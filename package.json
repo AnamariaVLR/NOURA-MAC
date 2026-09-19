@@ -1,0 +1,45 @@
+{
+  "name": "noura",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Verified healthy products in the UAE",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "db:push": "prisma db push --skip-generate",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "rm -f prisma/dev.db && npm run db:push && npm run db:seed",
+    "setup": "prisma generate && npm run db:push && npm run db:seed",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "seed:fetch": "tsx scripts/fetch-off-seed.ts",
+    "seed:moiat": "tsx scripts/import-moiat.ts",
+    "listings:export": "tsx scripts/listings-export.ts",
+    "listings:import": "tsx scripts/listings-import.ts",
+    "postinstall": "prisma generate"
+  },
+  "prisma": { "seed": "tsx prisma/seed.ts" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.125.0",
+    "@prisma/client": "6.19.3",
+    "next": "15.5.25",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "22.18.11",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "prisma": "6.19.3",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}

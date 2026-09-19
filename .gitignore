@@ -1,0 +1,29 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Local database and uploads
+prisma/dev.db
+prisma/dev.db-journal
+prisma/*.db
+.data/
+
+# Test artefacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+.DS_Store
+*.log
+npm-debug.log*
+tsconfig.tsbuildinfo
+next-env.d.ts
