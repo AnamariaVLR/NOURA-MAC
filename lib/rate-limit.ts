@@ -28,10 +28,10 @@ import { rateLimitSalt } from "./config";
 
 /**
  * Identification calls the Anthropic API, so this is the one that costs money.
- * 30/hour is far above a shopper's real rate — a supermarket trip might produce
- * fifteen scans — and far below what a script would want.
+ * The number, and why it is configurable rather than a constant, are in
+ * lib/config.ts.
  */
-export const SCAN_LIMIT_PER_HOUR = 30;
+export { scanLimitPerHour } from "./config";
 
 export const HOUR_MS = 60 * 60 * 1000;
 

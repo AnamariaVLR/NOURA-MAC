@@ -1373,3 +1373,36 @@ percentage, or any other single number. The brief asked for it not to be, and it
 would have been easy to reach for while making the page feel finished. The
 checklist is the product; a number on top of it would be the thing that averages
 away which claim is true.
+
+## 83. The rate limiter made the test suite look broken
+
+Every stall in the end-to-end suite this session — a POST to `/api/scan` that
+never returned, sixty seconds of a test waiting for a navigation — had the same
+cause, and it was not SQLite and not the code under test.
+
+**The limiter was working.** 30 identifications per hour per client, and every
+test run comes from `127.0.0.1`. The suite performs about fifteen scans per run,
+so the second run inside an hour starts getting 429, the capture form correctly
+shows the error instead of navigating, and `waitForURL` waits out its timeout.
+The failure presents as an application hang and is a policy doing its job.
+
+`SCAN_RATE_LIMIT_PER_HOUR` makes the number configurable, defaulting to 30, and
+`playwright.config.ts` raises it for the harness. Nonsense values fall back to
+the default rather than disabling the limit, which is the direction a
+misconfiguration should fail in.
+
+Two things worth keeping in view for the pilot:
+
+- **The limit is per hashed IP, and an IP is not a person.** Several shoppers
+  behind one office or mall NAT share an allowance. 30/hour is loose enough that
+  this is unlikely to bite a pilot, and it is the reason the number needed to be
+  adjustable rather than compiled in.
+- **A 429 currently reads as an error to the shopper.** The copy says what
+  happened and that it will work later, which is honest, but it is the one place
+  the app blames a person for something the app decided.
+
+The wider pattern, third time this session: a change to the environment or to a
+cross-cutting policy produced a symptom that pointed at the feature under test.
+Barcode salvage, `.env` overriding the harness, and now the limiter. When a test
+starts failing in a way that makes no sense for the code it exercises, look at
+what changed around it before looking harder at it.

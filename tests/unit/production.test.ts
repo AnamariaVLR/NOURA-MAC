@@ -22,7 +22,12 @@ import {
 import { HOUR_MS, clientAddress, limitKey, windowStartFor } from "../../lib/rate-limit";
 import { CLIENT_MAX_EDGE_PX, CLIENT_SKIP_BELOW_BYTES, targetSize } from "../../lib/image-client";
 import { currentProvider, providerFor, withProvider } from "../../scripts/prisma-provider";
-import { MAX_IMAGE_EDGE_PX, MAX_INLINE_IMAGE_BYTES, MAX_UPLOAD_BYTES } from "../../lib/config";
+import {
+  MAX_IMAGE_EDGE_PX,
+  MAX_INLINE_IMAGE_BYTES,
+  MAX_UPLOAD_BYTES,
+  scanLimitPerHour,
+} from "../../lib/config";
 
 const ORIGINAL = process.env.ADMIN_PASSWORD;
 afterEach(() => {
@@ -319,5 +324,31 @@ describe("the Postgres migration keeps up with the schema", () => {
     expect(migration).toMatch(/CREATE TABLE/);
     expect(migration).toMatch(/TIMESTAMP\(3\)|TEXT|BYTEA/);
     expect(migration).not.toMatch(/AUTOINCREMENT/); // SQLite-only
+  });
+});
+
+describe("the scan limit is a production protection, not a constant", () => {
+  const ORIGINAL_LIMIT = process.env.SCAN_RATE_LIMIT_PER_HOUR;
+  afterEach(() => {
+    if (ORIGINAL_LIMIT === undefined) delete process.env.SCAN_RATE_LIMIT_PER_HOUR;
+    else process.env.SCAN_RATE_LIMIT_PER_HOUR = ORIGINAL_LIMIT;
+  });
+
+  it("defaults to 30 an hour", () => {
+    delete process.env.SCAN_RATE_LIMIT_PER_HOUR;
+    expect(scanLimitPerHour()).toBe(30);
+  });
+
+  it("can be raised, because a test harness is not a shopper", () => {
+    process.env.SCAN_RATE_LIMIT_PER_HOUR = "100000";
+    expect(scanLimitPerHour()).toBe(100000);
+  });
+
+  it("ignores nonsense rather than disabling itself", () => {
+    // A misconfigured value must not become "no limit".
+    for (const bad of ["", "abc", "0", "-5", "NaN"]) {
+      process.env.SCAN_RATE_LIMIT_PER_HOUR = bad;
+      expect(scanLimitPerHour(), `value ${JSON.stringify(bad)}`).toBe(30);
+    }
   });
 });

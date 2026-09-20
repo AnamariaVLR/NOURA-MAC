@@ -59,6 +59,12 @@ export default defineConfig({
       // reads as unidentifiable, so every scan became a failed scan.
       NOURA_FORCE_MOCK: "1",
       VERIFIED_OFFLINE: "1",
+      // The suite performs ~15 scans per run, all from 127.0.0.1. At the
+      // production limit of 30/hour, two runs in an hour start returning 429 and
+      // every later scan hangs the test for sixty seconds waiting for a
+      // navigation that will never happen. The limiter is right; the harness is
+      // simply not a shopper.
+      SCAN_RATE_LIMIT_PER_HOUR: "100000",
       // The admin tests sign in for real, so the suite needs a password to sign
       // in WITH. It is a test value and it is in the repo on purpose: the point
       // of the test is that a wrong password is refused and the right one is not.

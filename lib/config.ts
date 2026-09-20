@@ -85,6 +85,24 @@ export function adminPassword(): string | null {
   return password && password.length >= 8 ? password : null;
 }
 
+/**
+ * Identifications allowed per hour, per client.
+ *
+ * Configurable because the default is a production protection and a test
+ * harness legitimately needs to exceed it: the end-to-end suite performs about
+ * fifteen scans per run, all from 127.0.0.1, so two runs in an hour would hit
+ * the limit and every subsequent scan would 429. That is the limiter working —
+ * and it made the suite hang for sixty seconds a test, which reads as an
+ * application fault and is not one.
+ *
+ * 30 is far above a shopper's real rate — a supermarket trip might produce
+ * fifteen — and far below what a script would want.
+ */
+export function scanLimitPerHour(): number {
+  const raw = Number(process.env.SCAN_RATE_LIMIT_PER_HOUR);
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 30;
+}
+
 /** Salt for the rate-limit key hash, so the table never holds an IP address. */
 export function rateLimitSalt(): string {
   return process.env.RATE_LIMIT_SALT?.trim() || process.env.ADMIN_PASSWORD?.trim() || "noura-dev";

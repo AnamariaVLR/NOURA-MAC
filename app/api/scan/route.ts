@@ -15,7 +15,7 @@
 import { NextResponse } from "next/server";
 import { MAX_UPLOAD_BYTES } from "@/lib/config";
 import { runPipeline } from "@/lib/pipeline/run";
-import { SCAN_LIMIT_PER_HOUR, consume, prune } from "@/lib/rate-limit";
+import { consume, prune, scanLimitPerHour } from "@/lib/rate-limit";
 import { UploadSchema } from "@/lib/schemas";
 import { resizeForModel, store } from "@/lib/storage";
 import { ensureUserKey } from "@/lib/user";
@@ -24,7 +24,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const limit = await consume(request.headers, "scan", SCAN_LIMIT_PER_HOUR);
+  const limit = await consume(request.headers, "scan", scanLimitPerHour());
   if (!limit.allowed) {
     const seconds = Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000));
     return NextResponse.json(
