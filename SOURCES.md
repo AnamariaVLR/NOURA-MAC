@@ -74,37 +74,62 @@ No tier-2 source was retrieved in this session. This is a real gap — see §4.
 - **Title:** *Nutrient profile model for the marketing of food and non-alcoholic beverages to children in the WHO Eastern Mediterranean Region*
 - **Body:** WHO Regional Office for the Eastern Mediterranean · **Ref:** EMROPUB_2017_en_19632
 - **URL:** https://applications.emro.who.int/dsaf/EMROPUB_2017_en_19632.pdf
-- **Accessed:** 20 Sep 2026 (PDF downloaded, full category table extracted locally)
+- **Accessed:** 20 Sep 2026 · **Re-extracted:** 20 Sep 2026 with a layout-preserving reader
 - **Defines:** 18 food categories with per-100 g/ml thresholds above which marketing to children is not permitted. Rule of use quoted verbatim: *"A food product must not exceed on a per 100 g/ml basis any of the relevant thresholds for that food product category if marketing is to be permitted."*
-- **Category thresholds extracted (per 100 g/ml):**
 
-  | # | Category | Threshold(s) |
-  |---|---|---|
-  | 1 | Chocolate/sugar confectionery, energy bars, sweet toppings | **Marketing not permitted** (any amount) |
-  | 2 | Savoury snacks | added sugars 0; salt 0.1 |
-  | 3a | **Fruit juices** (100% juices, reconstituted, smoothies) | **Marketing not permitted** |
-  | 3b | Vegetable juices | added sugars 0; salt 0.1 |
-  | 3c | Milk drinks (incl. almond, rice, oat) | total fat 2.5; added sugars 0; non-sugar sweeteners 0 |
-  | 3d | Energy drinks | **Marketing not permitted** |
-  | 3e | Other beverages (cola, soft drinks, flavoured waters) | added sugars 0; non-sugar sweeteners 0 |
-  | 4 | Edible ices | **Marketing not permitted** |
-  | 5 | **Breakfast cereals** | total fat 10; total sugars 15; salt 1.6 |
-  | 6 | Cakes, sweet biscuits, pastries | **Marketing not permitted** |
-  | 7 | **Yoghurts, sour milk, cream** | 2.5 / 10 / 2 / 0.1 (column mapping uncertain — see caveat) |
-  | 8 | Ready meals and composite dishes | 10 / 10 / 225 kcal / 4 / 1 |
-  | 9 | **Cheese** | 20 / 1.3 (column mapping uncertain) |
-  | 10 | **Butter, other fats and oils** | 15 / 20 / 1.3 (column mapping uncertain) |
-  | 11 | **Bread, bread products, crispbreads** | 10 / 10 / 1 |
-  | 12 | Pasta, rice, grains | 10 / 10 / 1 |
-  | 13 | Fresh/frozen meat, poultry, fish, **eggs** | salt 0.1 |
-  | 14 | Processed meat | **Marketing not permitted** |
-  | 15 | Processed fish | 2 / 1.7 |
-  | 16 | Fresh/frozen fruit, vegetables, legumes | **Permitted** (no threshold) |
-  | 17 | Processed fruit, vegetables, legumes | 5 / 10 / 0 / 1 |
-  | 18 | Sauces and dressings | 10 / 0 / 1 |
+#### The category table, with the column mapping recovered
 
-  **Caveat on column mapping.** The source table has seven value columns (total fat · total sugars · added sugars · non-sugar sweeteners · energy · saturated fat · salt) and most rows populate only two to four of them. Flattened PDF text does not preserve which column each number belongs to. **Breakfast cereals is confirmed** by the document's own prose (*"in the case of breakfast cereals, a product must not exceed the criteria for total fat, total sugars or salt"*) → fat 10, total sugars 15, salt 1.6. Rows marked *column mapping uncertain* are recorded as **UNKNOWN** in RUBRIC.md and must be re-read from the original table before use.
+The table has seven value columns. Version 1 of this file read the PDF as flattened
+text, which does not preserve which column a number sits in, so three rows were
+recorded as **column mapping uncertain** and could not be used. The document was
+re-read on 20 September 2026 with `pdfplumber`'s layout-preserving extractor, the
+seven header-column centres were measured in page points, and every numeric cell was
+assigned to its nearest centre. The raw output is committed at
+[`evidence/emro-column-mapping.txt`](evidence/emro-column-mapping.txt) and
+[`evidence/emro-table-layout.txt`](evidence/emro-table-layout.txt).
 
+Thresholds per 100 g/ml. A blank cell means the category has no threshold for that
+nutrient — not zero.
+
+| # | Category | Total fat | Total sugars | Added sugars | Non-sugar sweeteners | Energy kcal | Sat. fat | Salt |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Chocolate/sugar confectionery, energy bars, sweet toppings | — | — | — | — | — | — | **Marketing not permitted** |
+| 2 | Savoury snacks | | | **0** | | | | **0.1**ᶜ |
+| 3a | Fruit juices (100%, reconstituted, smoothies) | — | — | — | — | — | — | **Marketing not permitted**ᵈ |
+| 3b | Vegetable juices | | | **0** | | | | **0.1** |
+| 3c | Milk drinks (incl. almond, rice, oat) | **2.5** | | **0** | **0** | | | |
+| 3d | Energy drinks | — | — | — | — | — | — | **Marketing not permitted** |
+| 3e | Other beverages (cola, soft drinks, flavoured waters) | | | **0** | **0** | | | |
+| 4 | Edible ices | — | — | — | — | — | — | **Marketing not permitted** |
+| 5 | **Breakfast cereals** | **10** | **15** | | | | | **1.6** |
+| 6 | Cakes, sweet biscuits, pastries | — | — | — | — | — | — | **Marketing not permitted** |
+| 7 | **Yoghurts, sour milk, cream** | **2.5** | **10** | | | | **2** | **0.1** |
+| 8 | Ready meals and composite dishes | **10** | **10** | | | **225** | **4** | **1** |
+| 9 | **Cheese** | **20** | | | | | | **1.3** |
+| 10 | **Butter, and other fats and oils** | | | | | | **20** | **1.3** |
+| 11 | **Bread, bread products, crispbreads** | **10** | **10** | | | | | **1** |
+| 12 | Pasta, rice, grains | **10** | **10** | | | | | **1** |
+| 13 | Fresh/frozen meat, poultry, fish, **eggs** | | | | | | | **0.1** |
+| 14 | Processed meat | — | — | — | — | — | — | **Marketing not permitted** |
+| 15 | Processed fish | | | | | | **2** | **1.7** |
+| 16 | Fresh/frozen fruit, vegetables, legumes | — | — | — | — | — | — | **Permitted** (no threshold) |
+| 17 | Processed fruit, vegetables, legumes | **5** | **10** | **0** | | | | **1** |
+| 18 | Sauces and dressings | **10** | | **0** | | | | **1** |
+
+**What the re-extraction changed.**
+
+| Row | Recorded in v1 | Now | Effect |
+|---|---|---|---|
+| 7 Yoghurts | `2.5 / 10 / 2 / 0.1`, mapping unknown | total fat 2.5 · total sugars 10 · **sat. fat 2** · **salt 0.1** | The values were right; the mapping is now known. Usable. |
+| 9 Cheese | `20 / 1.3`, mapping unknown | **total fat 20** · **salt 1.3** | Usable. No cheese rule is written today (RUBRIC §9, L8). |
+| 10 Butter/fats/oils | `15 / 20 / 1.3`, mapping unknown | **sat. fat 20** · **salt 1.3** — there is **no total-fat threshold** | **The `15` was a transcription error.** It sits at x≈271, inside the *customs tariff code* column (`04.05; 15`), not inside any value column. |
+
+- **Footnotes, verbatim, that bear on a rule:**
+  - **c** (savoury snacks salt): *"Salt equivalent"*.
+  - **d** (fruit juices): *"This is in line with the WHO guidelines on sugars intake for children and adults (11), as fruits juices are a significant source of free sugars for children."* — a second tier-1 statement that juice sugars are free sugars.
+  - **g** (breakfast cereals **and** bread): *"For this category, countries may choose to include a threshold for minimum dietary fibre content, for example ≥ 6 g dietary fibre."* — independently corroborates the HIGH FIBRE line of ≥6 g/100 g that S12 sets.
+- **Category 7's "Included in category" column, verbatim:** *"Yoghurt; kephir; buttermilk; flavoured sour, fermented milk and drinking yoghurt (e.g. labneh, ayran, doogh); fromage frais; yoghurt substitutes; yoghurt products containing additional ingredients (e.g. muesli); cream; fruit-flavoured yoghurts"*. Drinking yoghurt, ayran and doogh are **inside the yoghurt category** in the source — the basis for RUBRIC §4.3's subcategory.
+- **Category 3c's "Included in category" column, verbatim:** *"Milks and sweetened milks; almond, rice and oat milks"*. Plant drinks sit in the milk category in the source.
 - **Also defines (verbatim):** *"Salt. 1 g of sodium is equivalent to about 2.5 g of salt."*
 
 ### S6 — Codex Alimentarius nutrition labelling · **Tier 1**
@@ -116,6 +141,7 @@ No tier-2 source was retrieved in this session. This is a real gap — see §4.
   - §3.4.4.2 **NRVs-NCD** — *Intake levels not to exceed:* **Saturated fatty acids 20 g**; **Sodium 2 000 mg**. *Intake levels to achieve:* **Potassium 3 500 mg**.
   - §2.7 *"Sugars means all mono-saccharides and di-saccharides present in food."*
   - §2.8 Dietary fibre — carbohydrate polymers with ten or more monomeric units not hydrolysed by endogenous enzymes in the human small intestine.
+  - §3.3.1 **Energy conversion factors**, verbatim: *"The amount of energy to be listed should be calculated by using the following conversion factors: Carbohydrates 4 kcal/g – 17 kJ · Protein 4 kcal/g – 17 kJ · Fat 9 kcal/g – 37 kJ · Alcohol (Ethanol) 7 kcal/g – 29 kJ · Organic acid 3 kcal/g – 13 kJ"*. These are the factors RUBRIC §3 U4 uses to derive an energy figure when none is published, and the factors `unexplainedEnergy()` already reconciles against.
 
 ### S7 — Nutri-Score · **Tier 1** (components only)
 - **Title:** *Nutri-Score* · **Body:** Santé publique France · **Page updated:** 6 November 2025
@@ -211,15 +237,73 @@ No tier-2 source was retrieved in this session. This is a real gap — see §4.
 - **Defines:** EFSA provides scientific advice supporting Commission authorisation; risk assessment covers chemical and biological properties, potential toxicity and dietary exposure. EFSA is mandated to re-evaluate all additives authorised before 20 January 2009 and has re-evaluated more than 70% of the 315 in scope. All additives on the EU market must comply with legal specifications and are authorised only after safety evaluation.
 - **Explicitly not established by this source:** that an authorised additive makes a food unhealthy, or any ranking of additives by harm.
 
+### S16 — EU food additives regulation · **Tier 1**
+- **Title:** Regulation (EC) No 1333/2008 of the European Parliament and of the Council of 16 December 2008 on food additives
+- **URL:** https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32008R1333
+- **Accessed:** 20 Sep 2026
+- **Defines, verbatim:**
+  - **Annex I**, functional class: *"'sweeteners' are substances used to impart a sweet taste to foods or in table-top sweeteners"*.
+  - **Article 24 and Annex V** — foods containing any of six colours must carry the additional information *"may have an adverse effect on activity and attention in children"*. The six are **E 102 Tartrazine · E 104 Quinoline yellow · E 110 Sunset yellow · E 122 Carmoisine · E 124 Ponceau 4R · E 129 Allura red**. The requirement does not apply where the colour is used for health or other marking on meat products, or for stamping or decorative colouring on eggshells.
+- **Not retrieved:** Annex II itself (the Community list) is a placeholder in this text; the sweetener list is taken from S20-S22.
+
+### S17 — EU food information to consumers · **Tier 1**
+- **Title:** Regulation (EU) No 1169/2011 on the provision of food information to consumers — **Annex III, *Foods whose labelling must include one or more additional particulars***
+- **URL:** https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02011R1169-20180101
+- **Accessed:** 20 Sep 2026 (consolidated text)
+- **Defines, verbatim — the mandatory particulars that constitute an EU warning label:**
+
+  | Trigger | Mandatory particular |
+  |---|---|
+  | Contains a sweetener | *"with sweetener(s)"*, accompanying the name of the food |
+  | Contains aspartame / aspartame-acesulfame salt | *"contains aspartame (a source of phenylalanine)"* where designated by E number; *"contains a source of phenylalanine"* where designated by name |
+  | More than 10% added polyols | *"excessive consumption may produce laxative effects"* |
+  | Glycyrrhizinic acid ≥100 mg/kg | *"contains liquorice"*; at ≥4 g/kg in confectionery, *"contains liquorice – people suffering from hypertension should avoid excessive consumption"* |
+  | Beverage with >150 mg/l caffeine | *"High caffeine content. Not recommended for children or pregnant or breast-feeding women"*, with the content in mg/100 ml |
+
+- **Reading used in RUBRIC §5:** *"with sweetener(s)"* is a qualifier on the name of the food, not a cautionary statement, and is **not** treated as a warning label. The other four are.
+
+### S18 — EFSA on titanium dioxide (E 171) · **Tier 1**
+- **Title:** *Titanium dioxide: E171 no longer considered safe when used as a food additive*
+- **Body:** European Food Safety Authority, Panel on Food Additives and Flavourings (FAF) · **Date:** 6 May 2021
+- **URL:** https://www.efsa.europa.eu/en/news/titanium-dioxide-e171-no-longer-considered-safe-when-used-food-additive
+- **Accessed:** 20 Sep 2026
+- **Defines, verbatim:** *"titanium dioxide can no longer be considered safe as a food additive"*; the Panel *"could not exclude genotoxicity concerns after consumption of titanium dioxide particles"* and therefore could not establish an ADI.
+- **This is the one retrieved case of a regulator withdrawing an additive's safety conclusion.**
+
+### S19 — EFSA on phosphates (E 338-341, E 343, E 450-452) · **Tier 1**
+- **Title:** *EFSA issues new advice on phosphates* · **Body:** European Food Safety Authority, FAF Panel · **Date:** 12 June 2019
+- **URL:** https://www.efsa.europa.eu/en/press/news/190612
+- **Accessed:** 20 Sep 2026
+- **Defines, verbatim:** a group ADI of *"40 milligrams per kilogram of body weight [mg/kg bw] per day"*, and: *"dietary exposure to phosphates may exceed the new ADI for infants, toddlers and children with average consumption of phosphates in their diet. This is also the case for adolescents whose diet is high in phosphates."*
+- **Not established by this source:** that any individual product is unsafe. The finding is about population exposure.
+
+### S20 — EU list of authorised sweeteners · **Tier 1**
+- **Title:** Commission Regulation (EU) No 1129/2011 establishing a Union list of food additives — Annex, Part B, *"2. Sweeteners"*
+- **URL:** https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32011R1129
+- **Accessed:** 20 Sep 2026
+- **Defines, verbatim:** E 420 Sorbitols · E 421 Mannitol · E 950 Acesulfame K · E 951 Aspartame · E 952 Cyclamates · E 953 Isomalt · E 954 Saccharins · E 955 Sucralose · E 957 Thaumatin · E 959 Neohesperidine DC · E 961 Neotame · E 962 Salt of aspartame-acesulfame · E 965 Maltitols · E 966 Lactitol · E 967 Xylitol · E 968 Erythritol.
+
+### S21 — Steviol glycosides as sweeteners · **Tier 1**
+- **Title:** Commission Regulation (EU) 2021/1156 amending Annex II to Regulation (EC) No 1333/2008 as regards steviol glycosides
+- **URL:** https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX%3A32021R1156
+- **Accessed:** 20 Sep 2026
+- **Defines, verbatim:** Annex II Part B *"2. Sweeteners"* gains **E 960a Steviol glycosides from Stevia** and **E 960c Enzymatically produced steviol glycosides**, grouped in Part C under *"E 960a – 960c: Steviol glycosides"*. These replace the single E 960 entry added by Regulation (EU) No 1131/2011.
+
+### S22 — Advantame as a sweetener · **Tier 1**
+- **Title:** Commission Regulation (EU) No 497/2014 amending Annex II to Regulation (EC) No 1333/2008 as regards the use of Advantame
+- **URL:** https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32014R0497
+- **Accessed:** 20 Sep 2026
+- **Defines, verbatim:** Annex II Part B Table 2 *"Sweeteners"* gains **E 969 Advantame**.
+
 ---
 
 ## 2. What the retrieved evidence does and does not cover
 
-**Well covered:** per-100 g/ml thresholds for sugars, saturated fat and salt (S1, S12); free-sugar and added-sugar definitions (S2, S9); fibre and protein claim thresholds (S12); Gulf regional category thresholds (S5); binding UAE drink sugar bands (S10); olive oil and oat beta-glucan attributes (S13); cosmetic labelling duties (S14); additive-authorisation semantics (S15).
+**Well covered:** per-100 g/ml thresholds for sugars, saturated fat and salt (S1, S12); free-sugar and added-sugar definitions (S2, S9); energy conversion factors (S6 §3.3.1); fibre and protein claim thresholds (S12); Gulf regional category thresholds, **all eighteen rows now column-mapped** (S5); binding UAE drink sugar bands (S10); olive oil and oat beta-glucan attributes (S13); cosmetic labelling duties (S14); additive-authorisation semantics (S15); **which additives carry an EU warning label (S16, S17), which are sweeteners (S20-S22), and the two EFSA re-evaluations that raised a concern (S18, S19)**.
 
-**Thinly covered:** processing (one tier-3 source only, S8); Nutri-Score numbers (components only, S7).
+**Thinly covered:** processing (one tier-3 source only, S8); Nutri-Score numbers (components only, S7); additive concerns (two EFSA findings, S18 and S19 — not a systematic screen of the 315 additives EFSA is re-evaluating).
 
-**Not covered at all:** supplements (no upper intake levels retrieved); eggs and plain yogurt beyond the EMRO row; cosmetic substance restrictions; additive-by-additive evaluations; any tier-2 systematic review.
+**Not covered at all:** supplements (no upper intake levels retrieved); eggs beyond the EMRO salt row; cosmetic substance restrictions; JECFA and IARC evaluations of any additive; any tier-2 systematic review.
 
 ---
 
@@ -238,7 +322,9 @@ No tier-2 source was retrieved in this session. This is a real gap — see §4.
 | UAE halal mark / ESMA halal scheme requirements | Not retrieved |
 | Codex CXG 2-1985 via the FAO Codex proxy URL | HTTP 403; the FAO-hosted PDF (S6) was used instead |
 | IARC monographs on any food additive or ingredient | Not retrieved |
-| JECFA additive evaluations | Not retrieved |
+| JECFA additive evaluations | Not retrieved. **Consequence:** RUBRIC §5.4's flagged-additive table cites EFSA and EU warning labels only. The decision to flag on "EFSA **or** JECFA" is honoured on the EFSA limb alone |
+| Commission Regulation (EU) No 1049/2012 (E 964 polyglycitol syrup) | Fetched; the page returned no extractable content. E 964 is therefore absent from the sweetener table in lib/health/additives.ts, and is recorded there as a known gap |
+| A systematic list of EFSA re-evaluations that lowered or withdrew an ADI | Not retrieved. S18 and S19 were opened individually. The flagged table is therefore **not exhaustive**, and says so |
 | EFSA tolerable upper intake levels (for supplements) | Not retrieved |
 | EFSA register of authorised health claims (as a database) | Not retrieved; the 432/2012 annex (S13) covers the claims used here |
 | SCCS opinions on cosmetic ingredients | Not retrieved |
@@ -248,8 +334,10 @@ No tier-2 source was retrieved in this session. This is a real gap — see §4.
 
 ## 4. Honest assessment of this evidence base
 
-1. **The brief was not completed.** Roughly 15 of the ~25 source families requested were opened. The gaps are concentrated in exactly the places Noura is weakest: **supplements, cosmetics, additive-level evaluations, and Gulf-specific regulator documents other than excise and the draft labelling standard.**
+1. **The brief was not completed.** Roughly 20 of the ~25 source families requested were opened. The gaps are concentrated in exactly the places Noura is weakest: **supplements, cosmetics, additive-level evaluations, and Gulf-specific regulator documents other than excise and the draft labelling standard.**
 2. **No tier-2 source was retrieved.** Every threshold below therefore rests on tier-1 regulator instruments or is explicitly marked unsourced. No systematic review or meta-analysis was opened, so no rule here is justified by pooled clinical evidence.
 3. **The most UAE-specific nutrition instrument retrieved (S5) is a marketing-restriction model, not a dietary standard.** It is designed to decide what may be advertised to children, which is a stricter and differently-motivated question than "is this a good choice for an adult shopper". RUBRIC.md uses it for category *structure* and as a conservative cross-check, not as the primary threshold source.
 4. **The only binding UAE numeric thresholds retrieved are fiscal** (S10), not nutritional. They are used, but their provenance is stated plainly wherever they appear.
 5. **The per-portion half of the UK criteria (S1) is unused** because Noura holds no serving-size data — a limitation recorded in RUBRIC.md §9.
+6. **The additive flag list is a floor, not a screen.** It contains every additive a retrieved instrument puts a warning label on or a retrieved EFSA opinion raised a concern about, and nothing else. An additive absent from it has not been cleared by Noura; it has not been looked at. RUBRIC §5.1 says so to the user.
+7. **The EMRO table was transcribed wrongly the first time.** One of three uncertain rows turned out to contain a number that was not a threshold at all (S5, category 10). The lesson recorded: a table read from flattened PDF text is not evidence, and the `evidence/` directory now holds the extraction output so the next reader can check rather than trust.
