@@ -68,7 +68,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     include: { body: true },
   })) as CertificationWithBody[];
 
-  const analysis = await analyseProduct(product, certifications);
+  const certificationLookup = await prisma.certificationLookup.findUnique({
+    where: { productId: product.id },
+  });
+
+  const analysis = await analyseProduct(product, certifications, certificationLookup);
 
   // Upsert rather than create: re-confirming after "Not this product?" replaces
   // the previous answer instead of failing on the unique scanId.

@@ -68,6 +68,12 @@ import { fibrePer100Kcal, proteinEnergyShare } from "../health/energy";
 import type { Check, Listing, NutritionFacts, ProductCategory, Verdict } from "../schemas";
 
 export type Candidate = {
+  /**
+   * The five-state UAE certification reading for this product. Carried on the
+   * candidate because the alternative comparison is partly about it, and
+   * recomputing it per comparison would be both slow and a chance to disagree.
+   */
+  certification: import("../health/certification").CertificationState;
   productId: string;
   slug: string;
   name: string;

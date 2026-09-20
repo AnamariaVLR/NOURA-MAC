@@ -5,7 +5,12 @@
  * thing in better English. If it declines, misfires, or drifts off the evidence,
  * we ship the deterministic sentences and the page is no worse.
  */
-import type { Product, ProductCertification, AccreditedBody } from "@prisma/client";
+import type {
+  AccreditedBody,
+  CertificationLookup,
+  Product,
+  ProductCertification,
+} from "@prisma/client";
 import { callTool } from "../anthropic";
 import { MODEL, runMode } from "../config";
 import type { CertificationEvidence } from "../health/checks";
@@ -29,6 +34,12 @@ import {
 
 export type CertificationWithBody = ProductCertification & { body: AccreditedBody | null };
 
+/** A product with everything the checker needs read alongside it. */
+export type ProductWithEvidence = Product & {
+  certifications: CertificationWithBody[];
+  certificationLookup?: CertificationLookup | null;
+};
+
 export function productSource(product: Product): SourceRef {
   return {
     name: product.evidenceSource,
@@ -46,8 +57,16 @@ export function toCertificationEvidence(
       | "valid"
       | "expired"
       | "suspended",
+    rawStatus: c.rawStatus,
+    issuedAt: c.issuedAt,
+    expiresAt: c.expiresAt,
+    matchBasis: c.matchBasis,
     bodyName: c.body?.name ?? null,
     certificateNumber: c.certificateNumber,
+    registerBrand: c.registerBrand,
+    registerModelNumber: c.registerModelNumber,
+    registerProductType: c.registerProductType,
+    registerCompany: c.registerCompany,
     sourceKind: c.source,
     source: {
       name: c.sourceName,
@@ -58,7 +77,11 @@ export function toCertificationEvidence(
 }
 
 /** Everything the checker needs, read out of the database columns via Zod. */
-export function buildEvidenceInput(product: Product, certifications: CertificationWithBody[]) {
+export function buildEvidenceInput(
+  product: Product,
+  certifications: CertificationWithBody[],
+  certificationLookup: CertificationLookup | null = null,
+) {
   return {
     // A category we do not recognise falls back to the generic food rule rather
     // than losing the product. `food` applies the universal checks of §3 and says
@@ -71,6 +94,19 @@ export function buildEvidenceInput(product: Product, certifications: Certificati
     allergens: parseJsonColumn(product.allergensJson, StringListSchema) ?? [],
     ingredientsText: product.ingredientsText,
     certifications: toCertificationEvidence(certifications),
+    // Null means the UAE register was never asked, which is UNKNOWN. Asked and
+    // empty is NOT FOUND, and the two must not render the same way.
+    certificationLookup: certificationLookup
+      ? {
+          barcode: certificationLookup.barcode,
+          exactMatches: certificationLookup.exactMatches,
+          brandMatches: certificationLookup.brandMatches,
+          succeeded: certificationLookup.succeeded,
+          source: certificationLookup.source,
+          sourceUrl: certificationLookup.sourceUrl,
+          checkedAt: certificationLookup.checkedAt,
+        }
+      : null,
     evidenceSource: productSource(product),
   };
 }
@@ -105,8 +141,9 @@ export function mergeModelProse(
 export async function analyseProduct(
   product: Product,
   certifications: CertificationWithBody[],
+  certificationLookup: CertificationLookup | null = null,
 ): Promise<HealthAnalysisResult> {
-  const input = buildEvidenceInput(product, certifications);
+  const input = buildEvidenceInput(product, certifications, certificationLookup);
   const evaluation = evaluateProduct(input);
 
   let checks = evaluation.checks;

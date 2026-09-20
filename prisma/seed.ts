@@ -15,7 +15,6 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { CATALOGUE, RETAILERS } from "./seed-data/catalogue";
-import { ACCREDITED_BODIES, CERTIFICATES, EIAC_SOURCE, MOIAT_SOURCE } from "./seed-data/regulator";
 
 const prisma = new PrismaClient();
 
@@ -52,9 +51,13 @@ export type SeedSummary = {
   products: number;
   /** Listings created as work items. Zero prices: see the note above. */
   listings: number;
+  /** Always 0. Bodies come from `npm run seed:bodies`, not from the seed. */
   bodies: number;
+  /** Always 0. Certificates come from `npm run seed:moiat`, not from the seed. */
   certificates: number;
   purgedSyntheticChecks: number;
+  /** Demo certification rows removed from a database seeded before the real import. */
+  purgedSyntheticCertificates: number;
 };
 
 export async function runSeed(client: PrismaClient = prisma): Promise<SeedSummary> {
@@ -67,6 +70,7 @@ export async function runSeed(client: PrismaClient = prisma): Promise<SeedSummar
     bodies: 0,
     certificates: 0,
     purgedSyntheticChecks: 0,
+    purgedSyntheticCertificates: 0,
   };
 
   // ---- Retailers --------------------------------------------------------
@@ -142,62 +146,25 @@ export async function runSeed(client: PrismaClient = prisma): Promise<SeedSummar
   }
 
   // ---- EIAC accredited bodies ------------------------------------------
-  for (const body of ACCREDITED_BODIES) {
-    await client.accreditedBody.upsert({
-      where: { slug: body.slug },
-      update: {
-        name: body.name,
-        scope: body.scope,
-        accreditationNo: body.accreditationNo,
-        source: "SYNTHETIC",
-        sourceName: EIAC_SOURCE.name,
-        sourceUrl: EIAC_SOURCE.url,
-        lastVerifiedAt: now,
-      },
-      create: {
-        ...body,
-        source: "SYNTHETIC",
-        sourceName: EIAC_SOURCE.name,
-        sourceUrl: EIAC_SOURCE.url,
-        lastVerifiedAt: now,
-      },
-    });
-    summary.bodies += 1;
-  }
-  const bodyIds = new Map(
-    (await client.accreditedBody.findMany()).map((b) => [b.slug, b.id] as const),
-  );
-  const productIds = new Map(
-    (await client.product.findMany({ select: { id: true, slug: true } })).map(
-      (p) => [p.slug, p.id] as const,
-    ),
-  );
-
-  // ---- MOIAT product conformity ----------------------------------------
-  for (const cert of CERTIFICATES) {
-    const productId = productIds.get(cert.productSlug);
-    if (!productId) continue;
-    const payload = {
-      productId,
-      certificateType: cert.certificateType,
-      status: cert.status,
-      issuedAt: new Date(cert.issuedAt),
-      expiresAt: cert.expiresAt ? new Date(cert.expiresAt) : null,
-      bodyId: cert.bodySlug ? (bodyIds.get(cert.bodySlug) ?? null) : null,
-      // Shipped SAMPLE- rows are demo scaffolding. The enum, not the prefix, is what
-      // stops them being rendered as verification.
-      source: "SYNTHETIC",
-      sourceName: MOIAT_SOURCE.name,
-      sourceUrl: MOIAT_SOURCE.url,
-      lastVerifiedAt: now,
-    };
-    await client.productCertification.upsert({
-      where: { certificateNumber: cert.certificateNumber },
-      update: payload,
-      create: { ...payload, certificateNumber: cert.certificateNumber },
-    });
-    summary.certificates += 1;
-  }
+  // CERTIFICATION IS NOT SEEDED. It used to be: a set of SAMPLE- certificates
+  // and EIAC bodies marked SYNTHETIC, which existed so the UI had something to
+  // render and which no code ever treated as evidence.
+  //
+  // There is a real source now, so the demo layer is gone rather than sitting
+  // alongside it. Certificates come from `npm run seed:moiat`, which asks the
+  // MOIAT conformity register about each product's barcode, and the bodies that
+  // issue them from `npm run seed:bodies`. A database that has had neither run
+  // reports every product's certification as UNKNOWN, which is exactly what it
+  // is — nobody asked.
+  //
+  // Anything left over from a seed that predates this is removed.
+  const staleCertificates = await client.productCertification.deleteMany({
+    where: { source: "SYNTHETIC" },
+  });
+  const staleBodies = await client.accreditedBody.deleteMany({ where: { source: "SYNTHETIC" } });
+  summary.certificates = 0;
+  summary.bodies = 0;
+  summary.purgedSyntheticCertificates = staleCertificates.count + staleBodies.count;
 
   // Any demo checks loaded by an earlier run are removed on every seed. Synthetic
   // prices do not linger here.

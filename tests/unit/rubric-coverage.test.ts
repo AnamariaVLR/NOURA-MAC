@@ -26,6 +26,7 @@ function readFiles(paths: string[]): string {
 const LIB = readFiles([
   "lib/health/rubric.ts",
   "lib/health/checks.ts",
+  "lib/health/certification.ts",
   "lib/health/verdict.ts",
   "lib/health/evaluate.ts",
   "lib/health/tolerance.ts",

@@ -96,15 +96,37 @@ CREATE TABLE "ProductCertification" (
     "certificateNumber" TEXT NOT NULL,
     "certificateType" TEXT NOT NULL,
     "status" TEXT NOT NULL,
+    "rawStatus" TEXT,
     "issuedAt" TIMESTAMP(3) NOT NULL,
     "expiresAt" TIMESTAMP(3),
     "bodyId" TEXT,
+    "matchBasis" TEXT NOT NULL DEFAULT 'BARCODE',
+    "registerBrand" TEXT,
+    "registerModelNumber" TEXT,
+    "registerProductType" TEXT,
+    "registerCompany" TEXT,
+    "registerCountry" TEXT,
     "source" TEXT NOT NULL DEFAULT 'SYNTHETIC',
     "sourceName" TEXT NOT NULL,
     "sourceUrl" TEXT NOT NULL,
     "lastVerifiedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "ProductCertification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CertificationLookup" (
+    "id" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "barcode" TEXT NOT NULL,
+    "exactMatches" INTEGER NOT NULL DEFAULT 0,
+    "brandMatches" INTEGER NOT NULL DEFAULT 0,
+    "succeeded" BOOLEAN NOT NULL DEFAULT true,
+    "source" TEXT NOT NULL,
+    "sourceUrl" TEXT NOT NULL,
+    "checkedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CertificationLookup_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -206,10 +228,16 @@ CREATE INDEX "ListingCheck_checkedAt_idx" ON "ListingCheck"("checkedAt");
 CREATE UNIQUE INDEX "AccreditedBody_slug_key" ON "AccreditedBody"("slug");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProductCertification_certificateNumber_key" ON "ProductCertification"("certificateNumber");
+CREATE INDEX "ProductCertification_productId_idx" ON "ProductCertification"("productId");
 
 -- CreateIndex
-CREATE INDEX "ProductCertification_productId_idx" ON "ProductCertification"("productId");
+CREATE INDEX "ProductCertification_matchBasis_idx" ON "ProductCertification"("matchBasis");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProductCertification_certificateNumber_productId_registerMo_key" ON "ProductCertification"("certificateNumber", "productId", "registerModelNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CertificationLookup_productId_key" ON "CertificationLookup"("productId");
 
 -- CreateIndex
 CREATE INDEX "Scan_userKey_createdAt_idx" ON "Scan"("userKey", "createdAt");
@@ -240,6 +268,9 @@ ALTER TABLE "ProductCertification" ADD CONSTRAINT "ProductCertification_productI
 
 -- AddForeignKey
 ALTER TABLE "ProductCertification" ADD CONSTRAINT "ProductCertification_bodyId_fkey" FOREIGN KEY ("bodyId") REFERENCES "AccreditedBody"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CertificationLookup" ADD CONSTRAINT "CertificationLookup_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Scan" ADD CONSTRAINT "Scan_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;

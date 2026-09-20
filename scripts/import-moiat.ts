@@ -1,172 +1,198 @@
 /**
- * Replaces the shipped SYNTHETIC certificate rows with the real MOIAT register.
+ * Replaces the SYNTHETIC certificate rows with the real MOIAT register.
  *
- *   1. Download the CSV from
- *      https://moiat.gov.ae/en/open-data/product-conformity-data
- *   2. npm run seed:moiat -- ./moiat-product-conformity.csv
+ *   npm run seed:moiat
  *
- * Matching: a certificate is attached to a product when the CSV row's barcode
- * matches a product barcode. Rows that match nothing in our catalogue are counted
- * and skipped — we do not invent products to hang certificates on.
+ * There is no bulk download to feed this — moiat.gov.ae's conformity page is a
+ * search interface, not a dataset. So this asks the register about each product
+ * in the catalogue, one barcode at a time, and records BOTH what came back and
+ * the fact that it was asked.
  *
- * Column names vary between MOIAT exports, so the header is matched
- * case-insensitively against the aliases in COLUMNS below.
+ * ── The three things it writes, and why the third matters most ──────────────
+ *
+ *   1. Exact-product certificates — the register's model number IS the barcode.
+ *   2. Brand-level certificates — the brand matched, this product did not. Kept
+ *      so the page can say "the brand is in the register and this product is
+ *      not", and never counted as verification.
+ *   3. A CertificationLookup row, always, even when nothing was found.
+ *
+ * (3) is what separates "we asked and the register has nothing" from "we never
+ * asked". Without it both render as unknown, and one of them is a fact worth
+ * telling a shopper.
+ *
+ * Nothing here invents a product. A certificate that matches no catalogue
+ * barcode is counted and dropped.
  */
 import "../lib/load-env";
-import { readFileSync } from "node:fs";
-import { PrismaClient } from "@prisma/client";
-import { CertificateStatusSchema, CertificateTypeSchema } from "../lib/schemas";
-import { parseCsv } from "../lib/retail/listings-csv";
+import { prisma } from "../lib/db";
+import {
+  MOIAT_SOURCE_NAME,
+  MOIAT_SOURCE_URL,
+  certificatesForBarcode,
+  certificatesForBrand,
+  namesExactProduct,
+  readStatus,
+  type MoiatCertificate,
+} from "../lib/evidence/moiat";
 
-const prisma = new PrismaClient();
+/** Be a good citizen of someone else's public endpoint. */
+const DELAY_MS = 700;
 
-const COLUMNS: Record<string, string[]> = {
-  certificateNumber: ["certificate number", "certificate_no", "certificateno", "cert no"],
-  certificateType: ["certificate type", "scheme", "certificate_scheme", "type"],
-  status: ["status", "certificate status"],
-  issuedAt: ["issue date", "issued", "issued_date", "issue_date"],
-  expiresAt: ["expiry date", "expires", "expiry_date", "valid until"],
-  barcode: ["barcode", "gtin", "ean", "product barcode"],
-  bodyName: ["certification body", "cab", "notified body", "body"],
+type Tally = {
+  products: number;
+  queried: number;
+  failed: number;
+  exact: number;
+  brand: number;
+  notFound: number;
 };
 
-function indexOfColumn(header: string[], aliases: string[]): number {
-  const normalised = header.map((h) => h.trim().toLowerCase());
-  for (const alias of aliases) {
-    const idx = normalised.indexOf(alias);
-    if (idx !== -1) return idx;
-  }
-  return -1;
-}
-
-function parseDate(value: string): Date | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  // Accept both 2025-03-11 and 11/03/2025.
-  const dmy = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  const iso = dmy ? `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}` : trimmed;
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-async function main() {
-  const path = process.argv[2];
-  if (!path) {
-    console.error("usage: npm run seed:moiat -- path/to/moiat-product-conformity.csv");
-    process.exit(1);
+async function importForProduct(
+  product: { id: string; slug: string; barcode: string | null; brand: string | null },
+  tally: Tally,
+  now: Date,
+): Promise<string> {
+  if (!product.barcode) {
+    // No barcode, no exact question to ask. UNKNOWN is the honest state and we
+    // record no lookup, because none was possible.
+    return "no barcode";
   }
 
-  const rows = parseCsv(readFileSync(path, "utf8"));
-  if (rows.length < 2) {
-    console.error("CSV has no data rows.");
-    process.exit(1);
-  }
-
-  const header = rows[0];
-  const idx = Object.fromEntries(
-    Object.entries(COLUMNS).map(([key, aliases]) => [key, indexOfColumn(header, aliases)]),
-  ) as Record<keyof typeof COLUMNS, number>;
-
-  const missing = (["certificateNumber", "barcode"] as const).filter((k) => idx[k] === -1);
-  if (missing.length) {
-    console.error(`CSV is missing required column(s): ${missing.join(", ")}`);
-    console.error(`Header seen: ${header.join(" | ")}`);
-    process.exit(1);
-  }
-
-  const products = await prisma.product.findMany({ select: { id: true, barcode: true } });
-  const byBarcode = new Map(products.filter((p) => p.barcode).map((p) => [p.barcode!, p.id]));
-
-  let imported = 0;
-  let unmatched = 0;
-  let rejected = 0;
-  const now = new Date();
-
-  for (const row of rows.slice(1)) {
-    const cell = (key: keyof typeof COLUMNS) => (idx[key] === -1 ? "" : (row[idx[key]] ?? "").trim());
-    const barcode = cell("barcode").replace(/\D/g, "");
-    const productId = byBarcode.get(barcode);
-    if (!productId) {
-      unmatched += 1;
-      continue;
-    }
-
-    const type = CertificateTypeSchema.safeParse(cell("certificateType"));
-    const status = CertificateStatusSchema.safeParse(cell("status").toLowerCase());
-    const certificateNumber = cell("certificateNumber");
-    const issuedAt = parseDate(cell("issuedAt"));
-    if (!certificateNumber || !type.success || !issuedAt) {
-      rejected += 1;
-      continue;
-    }
-
-    let bodyId: string | null = null;
-    const bodyName = cell("bodyName");
-    if (bodyName) {
-      const slug = bodyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      const body = await prisma.accreditedBody.upsert({
-        where: { slug },
-        update: { name: bodyName, source: "REGULATOR_IMPORT" },
-        create: {
-          slug,
-          name: bodyName,
-          scope: "As published in the MOIAT conformity register",
-          accreditationNo: "see EIAC register",
-          source: "REGULATOR_IMPORT",
-          sourceName: "MOIAT Product Conformity open data",
-          sourceUrl: "https://moiat.gov.ae/en/open-data/product-conformity-data",
-          lastVerifiedAt: now,
-        },
-      });
-      bodyId = body.id;
-    }
-
-    const payload = {
-      productId,
-      certificateType: type.data,
-      status: status.success ? status.data : "valid",
-      issuedAt,
-      expiresAt: parseDate(cell("expiresAt")),
-      bodyId,
-      // A real import is evidence; the SYNTHETIC rows it replaces were not.
-      source: "REGULATOR_IMPORT",
-      sourceName: "MOIAT Product Conformity open data",
-      sourceUrl: "https://moiat.gov.ae/en/open-data/product-conformity-data",
-      lastVerifiedAt: now,
-    };
-
-    await prisma.productCertification.upsert({
-      where: { certificateNumber },
-      update: payload,
-      create: { ...payload, certificateNumber },
+  const exact = await certificatesForBarcode(product.barcode);
+  if (exact === null) {
+    tally.failed += 1;
+    // A failed query is UNKNOWN. Record the failure so the state is auditable
+    // but does not read as NOT FOUND.
+    await prisma.certificationLookup.upsert({
+      where: { productId: product.id },
+      create: {
+        productId: product.id,
+        barcode: product.barcode,
+        exactMatches: 0,
+        brandMatches: 0,
+        succeeded: false,
+        source: MOIAT_SOURCE_NAME,
+        sourceUrl: MOIAT_SOURCE_URL,
+        checkedAt: now,
+      },
+      update: { succeeded: false, checkedAt: now, barcode: product.barcode },
     });
-    imported += 1;
+    return "QUERY FAILED";
+  }
+  tally.queried += 1;
+
+  const exactHits = exact.filter((c) => namesExactProduct(c, product.barcode!));
+
+  // Only ask about the brand when the product itself is not in the register:
+  // a brand answer is weaker evidence and there is no reason to spend a request
+  // on it when a better one already exists.
+  let brandHits: MoiatCertificate[] = [];
+  if (exactHits.length === 0 && product.brand) {
+    await new Promise((r) => setTimeout(r, DELAY_MS));
+    const brandRows = await certificatesForBrand(product.brand);
+    if (brandRows) {
+      brandHits = brandRows.filter((c) => !namesExactProduct(c, product.barcode!));
+    }
   }
 
-  // Real rows are in; drop the scaffolding for any product that now has one.
-  const withReal = new Set(
-    (
-      await prisma.productCertification.findMany({
-        where: { source: "REGULATOR_IMPORT" },
-        select: { productId: true },
-      })
-    ).map((c) => c.productId),
-  );
-  const removed = await prisma.productCertification.deleteMany({
-    where: { source: "SYNTHETIC", productId: { in: [...withReal] } },
+  await prisma.productCertification.deleteMany({
+    where: { productId: product.id, source: "REGULATOR_IMPORT" },
   });
 
-  console.log(
-    `imported ${imported}, unmatched ${unmatched}, rejected ${rejected}, ` +
-      `synthetic rows removed ${removed.count}`,
-  );
+  const write = async (certificate: MoiatCertificate, matchBasis: "BARCODE" | "BRAND") => {
+    await prisma.productCertification.create({
+      data: {
+        productId: product.id,
+        certificateNumber: certificate.certificateNumber,
+        certificateType: certificate.certificateType,
+        status: readStatus(certificate.rawStatus),
+        rawStatus: certificate.rawStatus,
+        issuedAt: certificate.issuedAt ?? now,
+        expiresAt: certificate.expiresAt,
+        matchBasis,
+        registerBrand: certificate.brand,
+        registerModelNumber: certificate.modelNumber,
+        registerProductType: certificate.productType,
+        registerCompany: certificate.company,
+        registerCountry: certificate.country,
+        source: "REGULATOR_IMPORT",
+        sourceName: MOIAT_SOURCE_NAME,
+        sourceUrl: MOIAT_SOURCE_URL,
+        lastVerifiedAt: now,
+      },
+    });
+  };
+
+  for (const certificate of exactHits) await write(certificate, "BARCODE");
+  // A handful is enough to say "the brand is in the register"; the rest is noise.
+  for (const certificate of brandHits.slice(0, 5)) await write(certificate, "BRAND");
+
+  await prisma.certificationLookup.upsert({
+    where: { productId: product.id },
+    create: {
+      productId: product.id,
+      barcode: product.barcode,
+      exactMatches: exactHits.length,
+      brandMatches: brandHits.length,
+      succeeded: true,
+      source: MOIAT_SOURCE_NAME,
+      sourceUrl: MOIAT_SOURCE_URL,
+      checkedAt: now,
+    },
+    update: {
+      barcode: product.barcode,
+      exactMatches: exactHits.length,
+      brandMatches: brandHits.length,
+      succeeded: true,
+      checkedAt: now,
+    },
+  });
+
+  tally.exact += exactHits.length;
+  tally.brand += Math.min(brandHits.length, 5);
+  if (exactHits.length === 0 && brandHits.length === 0) tally.notFound += 1;
+
+  if (exactHits.length > 0) return `${exactHits.length} exact`;
+  if (brandHits.length > 0) return `brand only (${brandHits.length})`;
+  return "not found";
 }
 
-if (require.main === module) {
-  main()
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    })
-    .finally(() => prisma.$disconnect());
+async function main(): Promise<void> {
+  const products = await prisma.product.findMany({
+    select: { id: true, slug: true, barcode: true, brand: true },
+    orderBy: { slug: "asc" },
+  });
+
+  const now = new Date();
+  const tally: Tally = { products: products.length, queried: 0, failed: 0, exact: 0, brand: 0, notFound: 0 };
+
+  console.log(`Asking the MOIAT register about ${products.length} products.\n`);
+
+  for (const product of products) {
+    const outcome = await importForProduct(product, tally, now);
+    console.log(`  ${outcome.padEnd(18)} ${product.slug}`);
+    await new Promise((r) => setTimeout(r, DELAY_MS));
+  }
+
+  // Every SYNTHETIC row for a product we now have a real answer about is gone.
+  // A product we could not ask about keeps nothing: demo scaffolding was never
+  // evidence and there is no reason to keep it once the real source is wired.
+  const purged = await prisma.productCertification.deleteMany({ where: { source: "SYNTHETIC" } });
+
+  console.log(`
+  products            ${tally.products}
+  asked               ${tally.queried}
+  query failed        ${tally.failed}
+  exact certificates  ${tally.exact}
+  brand certificates  ${tally.brand}
+  asked, nothing      ${tally.notFound}
+  synthetic purged    ${purged.count}`);
+
+  await prisma.$disconnect();
 }
+
+main().catch(async (error) => {
+  console.error(error);
+  await prisma.$disconnect();
+  process.exitCode = 1;
+});

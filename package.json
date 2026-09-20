@@ -29,7 +29,8 @@
     "qr": "tsx scripts/make-qr.ts",
     "pilot:url": "tsx scripts/pilot-url.ts",
     "db:where": "tsx scripts/db-where.ts",
-    "db:wal": "tsx scripts/sqlite-wal.ts"
+    "db:wal": "tsx scripts/sqlite-wal.ts",
+    "seed:bodies": "tsx scripts/import-notified-bodies.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

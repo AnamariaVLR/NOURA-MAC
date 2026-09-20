@@ -7,9 +7,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { EvidenceInput } from "@/lib/health/checks";
 import { evaluateProduct } from "@/lib/health/evaluate";
+import { MOIAT_SOURCE_NAME, MOIAT_SOURCE_URL } from "@/lib/evidence/moiat";
 import { mergeModelProse, productSource, toCertificationEvidence } from "@/lib/pipeline/analyze";
 import { ListingSchema, SourceRefSchema, type NutritionFacts } from "@/lib/schemas";
-import { MOIAT_SOURCE, CERTIFICATES, isSampleCertificate } from "@/prisma/seed-data/regulator";
 
 const evidenceSource = {
   name: "Open Food Facts",
@@ -18,8 +18,8 @@ const evidenceSource = {
 };
 
 const moiatSource = {
-  name: MOIAT_SOURCE.name,
-  url: MOIAT_SOURCE.url,
+  name: MOIAT_SOURCE_NAME,
+  url: MOIAT_SOURCE_URL,
   lastVerifiedAt: "2026-02-01T00:00:00.000Z",
 };
 
@@ -105,8 +105,8 @@ describe("every check carries a source", () => {
     );
     const cert = result.checks.find((c) => c.key === "certification");
     expect(cert).toBeDefined();
-    expect(cert!.source.name).toBe(MOIAT_SOURCE.name);
-    expect(cert!.source.url).toBe(MOIAT_SOURCE.url);
+    expect(cert!.source.name).toBe(MOIAT_SOURCE_NAME);
+    expect(cert!.source.url).toBe(MOIAT_SOURCE_URL);
   });
 });
 
@@ -182,8 +182,15 @@ describe("certificates keep the register's attribution", () => {
         expiresAt: null,
         bodyId: "b1",
         source: "REGULATOR_IMPORT",
-        sourceName: MOIAT_SOURCE.name,
-        sourceUrl: MOIAT_SOURCE.url,
+        sourceName: "MOIAT Product Conformity register",
+        sourceUrl: "https://api.moiat.gov.ae/api/ConformityHub/GetCertificatesListV3",
+        rawStatus: "Valid",
+        matchBasis: "BARCODE",
+        registerBrand: null,
+        registerModelNumber: null,
+        registerProductType: null,
+        registerCompany: null,
+        registerCountry: null,
         lastVerifiedAt: new Date("2026-02-01"),
         body: {
           id: "b1",
@@ -218,6 +225,13 @@ describe("certificates keep the register's attribution", () => {
         source: "REGULATOR_IMPORT",
         sourceName: "n",
         sourceUrl: "https://x",
+        rawStatus: "Expired",
+        matchBasis: "BARCODE",
+        registerBrand: null,
+        registerModelNumber: null,
+        registerProductType: null,
+        registerCompany: null,
+        registerCountry: null,
         lastVerifiedAt: new Date(),
         body: null,
       },
@@ -234,12 +248,10 @@ describe("shipped seed data is labelled honestly", () => {
     expect(catalogue).not.toMatch(/basePriceAed|RETAILER_PRICE_DELTA|priceFils/);
   });
 
-  it("marks every shipped certificate as a sample, so none can pass for a real one", () => {
-    expect(CERTIFICATES.length).toBeGreaterThan(0);
-    for (const cert of CERTIFICATES) {
-      expect(isSampleCertificate(cert.certificateNumber)).toBe(true);
-    }
-    expect(MOIAT_SOURCE.name).toMatch(/SAMPLE/);
+  it("ships no certificates at all: every certificate is imported from the register", () => {
+    const seed = readFileSync("prisma/seed.ts", "utf8");
+    expect(seed).toMatch(/summary\.certificates = 0/);
+    expect(seed).not.toMatch(/certification\.(create|upsert|createMany)/);
   });
 });
 

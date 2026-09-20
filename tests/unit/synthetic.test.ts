@@ -7,12 +7,12 @@
  * synthetic row could leak through: the check engine, the freshness rule, and the
  * enum itself.
  */
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DataSourceSchema, isVerifiableSource, type NutritionFacts } from "@/lib/schemas";
 import { evaluateChecks, type EvidenceInput } from "@/lib/health/checks";
 import { evaluateProduct } from "@/lib/health/evaluate";
 import { isFreshCheck, stalenessOf } from "@/lib/retail/freshness";
-import { CERTIFICATES, isSampleCertificate } from "@/prisma/seed-data/regulator";
 
 const source = { name: "MOIAT (sample)", url: null, lastVerifiedAt: "2026-01-01T00:00:00.000Z" };
 
@@ -159,9 +159,19 @@ describe("a synthetic price is never a price", () => {
 });
 
 describe("the shipped demo data is labelled at both levels", () => {
-  it("still prefixes every sample certificate number", () => {
-    expect(CERTIFICATES.length).toBeGreaterThan(0);
-    for (const c of CERTIFICATES) expect(isSampleCertificate(c.certificateNumber)).toBe(true);
+  it("ships no certificate rows at all — every one now comes from the register", () => {
+    // There used to be a file of SAMPLE- prefixed certificates here, labelled
+    // honestly but still invented. It is gone: a certificate number is a
+    // factual claim about a real company, so the safe number to invent is zero.
+    // Certificates now come from the live MOIAT register or they do not exist.
+    expect(existsSync("prisma/seed-data/regulator.ts")).toBe(false);
+
+    const seed = readFileSync("prisma/seed.ts", "utf8");
+    // The seed reports a count, and that count is hard-coded to nothing.
+    expect(seed).toMatch(/summary\.certificates = 0/);
+    // It creates no certificate rows, and actively removes any left behind.
+    expect(seed).not.toMatch(/certification\.(create|upsert|createMany)/);
+    expect(seed).toMatch(/deleteMany/);
   });
 
   it("relies on the enum rather than the prefix for the actual rule", () => {

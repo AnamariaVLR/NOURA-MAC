@@ -29,6 +29,12 @@ import type {
 import { hasIngredientList, resolveAddedSugar, type AddedSugarVerdict } from "./added-sugar";
 import { assessAdditives, type AdditiveAssessment } from "./additives";
 import { basisFor, resolveSubcategory, ruleFor } from "./categories";
+import {
+  CERTIFICATION_LABEL,
+  assessCertification,
+  type CertificationAssessment,
+  type LookupEvidence,
+} from "./certification";
 import type { Basis, CategoryRule, CheckKey, NutrientLine } from "./categories/types";
 import { fibrePer100Kcal, proteinEnergyShare, resolveEnergyKcal } from "./energy";
 import { FIBRE, LABELS, PROTEIN, type ComponentKey } from "./rubric";
@@ -37,9 +43,19 @@ import { isSevere } from "./tolerance";
 export type CertificationEvidence = {
   certificateType: string;
   status: "valid" | "expired" | "suspended";
-  /** Name of the EIAC-accredited body, when the certificate names one. */
+  /** The register's own status word, kept so ours can be audited. */
+  rawStatus?: string | null;
+  issuedAt?: Date | null;
+  expiresAt?: Date | null;
+  /** "BARCODE" — this exact product. "BRAND" — the brand only, never evidence. */
+  matchBasis?: string;
+  /** Name of the notified body, when the certificate names one. */
   bodyName: string | null;
   certificateNumber: string;
+  registerBrand?: string | null;
+  registerModelNumber?: string | null;
+  registerProductType?: string | null;
+  registerCompany?: string | null;
   /** DataSource. A "SYNTHETIC" certificate can never verify anything. */
   sourceKind: string;
   source: SourceRef;
@@ -55,6 +71,11 @@ export type EvidenceInput = {
   allergens: string[];
   ingredientsText: string | null;
   certifications: CertificationEvidence[];
+  /**
+   * Proof the UAE register was ASKED about this product. Null means it was not,
+   * which is UNKNOWN — a different thing from asked-and-nothing-found.
+   */
+  certificationLookup?: LookupEvidence;
   /** Attribution for the nutrition/ingredient evidence. */
   evidenceSource: SourceRef;
 };
@@ -427,85 +448,163 @@ function additivesCheck(
  * U7 / §6 — UAE certification
  * ----------------------------------------------------------------------- */
 
-function certificationCheck(
-  certifications: CertificationEvidence[],
+export function certificationCheck(
+  input: EvidenceInput,
   fallbackSource: SourceRef,
 ): Check {
   const key: ComponentKey = "certification";
   const label = LABELS[key];
 
-  // C6.1 — provenance. Demo scaffolding is not evidence. Every shipped SAMPLE-
-  // certificate is SYNTHETIC, and a synthetic certificate must never produce a
-  // tick, a cross, or any statement that a real body certified a real product.
-  // Filtering here rather than at the call site means no caller can forget.
-  const real = certifications.filter((c) => isVerifiableSource(c.sourceKind));
-  const discarded = certifications.length - real.length;
+  const assessment = assessCertification(
+    input.certifications.map((c) => ({
+      certificateNumber: c.certificateNumber,
+      certificateType: c.certificateType,
+      status: c.status,
+      rawStatus: c.rawStatus ?? null,
+      issuedAt: c.issuedAt ?? null,
+      expiresAt: c.expiresAt ?? null,
+      matchBasis: c.matchBasis ?? "BARCODE",
+      bodyName: c.bodyName,
+      registerBrand: c.registerBrand ?? null,
+      registerModelNumber: c.registerModelNumber ?? null,
+      registerProductType: c.registerProductType ?? null,
+      registerCompany: c.registerCompany ?? null,
+      sourceKind: c.sourceKind,
+      sourceName: c.source.name,
+      sourceUrl: c.source.url ?? "",
+      lastVerifiedAt: new Date(c.source.lastVerifiedAt),
+    })),
+    input.certificationLookup ?? null,
+  );
 
-  if (real.length === 0) {
-    // D9 / C6.10 — absence from our copy of the register is not evidence of
-    // absence from the register. Unknown, not failed.
-    return unknown(
-      key,
-      "We could not check UAE certification",
-      discarded > 0
-        ? "We hold no verified certification data for this product yet. This product does carry example rows in our demo data, which we do not treat as evidence and do not show you as one."
-        : "No certificate for this product appears in the conformity data we hold. That does not mean it is uncertified — only that we cannot confirm it.",
-      fallbackSource,
-      "not verified",
-    );
+  const certificate = assessment.certificate;
+  const source = certificate
+    ? {
+        name: certificate.sourceName,
+        url: certificate.sourceUrl || null,
+        lastVerifiedAt: certificate.lastVerifiedAt.toISOString(),
+      }
+    : input.certificationLookup
+      ? {
+          name: input.certificationLookup.source,
+          url: input.certificationLookup.sourceUrl,
+          lastVerifiedAt: input.certificationLookup.checkedAt.toISOString(),
+        }
+      : fallbackSource;
+
+  switch (assessment.state) {
+    case "VERIFIED": {
+      const c = certificate!;
+      return {
+        key,
+        label,
+        status: "pass",
+        claim: `${c.certificateType} certificate verified for this exact product`,
+        // C6.5 — the disclaimer is on every passing certification line, always.
+        detail:
+          `Certificate ${c.certificateNumber}${c.bodyName ? `, issued by ${c.bodyName}` : ""}, ` +
+          `matched to this product by its barcode${c.expiresAt ? ` and valid until ${c.expiresAt.toISOString().slice(0, 10)}` : ""}. ` +
+          "A certificate confirms the product meets that standard; it is not a statement that the product is nutritionally better.",
+        // C6.5 — the accrediting body is part of the claim: a certificate means
+        // as much as the body that issued it.
+        evidence: {
+          label,
+          value: c.bodyName
+            ? `${c.certificateType} — verified for this product by accredited body ${c.bodyName}`
+            : `${c.certificateType} — verified for this product`,
+        },
+        source,
+      };
+    }
+
+    case "EXPIRED": {
+      const c = certificate!;
+      const suspended = c.status === "suspended";
+      return {
+        key,
+        label,
+        status: "fail",
+        // C6.4 / V2.1 — only a suspension overrides the rest of the checklist.
+        ...(suspended ? { disqualifying: true as const } : {}),
+        claim: suspended
+          ? `Its ${c.certificateType} certificate is suspended`
+          : `Its ${c.certificateType} certificate has lapsed`,
+        detail: suspended
+          ? `Certificate ${c.certificateNumber} is recorded as ${c.rawStatus ?? "suspended"}. Treat any claim resting on it with caution.`
+          : `Certificate ${c.certificateNumber} covered this exact product and is no longer valid. A lapsed certificate is not a finding against the product; it means the assurance is out of date.`,
+        evidence: { label, value: `${c.certificateType} — ${suspended ? "suspended" : "expired"}` },
+        source,
+      };
+    }
+
+    case "BRAND_LEVEL_ONLY": {
+      // The brand is in the register and this product is not. Shown, and never
+      // counted: a certified kettle says nothing about a bottle of water from
+      // the same company. UNKNOWN, not a pass.
+      const c = certificate!;
+      return unknown(
+        key,
+        "The brand is in the UAE register, this product is not",
+        `${c.registerCompany ?? c.registerBrand ?? "This brand"} holds certificate ${c.certificateNumber}` +
+          `${c.registerProductType ? ` for ${c.registerProductType.toLowerCase()}` : ""}, but nothing in the register names this product. ` +
+          "A certificate covering one product is not evidence about another, so Noura does not count it.",
+        source,
+        "brand only, not this product",
+      );
+    }
+
+    case "NOT_FOUND":
+      return unknown(
+        key,
+        "No certificate for this product is in the UAE register",
+        "We searched the UAE conformity register for this barcode and it returned nothing. " +
+          "That is not the same as uncertified: the register covers technical regulations — " +
+          "electrical goods, bottled water, detergents, cosmetics — and most packaged food is " +
+          "outside its scope entirely.",
+        source,
+        "searched, none found",
+      );
+
+    default:
+      return unknown(
+        key,
+        "We could not check UAE certification",
+        input.certifications.length > 0
+          ? "This product carries example rows in our demo data, which we do not treat as evidence and do not show you as one."
+          : "The UAE conformity register has not been searched for this product. Absence from our " +
+            "records does not mean it is uncertified: it is not evidence of absence from the register.",
+        source,
+        "not checked",
+      );
   }
-
-  const suspended = real.filter((c) => c.status === "suspended");
-  const valid = real.filter((c) => c.status === "valid");
-  const expired = real.filter((c) => c.status === "expired");
-  const source = real[0].source;
-
-  if (suspended.length > 0) {
-    const c = suspended[0];
-    return {
-      key,
-      label,
-      status: "fail",
-      // C6.4 / V2.1 — a suspended certificate is a live regulator warning about
-      // the assurance the product rests on, and overrides the rest of the list.
-      disqualifying: true,
-      claim: `Its ${c.certificateType} certificate is suspended`,
-      detail: `Certificate ${c.certificateNumber} is recorded as suspended. Treat any claim resting on it with caution.`,
-      evidence: { label, value: `${c.certificateType} — suspended` },
-      source,
-    };
-  }
-
-  if (valid.length > 0) {
-    const accredited = valid.find((c) => c.bodyName);
-    const types = valid.map((c) => c.certificateType).join(", ");
-    return {
-      key,
-      label,
-      status: "pass",
-      claim: accredited
-        ? `Certified by an accredited body: ${types}`
-        : `Holds a valid ${types} certificate`,
-      // C6.5 — stated in the copy, every time.
-      detail: accredited
-        ? `Certificate ${accredited.certificateNumber} was issued by ${accredited.bodyName}, a body on the UAE accreditation register. A certificate confirms the product meets that standard; it is not a statement that the product is nutritionally better.`
-        : `Certificate ${valid[0].certificateNumber} is recorded as valid, though our data does not name the body that issued it. A certificate confirms the product meets that standard; it is not a statement that the product is nutritionally better.`,
-      evidence: { label, value: accredited ? `${types}, accredited body` : types },
-      source,
-    };
-  }
-
-  const c = expired[0];
-  return {
-    key,
-    label,
-    status: "fail",
-    claim: `Its ${c.certificateType} certificate has lapsed`,
-    detail: `Certificate ${c.certificateNumber} is recorded as expired. A lapsed certificate is not a finding against the product; it means the assurance is out of date.`,
-    evidence: { label, value: `${c.certificateType} — expired` },
-    source,
-  };
 }
+
+/** The assessment behind the check, for the ranker and the result page. */
+export function certificationFor(input: EvidenceInput): CertificationAssessment {
+  return assessCertification(
+    input.certifications.map((c) => ({
+      certificateNumber: c.certificateNumber,
+      certificateType: c.certificateType,
+      status: c.status,
+      rawStatus: c.rawStatus ?? null,
+      issuedAt: c.issuedAt ?? null,
+      expiresAt: c.expiresAt ?? null,
+      matchBasis: c.matchBasis ?? "BARCODE",
+      bodyName: c.bodyName,
+      registerBrand: c.registerBrand ?? null,
+      registerModelNumber: c.registerModelNumber ?? null,
+      registerProductType: c.registerProductType ?? null,
+      registerCompany: c.registerCompany ?? null,
+      sourceKind: c.sourceKind,
+      sourceName: c.source.name,
+      sourceUrl: c.source.url ?? "",
+      lastVerifiedAt: new Date(c.source.lastVerifiedAt),
+    })),
+    input.certificationLookup ?? null,
+  );
+}
+
+export { CERTIFICATION_LABEL };
 
 /* -------------------------------------------------------------------------
  * U8 — Ingredient transparency
@@ -670,7 +769,7 @@ export function evaluateChecks(input: EvidenceInput): Check[] {
     salt: () => quantityCheck("salt", input.nutrition?.saltG ?? null, lines.salt!, basis, src),
     nutrientDensity: () => nutrientDensityCheck(input.nutrition, basis, src),
     additives: () => additivesCheck(assessment, input.ingredientsText, src),
-    certification: () => certificationCheck(input.certifications, src),
+    certification: () => certificationCheck(input, src),
     transparency: () => transparencyCheck(input.ingredientsText, input.category, src),
   };
 

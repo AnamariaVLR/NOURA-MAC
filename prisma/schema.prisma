@@ -61,10 +61,11 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  listings       ProductListing[]
-  certifications ProductCertification[]
-  analyses       HealthAnalysis[]
-  scans          Scan[]
+  listings            ProductListing[]
+  certifications      ProductCertification[]
+  certificationLookup CertificationLookup?
+  analyses            HealthAnalysis[]
+  scans               Scan[]
 
   @@index([category])
   @@index([category, subcategory])
@@ -171,18 +172,40 @@ model AccreditedBody {
   certifications ProductCertification[]
 }
 
-/// A certificate for a product, from MOIAT Product Conformity open data.
+/// A certificate for a product, from the MOIAT conformity register.
+///
+/// A row here is a certificate that was RETURNED BY THE REGISTER for this
+/// product. How it was tied to the product is `matchBasis`, and that distinction
+/// is the whole point: a certificate found by barcode identifies this exact
+/// product, and one found by brand identifies only the brand. The second is
+/// never presented as the first.
 model ProductCertification {
   id                String    @id @default(cuid())
   productId         String
-  certificateNumber String    @unique
-  /// "ECAS" | "EQM" | "Halal" | "Organic" | "GMP" — CertificateType in lib/schemas.ts
+  /// Register identity. Not unique on its own — one certificate can cover many
+  /// models — so the pair with the model number is what is unique.
+  certificateNumber String
+  /// "ECAS" | "EQM" | "GMark" | "Made In Emirates" | "HNM" as the register spells it.
   certificateType   String
-  /// "valid" | "expired" | "suspended"
+  /// "valid" | "expired" | "suspended" — our reading of the register's status.
   status            String
+  /// The register's own status word, kept verbatim so ours can be audited.
+  rawStatus         String?
   issuedAt          DateTime
   expiresAt         DateTime?
   bodyId            String?
+
+  /// How this certificate was attached to this product.
+  ///   "BARCODE" — the register's model number is this product's barcode. Exact.
+  ///   "BRAND"   — the brand matched and no exact product could be established.
+  matchBasis String @default("BARCODE")
+
+  /// What the register said, preserved for provenance and for auditing a match.
+  registerBrand       String?
+  registerModelNumber String?
+  registerProductType String?
+  registerCompany     String?
+  registerCountry     String?
 
   /// DataSource. Every shipped SAMPLE- certificate is "SYNTHETIC"; only a real
   /// import (npm run seed:moiat) produces "REGULATOR_IMPORT". A SYNTHETIC row is
@@ -195,7 +218,34 @@ model ProductCertification {
   product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   body    AccreditedBody? @relation(fields: [bodyId], references: [id])
 
+  @@unique([certificateNumber, productId, registerModelNumber])
   @@index([productId])
+  @@index([matchBasis])
+}
+
+/// Proof that the register was ASKED about a product.
+///
+/// This is what separates "we looked and found nothing" from "we never looked",
+/// and those must never render the same way. Without a row here a product's
+/// certification is UNKNOWN; with one and no certificates, it is NOT FOUND — and
+/// not found is still not the same as "not certified", because absence from our
+/// copy of a register is not absence from the register.
+model CertificationLookup {
+  id           String   @id @default(cuid())
+  productId    String   @unique
+  /// The barcode that was queried, so a later barcode correction invalidates it.
+  barcode      String
+  /// Certificates the register returned whose model number IS this barcode.
+  exactMatches Int      @default(0)
+  /// Certificates returned for the brand that name some other product.
+  brandMatches Int      @default(0)
+  /// Null when the query itself failed — that is UNKNOWN, not NOT_FOUND.
+  succeeded    Boolean  @default(true)
+  source       String
+  sourceUrl    String
+  checkedAt    DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 /// One run of the pipeline: an image in, a result screen out.

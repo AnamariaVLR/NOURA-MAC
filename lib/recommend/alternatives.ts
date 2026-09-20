@@ -13,10 +13,17 @@ import { hasIngredientList } from "../health/added-sugar";
 import { unitPriceFils } from "../format";
 import { evaluateProduct } from "../health/evaluate";
 import { isVerified } from "../health/verdict";
+import { certificationFor } from "../health/checks";
 import { buildEvidenceInput, type CertificationWithBody } from "../pipeline/analyze";
 import { ageInDays, isFreshCheck } from "../retail/freshness";
 import { ListingSchema, type Check, type Listing, type ProductCategory } from "../schemas";
 import { compareCandidates, isBetterThan, passedCount, type Candidate } from "./rank";
+import { isComparable } from "./rank";
+import {
+  selectVerifiedAlternatives,
+  type AlternativeCandidate,
+  type VerifiedAlternativesResult,
+} from "./verified-alternatives";
 
 export type Alternative = Candidate & {
   /** 1, 2 or 3 — the medal rank shown on the page. */
@@ -147,11 +154,16 @@ function toCandidate(
     evidenceSource: string;
     lastVerifiedAt: Date;
     certifications: CertificationWithBody[];
+    certificationLookup?: import("@prisma/client").CertificationLookup | null;
     listings: Parameters<typeof toListing>[0][];
   },
   now: Date,
 ): Candidate {
-  const input = buildEvidenceInput(product as never, product.certifications);
+  const input = buildEvidenceInput(
+    product as never,
+    product.certifications,
+    product.certificationLookup ?? null,
+  );
   const evaluation = evaluateProduct(input);
 
   // Buyable means: somebody checked it recently, and it was in stock when they did.
@@ -161,7 +173,10 @@ function toCandidate(
     .filter((l): l is Listing => l !== null && l.isFresh && l.inStock)
     .sort((a, b) => (a.unitPriceFils ?? a.priceFils) - (b.unitPriceFils ?? b.priceFils));
 
+  const certification = certificationFor(input).state;
+
   return {
+    certification,
     productId: product.id,
     slug: product.slug,
     name: product.name,
@@ -195,6 +210,7 @@ export async function findAlternatives(args: {
 
   const include = {
     certifications: { include: { body: true } },
+    certificationLookup: true,
     listings: { include: { retailer: true, checks: { orderBy: { checkedAt: "desc" as const }, take: 1 } } },
   };
 
@@ -234,4 +250,68 @@ export async function findAlternatives(args: {
     alternatives,
     emptyMessage: alternatives.length === 0 ? NO_BETTER_OPTION : null,
   };
+}
+
+/* ===========================================================================
+ * findVerifiedAlternatives — the service the product promise rests on.
+ *
+ * "I scanned this. If there is a better verified alternative I can actually buy
+ * in the UAE, show it to me."
+ *
+ * This is the database half; the decision itself is in ./verified-alternatives,
+ * which is pure and therefore testable without a database. Nothing here calls a
+ * model. The deterministic layer decides; the model may later rewrite the `why`
+ * into better English, keyed to the same dimensions.
+ * ========================================================================= */
+
+export async function findVerifiedAlternatives(args: {
+  productId: string;
+  /** The scanned product's own checklist, as persisted against the scan. */
+  scannedChecks?: Check[];
+  limit?: number;
+  now?: Date;
+}): Promise<VerifiedAlternativesResult & { scanned: AlternativeCandidate | null }> {
+  const { productId, scannedChecks, limit = 3, now = new Date() } = args;
+
+  const include = {
+    certifications: { include: { body: true } },
+    certificationLookup: true,
+    listings: {
+      include: { retailer: true, checks: { orderBy: { checkedAt: "desc" as const }, take: 1 } },
+    },
+  };
+
+  const scannedRow = await prisma.product.findUnique({ where: { id: productId }, include });
+  if (!scannedRow) {
+    return {
+      alternatives: [],
+      considered: [],
+      comparableCount: 0,
+      emptyReason: "We no longer hold that product, so there was nothing to compare against.",
+      scanned: null,
+    };
+  }
+
+  // Narrow on the indexed column; the subcategory half of "same kind of
+  // product" is applied by isComparable, so the rule lives in one place.
+  const rows = await prisma.product.findMany({
+    where: { category: scannedRow.category, id: { not: productId } },
+    include,
+  });
+
+  const scanned: AlternativeCandidate = {
+    ...toCandidate(scannedRow as never, now),
+    // The scan's own persisted checklist wins over a recomputation: it is what
+    // the shopper is actually looking at on the page.
+    ...(scannedChecks ? { checks: scannedChecks } : {}),
+  };
+
+  const pool = rows.map((row) => toCandidate(row as never, now));
+
+  const result = selectVerifiedAlternatives(scanned, pool, {
+    limit,
+    sameSubcategory: isComparable,
+  });
+
+  return { ...result, scanned };
 }
