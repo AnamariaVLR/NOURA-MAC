@@ -928,3 +928,181 @@ It found a second, smaller thing on its first run: `GOOD_CHOICE_PASS_RATE = 0.8`
 was in the code as a decimal and in RUBRIC.md only as "80%". The specification now
 gives both forms, so the document and the constant agree literally rather than by
 a reader's arithmetic.
+
+---
+
+# The pilot
+
+20 September 2026. Everything needed to put a URL on a phone and use it in a
+supermarket. Entries §64-§72 supersede the parts of §9, §15, §35, §36 and §42
+they name.
+
+## 64. Images cannot live on the filesystem, and there are three answers
+
+Every image — scan photos and shelf photos alike — was written to
+`.data/uploads`. On a serverless platform that is not a small problem: the
+filesystem is read-only apart from `/tmp`, and `/tmp` does not survive between
+invocations. The scan image a shopper sees on their result page would have been
+written by one lambda and read by another, and would not be there.
+
+`lib/storage.ts` has three backends, tried in order:
+
+1. **Vercel Blob**, when `BLOB_READ_WRITE_TOKEN` is set. The right answer: bytes
+   outside the database, served from a CDN.
+2. **The database row**, as a JPEG compressed under 300 KB. So the pilot works on
+   a bare Neon database with nothing else configured. Postgres handles a 300 KB
+   `bytea` without complaint; it is not where you would put a million of them.
+3. **The local filesystem**, development only.
+
+The compression steps quality down until the result fits, because quality and
+output size are not linearly related and depend on the picture — a busy shelf
+photo at q80 can be three times the size of a flat label.
+
+## 65. A photo can never fail a price check
+
+`store()` returns null rather than throwing, and every caller treats null as "no
+photo" and carries on. Wrong file type, too large, undecodable, blob store
+down — the check saves without it, and the response says whether the photo made
+it so the form can mention it.
+
+The reason is the operator, not the architecture. They are standing in an aisle
+holding a basket, and they have just spent thirty seconds on the part that
+matters. A shelf photo is evidence *about* a price check, not the check itself,
+and losing the check to save the photo has the priority exactly backwards.
+
+## 66. No admin password means /admin is closed, not open
+
+§42 recorded that `/admin` had no authentication and that "a real deployment
+needs auth in front of it". This is that.
+
+The old rule was: open in development, closed elsewhere unless `ALLOW_ADMIN=1`.
+For a deployed pilot that shape is wrong, because it makes *"did anyone remember
+to set the flag?"* the only thing between the public and the price-entry form.
+The question is now *"is there a password?"*, and the answer being no returns
+**404** — not a login form, not a 403. The tool does not exist for that
+deployment, for everyone, including the operator. A misconfigured deploy fails
+closed.
+
+The cookie is `<expiry>.<HMAC-SHA256(expiry, password)>`. Not the password, and
+not a random session id either, because there is no session store to look one up
+in. The server verifies it with nothing but the password already in its
+environment, it expires on its own, and **changing `ADMIN_PASSWORD` invalidates
+every cookie ever issued** — which is exactly what you want on the day you change
+it.
+
+Thirty days, so the operator signs in about once a month. httpOnly, so page
+JavaScript cannot read it. Secure follows the request scheme rather than
+`NODE_ENV`, for the reason in §14.
+
+`middleware.ts` runs on the edge runtime, which has no node builtins, so it
+verifies with Web Crypto while `lib/admin-auth.ts` uses `node:crypto`. A test
+asserts the two agree on a token. The API routes check a second time, so a change
+to the middleware matcher can never silently open the form.
+
+## 67. The rate limiter counts in the database, and fails open
+
+The obvious implementation is a `Map` in module scope. On serverless that is
+wrong in a way that looks right in testing: every instance keeps its own, so a
+limit of 30 becomes 30 × however many lambdas warmed up. Counting in the database
+is slower per request and is the only version that means what it says.
+
+**The key is a salted SHA-256 of the client address.** Enough to count requests
+from one client, not enough to say who they were. A rate limiter is not a reason
+to start keeping a record of who scanned what.
+
+**It fails open.** If the database is unreachable the request is allowed. A scan
+costs a few cents; refusing every shopper because a counter is down is the worse
+failure. The limit protects a bill, not a secret.
+
+30 identifications an hour is far above a shopper's real rate — a supermarket
+trip might produce fifteen — and far below what a script would want.
+
+## 68. Images are resized twice, and the client-side one is for the shopper
+
+A current phone camera produces a 4000px, 4-6 MB JPEG. Nothing downstream reads a
+label better at 4000px than at 1600px.
+
+The browser resizes before uploading, because on supermarket 4G the gap between
+5 MB and 400 KB is the gap between a scan that works and a scan that gets
+abandoned. The server resizes again, because a client-side limit is a suggestion.
+Both are best-effort: if the decode or encode fails, the original is used, since
+a slow upload beats a refused scan.
+
+## 69. Prisma's provider is written, not configured
+
+Prisma does not accept `env()` for `provider`, so the value has to be in the
+schema before `generate`, `db push` or `migrate` runs.
+`scripts/prisma-provider.ts` writes it from the URL scheme and runs in front of
+every Prisma command in `package.json`. A developer with a file URL and a Vercel
+build with a Neon URL both get a schema that matches their database without
+either having to remember.
+
+The committed value is `sqlite`, because that is what a fresh clone gets from
+`.env.example`. A build against Postgres rewrites one line, and `npm run db:local`
+puts it back.
+
+## 70. The service worker caches the shell and nothing with a date on it
+
+`/result`, `/history`, `/admin` and `/api` are never cached and never served from
+cache.
+
+This is not a performance decision. Noura's promise is that a price was checked
+by a person on a date and a verdict rests on evidence fetched on a date. A cached
+result page would show yesterday's price as though it were today's, and a cached
+admin queue would show an operator a row somebody else had already done.
+"Verified" has to mean verified now.
+
+The cost is accepted and stated on the offline page: with no signal you cannot
+re-read a result you looked at ten minutes ago. The alternative — showing it with
+a stale date, or with no date — is worse than showing nothing.
+
+## 71. The catalogue is 35 products because that is how many had evidence
+
+`npm run seed:fetch` now **drops** any product whose Open Food Facts record
+carries neither an ingredient list nor a nutrition panel, and writes every
+barcode tried, kept and dropped to `catalogue-report.md`.
+
+A record with neither is a barcode and a name. Noura would render it as a wall of
+"unknown" — technically correct, since unknown is never a pass, and useless: a
+shopper who scans three products and gets three shrugs stops scanning.
+
+36 barcodes tried, 35 kept. The one dropped is the Garnier shampoo, whose record
+has lost its ingredient list since the first fetch. The catalogue's size is now a
+fact about Open Food Facts' coverage rather than a number someone chose.
+
+**Every barcode was found in Open Food Facts' own v2 search before being added.**
+The free-text search endpoint is the unreliable one (§18) and is not used;
+`/api/v2/search` with `brands_tags` or `categories_tags` is solid.
+`scripts/discover-products.ts` is that search, kept so the next person can extend
+the catalogue the same way rather than typing barcodes from memory.
+
+**Open Food Facts' UAE coverage is uneven and the catalogue shows it.** Milk,
+yoghurt, water, bread and olive oil have real UAE-tagged records with Arabic
+names. Eggs, cereal and crisps do not, so those entries are European records for
+the same kind of product. `catalogue-report.md` says which is which, because a
+barcode that will not match a Dubai shelf is a thing the pilot operator needs to
+know before they are standing in front of one.
+
+## 72. Eggs were condemned for being eggs
+
+Putting eggs in the catalogue for the first time — §4.4 had existed for a day
+with nothing to run against — immediately returned **NOT RECOMMENDED** for both.
+
+The cause: EMRO's category-13 line is 0.1 g of salt per 100 g, and a hen's egg
+carries about 0.3 g of salt equivalent and always has. That sodium is part of the
+egg, not something a manufacturer added. The line fails every egg ever laid.
+
+This is the same error as counting lactose as added sugar (§29-31), in a
+different nutrient, and the rubric already had the rule for it: C0 says a line
+that fails its entire category is declined and shown as a note, which is what
+§4.3 does for yoghurt salt and §4.7 for snack salt. C4.4.2 now declines it.
+
+An egg is left with one applicable check — certification — which is usually
+unknown, so the verdict is COULD NOT VERIFY. That is not a gap. RUBRIC §4.4 has
+said from the start that the honest output for a plain egg is "there is nothing
+here to check"; it just had never been run.
+
+**The general lesson, recorded because it keeps recurring:** a rule with no
+product to run against is a rule nobody has tested. Three of the eight category
+rules had no product in the catalogue before this session, and the first one to
+get one was wrong.

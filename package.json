@@ -25,7 +25,8 @@
     "prebuild": "tsx scripts/prisma-provider.ts",
     "db:migrate": "tsx scripts/prisma-provider.ts && prisma migrate deploy",
     "db:migrate:new": "tsx scripts/prisma-provider.ts && prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
-    "icons": "tsx scripts/make-icons.ts"
+    "icons": "tsx scripts/make-icons.ts",
+    "qr": "tsx scripts/make-qr.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -44,9 +45,11 @@
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.18.11",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "prisma": "6.19.3",
+    "qrcode": "^1.5.4",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.13",
     "typescript": "5.9.3",

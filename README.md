@@ -53,8 +53,8 @@ ANTHROPIC_MODEL="claude-sonnet-5"
 | `npm run dev` | Dev server |
 | `npm run build` | Production build (runs `prisma generate` first) |
 | `npm start` | Serve the production build |
-| `npm test` | Vitest unit tests (260) |
-| `npm run test:e2e` | Playwright tests (13) against a production build |
+| `npm test` | Vitest unit tests (460) |
+| `npm run test:e2e` | Playwright tests (22) against a production build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run setup` | Generate client, push schema, seed |
 | `npm run db:reset` | Delete the SQLite file and rebuild it from seed |
@@ -62,6 +62,11 @@ ANTHROPIC_MODEL="claude-sonnet-5"
 | `npm run seed:moiat -- file.csv` | Import the real MOIAT conformity register |
 | `npm run listings:export -- checks.csv` | Write the price-check queue as CSV |
 | `npm run listings:import -- checks.csv` | Load completed checks back in |
+| `npm run icons` | Regenerate every app icon from `public/brand/mark.svg` |
+| `npm run qr -- <url>` | Write `qr.png` pointing at the live pilot |
+| `npm run db:migrate` | Apply `prisma/migrations` — Postgres only |
+| `npm run db:local` | Force the schema back to SQLite after a Postgres build |
+| `./scripts/deploy.sh` | Env vars, migration, seed, deploy — in that order |
 
 ### Pages
 
@@ -70,15 +75,47 @@ ANTHROPIC_MODEL="claude-sonnet-5"
 | `/` | Capture: camera, file, or paste a screenshot |
 | `/result/[id]` | Product, verification, why, better options, where to buy |
 | `/history` | This browser's past scans (no auth in the MVP) |
+| `/admin/login` | The one way into `/admin`. One password, 30-day cookie |
 | `/admin/listings` | Record price checks; the queue, sorted by staleness |
 | `/admin/seed` | Dev tool: reload seed data, inspect what is loaded |
 
 ### Environment
 
-Every variable is documented in `.env.example`. `.env` is gitignored and no secret
-appears anywhere in the repo. `ALLOW_ADMIN` gates `/admin/listings` and
-`ALLOW_SEED_ENDPOINT` gates `/api/seed` outside development; `VERIFIED_OFFLINE=1`
-disables every outbound call so the app runs on seeded evidence alone.
+Every variable is documented in `.env.example`, one line each, and a test asserts
+that file lists every name the app actually reads. `.env` is gitignored and has
+never been committed — checked against full history, with a test that keeps
+checking.
+
+Three that decide how the deployment behaves:
+
+- **`DATABASE_URL`** — a `postgresql://` URL selects the Postgres provider and
+  anything else selects SQLite. `scripts/prisma-provider.ts` writes the right one
+  into the schema before every Prisma command, because Prisma will not take
+  `env()` for `provider`.
+- **`ADMIN_PASSWORD`** — **unset, or shorter than 8 characters, closes `/admin`
+  entirely**, for everyone including you. There is no other way in and no reset
+  flow.
+- **`BLOB_READ_WRITE_TOKEN`** — set it and images go to Vercel Blob; leave it
+  empty and they are compressed to a JPEG under 300 KB and kept in the row.
+
+`VERIFIED_OFFLINE=1` disables every outbound call so the app runs on seeded
+evidence alone.
+
+### Deploying
+
+```bash
+./scripts/deploy.sh      # env vars, then migration, then seed, then deploy
+npm run qr -- https://…  # the QR code for the hand-over
+```
+
+The order is the point: environment variables first, because a build with no
+`DATABASE_URL` dies at `prisma generate`; the migration before the deploy, so new
+code never meets an old schema. The script never prints a secret — only the name
+of each variable and its length.
+
+[`PILOT.md`](PILOT.md) is the hand-over document: how to install it on a phone,
+how to record a price check in an aisle, what happens with no signal, and the
+five things most likely to go wrong.
 
 ---
 
@@ -283,6 +320,27 @@ rank **strictly** above the scanned product. Up to three survive, shown with med
 ranks, a price in AED and a "Why" built from the checks it passes that the scanned
 product fails. If none survive the page says *"No better verified option found."*
 
+### Installing it on a phone
+
+`app/manifest.ts` and `public/sw.js` make this installable: from a home screen it
+opens full-screen with no address bar, which is the difference between something
+usable in an aisle and something not.
+
+Icons are generated from `public/brand/mark.svg` by `npm run icons` and
+committed. They are drawn as **paths with no text element**, because sharp
+rasterises SVG through librsvg, whose text support depends on the fonts installed
+on whatever machine runs the build. The maskable 512 is a separate drawing rather
+than the same file tagged differently: Android crops a maskable icon to the
+launcher's shape and guarantees only the central 80%, so reusing the standard
+icon clips the mark.
+
+**The service worker caches the app shell and never caches `/result`, `/history`,
+`/admin` or `/api`.** That is not a performance decision — it is the product's
+central claim. A cached result page would show yesterday's price as though it
+were today's, so anything carrying a date is fetched or it is not shown. With no
+connection the app opens to `/offline`, which says what is wrong, that nothing is
+broken, and what still works.
+
 ### Data model
 
 `Product`, `Retailer`, `ProductListing`, `ListingCheck`, `AccreditedBody`,
@@ -293,9 +351,16 @@ file runs on SQLite and PostgreSQL unchanged. Constrained values are strings
 enforced by Zod at every write; structured blobs are JSON in `String` columns parsed
 through a schema at the boundary; money is an integer count of fils.
 
-**Moving to Postgres:** change `provider` to `"postgresql"` in
-`prisma/schema.prisma`, point `DATABASE_URL` at the server, run
-`npx prisma db push && npm run db:seed`. Nothing else changes.
+**Moving to Postgres:** point `DATABASE_URL` at the server. Nothing else —
+`scripts/prisma-provider.ts` rewrites the `provider` line before every Prisma
+command, so local SQLite and a Neon deployment share one schema file and one set
+of models.
+
+Images are the one thing a serverless deployment changes. `lib/storage.ts` has
+three backends — Vercel Blob, a compressed JPEG in the row, the local filesystem
+— because a lambda's filesystem is read-only and does not survive between
+invocations, so the scan image one instance wrote is not there when another
+serves it.
 
 ---
 
@@ -428,12 +493,19 @@ case-insensitively against a list of aliases in `COLUMNS` at the top of
 ### Refreshing product evidence
 
 ```bash
-npm run seed:fetch   # re-fetch all 17 products from Open Food Facts / Open Beauty Facts
+npm run seed:fetch   # re-fetch every catalogue product from Open Food Facts
 npm run db:seed      # write them into the database
 ```
 
 The result is committed to `prisma/seed-data/products.json` so seeding works with no
 network. The "last verified" date users see is the timestamp of that fetch.
+
+**A product is kept only if the record came back with an ingredient list or a
+nutrition panel.** A record with neither is a barcode and a name, and Noura would
+render it as a wall of "unknown" — technically correct and useless. Every barcode
+tried, kept and dropped is written to [`catalogue-report.md`](catalogue-report.md),
+so the catalogue's size is a fact about Open Food Facts' coverage rather than a
+number someone picked.
 
 ---
 
