@@ -60,7 +60,11 @@ export function toCertificationEvidence(
 /** Everything the checker needs, read out of the database columns via Zod. */
 export function buildEvidenceInput(product: Product, certifications: CertificationWithBody[]) {
   return {
+    // A category we do not recognise falls back to the generic food rule rather
+    // than losing the product. `food` applies the universal checks of §3 and says
+    // so on the page (C4.11.2), which is the honest outcome for an unknown kind.
     category: ProductCategorySchema.catch("food").parse(product.category),
+    subcategory: product.subcategory,
     nutrition: parseJsonColumn(product.nutritionJson, NutritionFactsSchema),
     novaGroup: product.novaGroup,
     additives: parseJsonColumn(product.additivesJson, StringListSchema) ?? [],
@@ -141,6 +145,10 @@ export async function analyseProduct(
     verdict: evaluation.verdict,
     checks,
     unknowns: evaluation.unknowns,
+    // Notes are never sent to the model and never rewritten. They quote sources
+    // verbatim — a declined threshold, an authorised claim — and a paraphrase of
+    // a quotation is not a quotation.
+    notes: evaluation.notes,
     model,
     mode,
   });

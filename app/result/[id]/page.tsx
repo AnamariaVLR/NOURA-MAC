@@ -30,9 +30,11 @@ import { formatAed, formatDate } from "@/lib/format";
 import { findAlternatives } from "@/lib/recommend/alternatives";
 import { freshnessLabel } from "@/lib/retail/freshness";
 import { bestPrice, searchUaeListings } from "@/lib/retail/search";
+import { resolveSubcategory, ruleFor } from "@/lib/health/categories";
 import {
   CheckSchema,
   IdentificationSchema,
+  NoteSchema,
   NutritionFactsSchema,
   ProductCategorySchema,
   StringListSchema,
@@ -103,6 +105,11 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   const checks = parseJsonColumn(analysis.checksJson, z.array(CheckSchema)) ?? [];
   const verdict = parseJsonColumn(analysis.verdictJson, VerdictResultSchema);
   const unknowns = parseJsonColumn(analysis.unknownsJson, StringListSchema) ?? [];
+  const notes = parseJsonColumn(analysis.notesJson, z.array(NoteSchema)) ?? [];
+  // The rule this product was judged by, so the page can name the kind of product
+  // rather than a database value ("Laban, ayran and drinking yogurt", not "yogurt").
+  const rule = ruleFor(category);
+  const subcategory = resolveSubcategory(category, product.subcategory);
   const nutrition = parseJsonColumn(product.nutritionJson, NutritionFactsSchema);
   const allergens = parseJsonColumn(product.allergensJson, StringListSchema) ?? [];
   const additives = parseJsonColumn(product.additivesJson, StringListSchema) ?? [];
@@ -160,7 +167,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
               {product.sizeLabel ? ` · ${product.sizeLabel}` : ""}
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <Pill tone="brand">{category}</Pill>
+              <Pill tone="brand">{subcategory.label}</Pill>
               {scan.mode === "mock" ? <Pill tone="warn">example scan</Pill> : null}
             </div>
           </div>
@@ -331,6 +338,27 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           </p>
         ) : null}
 
+        {notes.length > 0 ? (
+          <details className="mt-3 rounded-xl border border-line px-3 py-2.5">
+            <summary className="cursor-pointer text-[12.5px] font-medium">
+              Worth knowing ({notes.length})
+            </summary>
+            <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
+              None of this counted for or against the verdict above. It is here because it is true
+              and you might want it.
+            </p>
+            <ul className="mt-2 space-y-2.5">
+              {notes.map((note, i) => (
+                <li key={`${note.rule}-${i}`} className="text-[12px] leading-relaxed">
+                  <span className="font-medium">{note.label}. </span>
+                  <span className="text-ink-soft">{note.text}</span>
+                  <span className="block text-[11px] text-ink-faint">{note.source}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
+
         <div className="mt-3">
           <Disclaimer text={DISCLAIMER} />
         </div>
@@ -338,7 +366,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
       {/* ================= 4. BETTER OPTIONS ================= */}
       <Card testId="better-options">
-        <SectionTitle hint="Same kind of product, passing more of the same checks, and confirmed in stock by a person in the last two weeks.">
+        <SectionTitle hint="The same kind of product — crossing fewer of the lines we check, and confirmed in stock by a person in the last two weeks.">
           Better options
         </SectionTitle>
 

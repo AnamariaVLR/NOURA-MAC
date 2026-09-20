@@ -33,8 +33,14 @@ export const IDENTIFY_SYSTEM = [
   // Rule 3 — calibrated confidence, because the UI shows it to the user and a
   // low-confidence identification is a useful answer, not a failure.
   "Set confidence honestly: 0.9+ only when brand and product name are both clearly legible; below 0.5 when you are largely inferring from shape or colour.",
-  // Rule 4 — the category drives which rubric the checker applies.
-  "Choose the category that determines how the product is regulated and eaten: food, drink, supplement or cosmetic.",
+  // Rule 4 — the category drives which rubric the checker applies, and the
+  // categories are now specific (RUBRIC.md §4), so a wrong one applies the wrong
+  // lines. The instruction is written to make "food" the honest fallback rather
+  // than a lazy default.
+  "Choose the most specific category that fits what the product IS: fats_oils for oils, butter, margarine and spreads; milk for dairy milk and for almond, oat, rice and soy drinks; yogurt for yogurt, labneh, laban, ayran and doogh; eggs; bread for bread, crispbread and rusks; cereal for breakfast cereal, muesli and granola; snacks for crisps, savoury biscuits, nuts and pretzels; drink for water, juice, soft drinks and iced tea; cosmetic; supplement. Use food only when none of the others fits — cheese, deli, ready meals.",
+  // Rule 5 — the subcategory decides whether the product is judged per 100 g or
+  // per 100 ml, so it must be read off the pack rather than inferred.
+  "Set subcategory only when the pack makes it plain: olive_oil or other_fats_oils; dairy_milk or plant_milk; spoonable_yogurt or drinking_yogurt. Null is a correct answer and is better than a guess.",
   "Use the record_product tool exactly once. Do not write any prose.",
 ].join("\n");
 
@@ -54,7 +60,35 @@ export const IDENTIFY_TOOL = {
         type: ["string", "null"],
         description: "8-14 digits, exactly as printed. Null unless fully legible.",
       },
-      category: { type: "string", enum: ["food", "drink", "supplement", "cosmetic"] },
+      category: {
+        type: "string",
+        enum: [
+          "fats_oils",
+          "milk",
+          "yogurt",
+          "eggs",
+          "bread",
+          "cereal",
+          "snacks",
+          "drink",
+          "food",
+          "cosmetic",
+          "supplement",
+        ],
+      },
+      subcategory: {
+        type: ["string", "null"],
+        enum: [
+          "olive_oil",
+          "other_fats_oils",
+          "dairy_milk",
+          "plant_milk",
+          "spoonable_yogurt",
+          "drinking_yogurt",
+          null,
+        ],
+        description: "Null unless the pack makes it plain.",
+      },
       sizeLabel: { type: ["string", "null"], description: 'Pack size, e.g. "500 ml". Null if absent.' },
       confidence: { type: "number", description: "0 to 1." },
       visibleText: {
@@ -62,7 +96,16 @@ export const IDENTIFY_TOOL = {
         description: "The text you could actually read on the pack.",
       },
     },
-    required: ["name", "brand", "barcode", "category", "sizeLabel", "confidence", "visibleText"],
+    required: [
+      "name",
+      "brand",
+      "barcode",
+      "category",
+      "subcategory",
+      "sizeLabel",
+      "confidence",
+      "visibleText",
+    ],
   },
 };
 
@@ -145,6 +188,7 @@ export function healthUserPrompt(args: {
 
   return [
     `Product: ${productName}${brand ? ` by ${brand}` : ""} (${category})`,
+    `Judged by ${evaluation.section}, as ${evaluation.subcategory.label}.`,
     `Verdict already decided: ${evaluation.verdict.verdict.replace(/_/g, " ").toUpperCase()}.`,
     `${evaluation.verdict.counts.passed} of ${evaluation.verdict.counts.known} checks passed; ` +
       `${evaluation.verdict.counts.unknown} could not be made.`,

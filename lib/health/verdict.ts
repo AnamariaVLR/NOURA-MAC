@@ -3,7 +3,8 @@
  *
  * ── The rules, in the order they are applied ────────────────────────────────
  *
- *  0. No applicable checks at all                 → COULD NOT VERIFY
+ *  0. Category not supported, or no applicable or
+ *     resolvable checks at all                     → COULD NOT VERIFY
  *  1. Coverage below MIN_COVERAGE (50%)           → COULD NOT VERIFY
  *  2. Any disqualifying check failed              → NOT RECOMMENDED
  *  3. Pass rate ≥ 80% AND at least 3 known checks → VERIFIED — GOOD CHOICE
@@ -39,6 +40,7 @@
  */
 
 import type { Check, Verdict, VerdictResult } from "../schemas";
+import type { CategoryRule } from "./categories/types";
 import {
   ACCEPTABLE_PASS_RATE,
   GOOD_CHOICE_PASS_RATE,
@@ -66,7 +68,19 @@ export function isVerified(verdict: Verdict): boolean {
   return verdict === "good_choice" || verdict === "acceptable";
 }
 
-export function verdictFor(checks: Check[]): VerdictResult {
+/**
+ * Rule D12 — a category Noura cannot evidence returns COULD NOT VERIFY with an
+ * explicit message, whatever its checks say.
+ *
+ * Without this, a cosmetic that publishes an ingredient list and has no
+ * certificate on file reaches VERIFIED — ACCEPTABLE on a pass rate of 1.0 over
+ * one resolved check. That sentence would be true arithmetic and a false claim:
+ * the thing that decides whether a cosmetic is safe is its ingredients against
+ * the EU restricted-substance annexes, and Noura does not hold those. Better to
+ * say we cannot assess the category than to publish a verdict built from the two
+ * weakest dimensions we happen to have. RUBRIC.md §4.9 C4.9.6, §4.10 C4.10.4.
+ */
+export function verdictFor(checks: Check[], rule?: CategoryRule): VerdictResult {
   const applicable = checks.length;
   const passed = checks.filter((c) => c.status === "pass").length;
   const failed = checks.filter((c) => c.status === "fail").length;
@@ -81,6 +95,18 @@ export function verdictFor(checks: Check[]): VerdictResult {
     coverage: Math.round(coverage * 100) / 100,
     passRate: Math.round(passRate * 100) / 100,
   };
+
+  // 0 — D12 first: an unsupported category is not a product that scored badly.
+  if (rule && !rule.supported) {
+    return {
+      verdict: "could_not_verify",
+      reason:
+        rule.unsupportedMessage ??
+        `Noura cannot assess ${rule.label.toLowerCase()} yet.`,
+      counts,
+      ...rounded,
+    };
+  }
 
   // 0 + 1 — not enough evidence to say anything.
   if (applicable === 0 || known === 0) {

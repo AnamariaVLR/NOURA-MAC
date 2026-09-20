@@ -31,6 +31,7 @@ export function mockIdentification(slug: string = MOCK_PRODUCT_SLUG): Identifica
     brand: entry.fallbackBrand,
     barcode: entry.barcode,
     category: entry.category,
+    subcategory: entry.subcategory,
     sizeLabel: entry.sizeLabel,
     confidence: 1,
     visibleText:

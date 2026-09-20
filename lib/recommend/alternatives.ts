@@ -9,6 +9,7 @@
  */
 
 import { prisma } from "../db";
+import { hasIngredientList } from "../health/added-sugar";
 import { unitPriceFils } from "../format";
 import { evaluateProduct } from "../health/evaluate";
 import { isVerified } from "../health/verdict";
@@ -123,8 +124,9 @@ export function buildWhy(
 }
 
 function additiveCountOf(additives: string[], ingredientsText: string | null): number | null {
-  // Mirrors the additives check: no list and no ingredients means unknown, not zero.
-  if (additives.length === 0 && !ingredientsText) return null;
+  // Mirrors the additives check, through the same predicate: no additives AND no
+  // readable ingredient list means unknown, not zero.
+  if (additives.length === 0 && !hasIngredientList(ingredientsText)) return null;
   return additives.length;
 }
 
@@ -138,6 +140,8 @@ function toCandidate(
     sizeLabel: string | null;
     imageUrl: string | null;
     category: string;
+    subcategory: string | null;
+    nutritionJson: string | null;
     additivesJson: string | null;
     ingredientsText: string | null;
     evidenceSource: string;
@@ -164,9 +168,14 @@ function toCandidate(
     brand: product.brand,
     sizeLabel: product.sizeLabel,
     imageUrl: product.imageUrl,
-    category: product.category,
+    category: input.category,
+    subcategory: product.subcategory,
     verdict: evaluation.verdict.verdict,
     checks: evaluation.checks,
+    // The category "better" attributes of §8 read the panel directly — protein as
+    // a share of energy (U4.3), fibre on either of S12's two bases (U4.1) — so
+    // the candidate has to carry it.
+    nutrition: input.nutrition,
     additiveCount: additiveCountOf(input.additives, product.ingredientsText),
     bestListing: buyable[0] ?? null,
     evidenceSource: product.evidenceSource,
@@ -189,7 +198,10 @@ export async function findAlternatives(args: {
     listings: { include: { retailer: true, checks: { orderBy: { checkedAt: "desc" as const }, take: 1 } } },
   };
 
-  // Same category only. The category column is the fixed enum from lib/schemas.ts.
+  // R6 — same category, and then same SUBCATEGORY, which isBetterThan enforces
+  // below. The query narrows on category because that is the indexed column; the
+  // subcategory half is applied in isComparable so there is one place to read the
+  // rule rather than two.
   const rows = await prisma.product.findMany({
     where: { category, id: { not: scannedProductId } },
     include,

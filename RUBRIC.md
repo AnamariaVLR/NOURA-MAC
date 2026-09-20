@@ -325,7 +325,7 @@ S5 category 3c, *"Milks and sweetened milks; almond, rice and oat milks"*. Asses
 | ID | Rule | Tag |
 |---|---|---|
 | **C4.2.1** | Added sugar — U1 on the liquid lines. Plain milk contains lactose and no added sugar; the ingredient list decides (U1.9) | **SOURCED** — S9 §3.5.1, S2 · tier 1 |
-| **C4.2.2** | Total sugar — U1.5/U1.6 liquid bands, assessed on the **total** sugars figure, because S10's band is defined on *"natural sugar plus added sugar and other sweeteners combined"* | **SOURCED** — S10 · tier 1, binding UAE |
+| **C4.2.2** | Total sugar — **the S10 high line of ≥8 g/100 ml only**, assessed on the **total** sugars figure because S10's band is defined on *"natural sugar plus added sugar and other sweeteners combined"*. Above it, this is a flavoured milk drink rather than milk, so the high line is also the disqualifier. **U1.5's low line of 2.5 g is deliberately NOT applied**: S10 *excludes milk products from the excise*, so using its low band as a pass line would apply an instrument against the products it exempts — and would mark plain milk down for lactose and an oat drink down for the sugars enzymes release from its own starch, which is the error U1.9 exists to prevent | **SOURCED** — S10 · tier 1, binding UAE. **POLICY** for declining the low line, with the reason stated |
 | **C4.2.3** | Saturated fat — U2.3/U2.4 liquid lines | **SOURCED** — S12, S1 · tier 1 |
 | **C4.2.4** | Salt — U3.3/U3.4 liquid lines | **SOURCED** — S12, S1 · tier 1 |
 | **C4.2.5** | Fibre and protein — U4 | **SOURCED** — S12 · tier 1 |
@@ -726,6 +726,7 @@ a cheese, a butter spread context, a hummus — currently fall to the generic `f
 | 1.1 | 2026-09-20 | §4.3 **yoghurt total-sugars fail line of 10 g and saturated-fat high line of 2 g** adopted under C0 | Same recovery; the C4.6 cereal pattern applied to the row it was always meant to apply to | S5 #7 · 1 |
 | 1.1 | 2026-09-20 | §4.3 **yoghurt salt line of 0.1 g declined** and shown as a note | C0 and the §4.7 precedent: 0.1 g fails plain unsweetened yoghurt | **POLICY** |
 | 1.1 | 2026-09-20 | §4.8 / §4.2 **total sugar becomes its own check on the S10 band**, separate from the presence-decided added-sugar check | S10's band is defined on total sugar, so applying it to an added-sugar figure was a category error | S10 · 1 |
+| 1.1 | 2026-09-20 | §4.2 **milk's total-sugar check takes the S10 high line only**, not its low line | Found while running the rubric over the catalogue: the low line failed plain milk on lactose and an oat drink on its own starch. S10 excludes milk products from the excise, so its low band was never addressed to them | S10 · 1 |
 | 1.1 | 2026-09-20 | §5.4 **flagged-additive list added**; the additive check fails on a flagged additive only | Approval decision 1 | S16–S19 · 1 |
 | 1.1 | 2026-09-20 | §5.5 **sweetener list sourced** to the EU authorised list rather than left implicit | Needed to make C4.8.5's note checkable | S20–S22 · 1 |
 | 1.1 | 2026-09-20 | §3 U4.5 **energy derived from macronutrients** with the Codex factors when no energy figure is published | Approval decision 5. Without it, U4.3's protein-as-share-of-energy rule is UNKNOWN wherever energy is missing | S6 §3.3.1 · 1 |

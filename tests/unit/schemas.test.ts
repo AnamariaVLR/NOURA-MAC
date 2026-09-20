@@ -183,6 +183,15 @@ describe("HealthAnalysisResultSchema", () => {
       },
     ],
     unknowns: [],
+    // Notes are shown and counted in nothing (RUBRIC.md §3 U5.1, §5 A4).
+    notes: [
+      {
+        rule: "U5.1",
+        label: "Level of processing",
+        text: "Researchers classify this as ultra-processed.",
+        source: "S8 · tier 3",
+      },
+    ],
     model: "claude-sonnet-5",
     mode: "live",
   };
@@ -198,6 +207,11 @@ describe("HealthAnalysisResultSchema", () => {
   it("has no score field anywhere in the result", () => {
     const parsed = HealthAnalysisResultSchema.parse(base);
     expect(parsed).not.toHaveProperty("score");
+    // And a note can never carry one either: it is prose plus a provenance line.
+    for (const note of parsed.notes) {
+      expect(note).not.toHaveProperty("status");
+      expect(note).not.toHaveProperty("score");
+    }
     expect(parsed).not.toHaveProperty("band");
   });
 });

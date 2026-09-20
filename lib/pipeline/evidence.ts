@@ -81,6 +81,7 @@ function slugify(value: string): string {
 async function upsertFromOpenDb(
   record: EvidenceRecord,
   category: ProductCategory,
+  subcategory: string | null,
   fallbackSize: string | null,
 ): Promise<Product> {
   const slug = slugify(
@@ -90,6 +91,7 @@ async function upsertFromOpenDb(
     name: record.name,
     brand: record.brand,
     category,
+    subcategory,
     sizeLabel: record.sizeLabel ?? fallbackSize,
     imageUrl: record.imageUrl,
     ingredientsText: record.ingredientsText,
@@ -119,7 +121,7 @@ async function upsertFromOpenDb(
 }
 
 export async function gatherEvidence(identification: Identification): Promise<EvidenceResult> {
-  const { barcode, name, brand, category, sizeLabel } = identification;
+  const { barcode, name, brand, category, subcategory, sizeLabel } = identification;
 
   // 1. Barcode, locally.
   if (barcode) {
@@ -131,7 +133,7 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
   if (barcode) {
     const record = await lookupByBarcode(barcode, category);
     if (record) {
-      const product = await upsertFromOpenDb(record, category, sizeLabel);
+      const product = await upsertFromOpenDb(record, category, subcategory, sizeLabel);
       return { product, method: "barcode-open-db", note: null };
     }
   }
@@ -150,7 +152,7 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
   // 4. Name, open database.
   const record = await searchByName(`${brand ?? ""} ${name}`.trim(), category);
   if (record) {
-    const product = await upsertFromOpenDb(record, category, sizeLabel);
+    const product = await upsertFromOpenDb(record, category, subcategory, sizeLabel);
     return {
       product,
       method: "name-open-db",

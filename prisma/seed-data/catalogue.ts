@@ -15,12 +15,21 @@
  * check this one". It is not a claim that the product is stocked there.
  */
 
+import type { ProductCategory } from "../../lib/schemas";
+
 export type CatalogueEntry = {
   slug: string;
   barcode: string;
   /** "off" = Open Food Facts, "obf" = Open Beauty Facts (same API shape). */
   db: "off" | "obf";
-  category: "food" | "drink" | "supplement" | "cosmetic";
+  /** One of the eleven in lib/schemas.ts. Rules: lib/health/categories/. */
+  category: ProductCategory;
+  /**
+   * RUBRIC.md §4 C4.0.1. Selects the per-100 basis and bounds the alternative
+   * ranking. Null means "the category's default", which is a statement about what
+   * we recorded, not a guess about the product.
+   */
+  subcategory: string | null;
   /** Pack size as sold in the UAE. Overrides whatever the open database says. */
   sizeLabel: string;
   /** Shown if the open database has no usable name. */
@@ -39,7 +48,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "kelloggs-corn-flakes-500g",
     barcode: "3159470000120",
     db: "off",
-    category: "food",
+    category: "cereal",
+    subcategory: null,
     sizeLabel: "500 g",
     fallbackName: "Corn Flakes",
     fallbackBrand: "Kellogg's",
@@ -49,7 +59,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "kelloggs-all-bran-fibre-plus-500g",
     barcode: "3159470001424",
     db: "off",
-    category: "food",
+    category: "cereal",
+    subcategory: null,
     sizeLabel: "500 g",
     fallbackName: "All-Bran Fibre Plus",
     fallbackBrand: "Kellogg's",
@@ -59,7 +70,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "kelloggs-special-k-500g",
     barcode: "5050083296079",
     db: "off",
-    category: "food",
+    category: "cereal",
+    subcategory: null,
     sizeLabel: "500 g",
     fallbackName: "Special K Original",
     fallbackBrand: "Kellogg's",
@@ -71,7 +83,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "al-rawabi-full-cream-yogurt-400g",
     barcode: "6291030400241",
     db: "off",
-    category: "food",
+    category: "yogurt",
+    subcategory: "spoonable_yogurt",
     sizeLabel: "400 g",
     fallbackName: "Full Cream Yogurt",
     fallbackBrand: "Al Rawabi",
@@ -81,7 +94,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "puck-mango-yoghurt-150g",
     barcode: "5711953167577",
     db: "off",
-    category: "food",
+    category: "yogurt",
+    subcategory: "spoonable_yogurt",
     sizeLabel: "150 g",
     fallbackName: "Mango Yoghurt",
     fallbackBrand: "Puck",
@@ -92,6 +106,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     barcode: "5711953023095",
     db: "off",
     category: "food",
+    subcategory: null,
     sizeLabel: "200 g",
     fallbackName: "Natural Gouda Cheese Slices",
     fallbackBrand: "Puck",
@@ -101,7 +116,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "president-butter-250g",
     barcode: "3228020215106",
     db: "off",
-    category: "food",
+    category: "fats_oils",
+    subcategory: "other_fats_oils",
     sizeLabel: "250 g",
     fallbackName: "Salted Butter",
     fallbackBrand: "Président",
@@ -114,6 +130,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     barcode: "8480000808585",
     db: "off",
     category: "food",
+    subcategory: null,
     sizeLabel: "240 g",
     fallbackName: "Hummus Classic",
     fallbackBrand: "Hacendado",
@@ -126,6 +143,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     barcode: "5449000000996",
     db: "off",
     category: "drink",
+    subcategory: null,
     sizeLabel: "330 ml",
     fallbackName: "Coca-Cola",
     fallbackBrand: "Coca-Cola",
@@ -136,6 +154,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     barcode: "3502110005403",
     db: "off",
     category: "drink",
+    subcategory: null,
     sizeLabel: "500 ml",
     fallbackName: "Ice Tea Peach",
     fallbackBrand: "Lipton",
@@ -145,7 +164,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "alpro-oat-no-sugars-1l",
     barcode: "5411188124689",
     db: "off",
-    category: "drink",
+    category: "milk",
+    subcategory: "plant_milk",
     sizeLabel: "1 L",
     fallbackName: "Oat Drink No Sugars",
     fallbackBrand: "Alpro",
@@ -155,7 +175,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "oatly-organic-oat-drink-1l",
     barcode: "7394376123337",
     db: "off",
-    category: "drink",
+    category: "milk",
+    subcategory: "plant_milk",
     sizeLabel: "1 L",
     fallbackName: "Organic Oat Drink",
     fallbackBrand: "Oatly",
@@ -165,7 +186,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "al-rawabi-low-fat-milk-1l",
     barcode: "6291030201022",
     db: "off",
-    category: "drink",
+    category: "milk",
+    subcategory: "dairy_milk",
     sizeLabel: "1 L",
     fallbackName: "Low Fat Milk",
     fallbackBrand: "Al Rawabi",
@@ -175,7 +197,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: "al-rawabi-laban-1l",
     barcode: "6291030301043",
     db: "off",
-    category: "drink",
+    category: "yogurt",
+    subcategory: "drinking_yogurt",
     sizeLabel: "1 L",
     fallbackName: "Fresh Laban",
     fallbackBrand: "Al Rawabi",
@@ -186,6 +209,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     barcode: "6291100850044",
     db: "off",
     category: "drink",
+    subcategory: null,
     sizeLabel: "500 ml",
     fallbackName: "Bottled Drinking Water",
     fallbackBrand: "Al Ain",
@@ -198,6 +222,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     barcode: "4005900462060",
     db: "obf",
     category: "cosmetic",
+    subcategory: null,
     sizeLabel: "200 ml",
     fallbackName: "Sun Protect & Bronze SPF 20 Spray",
     fallbackBrand: "Nivea Sun",
@@ -208,6 +233,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     barcode: "3600542462228",
     db: "obf",
     category: "cosmetic",
+    subcategory: null,
     sizeLabel: "300 ml",
     fallbackName: "Honey Treasures Shampoo",
     fallbackBrand: "Garnier",

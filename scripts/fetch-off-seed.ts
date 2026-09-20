@@ -8,6 +8,7 @@
  * from the `fetchedAt` written here, so it is a real claim about a real check.
  */
 import "../lib/load-env";
+import { basisFor } from "../lib/health/categories";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { CATALOGUE, type CatalogueEntry } from "../prisma/seed-data/catalogue";
@@ -31,6 +32,7 @@ type FetchedProduct = {
   slug: string;
   barcode: string;
   category: CatalogueEntry["category"];
+  subcategory: string | null;
   name: string;
   brand: string | null;
   sizeLabel: string;
@@ -101,13 +103,20 @@ async function fetchOne(entry: CatalogueEntry): Promise<FetchedProduct | null> {
         allergens: (p.allergens_tags ?? []).map((t: string) => cleanTag(t)),
         additives: (p.additives_tags ?? []).map((t: string) => cleanTag(t, true)),
         novaGroup: num(p.nova_group),
+        subcategory: entry.subcategory,
         // Cosmetics carry no nutrition panel; storing an empty one would invite the
         // checker to treat "no sugar data" as "no sugar".
         nutrition:
           entry.category === "cosmetic"
             ? null
             : {
-                basis: entry.category === "drink" ? "per_100ml" : "per_100g",
+                // U9.1 — the basis follows the product's SUBCATEGORY, not its
+                // category: drinking yoghurt is a liquid and spoonable yoghurt is
+                // not, and they share a category (C4.3.7).
+                basis:
+                  basisFor(entry.category, entry.subcategory) === "liquid"
+                    ? "per_100ml"
+                    : "per_100g",
                 energyKcal: num(n["energy-kcal_100g"]),
                 carbohydratesG: num(n["carbohydrates_100g"]),
                 sugarsG: num(n["sugars_100g"]),

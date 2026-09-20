@@ -7,8 +7,44 @@ import { ACCEPTED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from "./config";
  * so every write goes through one of these schemas first.
  * ------------------------------------------------------------------------- */
 
-export const ProductCategorySchema = z.enum(["food", "drink", "supplement", "cosmetic"]);
+/**
+ * The eleven categories — RUBRIC.md §4 C4.0.
+ *
+ * Eight pilot categories whose boundaries follow S5's own category structure
+ * (SOURCED, tier 1), plus `food` as a declared fallback for products inside none
+ * of them (POLICY, C4.11.1), plus the two Noura cannot evidence at all.
+ *
+ * This replaced a four-value enum under which one `food` rubric judged olive oil,
+ * eggs, cheese and bread by the same lines. The rules live in
+ * lib/health/categories/, one file per RUBRIC.md §4 section.
+ */
+export const ProductCategorySchema = z.enum([
+  "fats_oils",
+  "milk",
+  "yogurt",
+  "eggs",
+  "bread",
+  "cereal",
+  "snacks",
+  "drink",
+  "food",
+  "cosmetic",
+  "supplement",
+]);
 export type ProductCategory = z.infer<typeof ProductCategorySchema>;
+
+/**
+ * A subcategory (RUBRIC.md §4 C4.0.1) does two things and no more: it selects the
+ * per-100 basis — drinking yoghurt is judged on the liquid lines, spoonable
+ * yoghurt on the solid ones — and it bounds the alternative ranking, so laban is
+ * never offered as an alternative to a pot of yoghurt.
+ *
+ * Validated loosely here and resolved strictly in lib/health/categories: a key
+ * that does not belong to the product's category falls back to that category's
+ * default rather than being rejected, because a wrong subcategory must not lose
+ * the product.
+ */
+export const SubcategorySchema = z.string().min(1).max(40);
 
 export const CertificateTypeSchema = z.enum(["ECAS", "EQM", "Halal", "Organic", "GMP"]);
 export type CertificateType = z.infer<typeof CertificateTypeSchema>;
@@ -110,6 +146,11 @@ export const IdentificationSchema = z.object({
     .nullable()
     .default(null),
   category: ProductCategorySchema,
+  /**
+   * RUBRIC.md §4 C4.0.1. Null is the honest answer when the pack does not say,
+   * and resolves to the category's default rather than to a guess.
+   */
+  subcategory: SubcategorySchema.nullable().default(null),
   sizeLabel: z.string().max(60).nullable().default(null),
   /** The model's own confidence. Surfaced to the user, never used to gate silently. */
   confidence: z.number().min(0).max(1),
@@ -141,6 +182,26 @@ export const CheckSchema = z.object({
 });
 export type Check = z.infer<typeof CheckSchema>;
 
+/**
+ * A note is shown to the reader and touches nothing. It is how RUBRIC.md reports a
+ * declined threshold (C4.3.4, C4.7.5), a regional cross-check (C4.2.6), an
+ * authorised claim Noura cannot evaluate (C4.1.5, C4.6.7), the processing
+ * classification demoted by U5.1, and the additive count demoted by A4.
+ *
+ * Notes never enter the pass rate and can never disqualify. That is the whole
+ * point of them: a tier-3 source and a child-marketing line both have something
+ * to say, and neither may set a threshold.
+ */
+export const NoteSchema = z.object({
+  /** RUBRIC.md rule identifier, e.g. "U5.1" or "C4.7.5". */
+  rule: z.string().min(1),
+  label: z.string().min(1),
+  text: z.string().min(3).max(600),
+  /** Where the note comes from, e.g. "S5 #2 · tier 1, declined". */
+  source: z.string().min(1),
+});
+export type Note = z.infer<typeof NoteSchema>;
+
 export const VerdictResultSchema = z.object({
   verdict: VerdictSchema,
   /** One sentence explaining how the verdict follows from the checklist. */
@@ -164,6 +225,8 @@ export const HealthAnalysisResultSchema = z.object({
   /** The full checklist, in the rubric's display order. */
   checks: z.array(CheckSchema).min(1),
   unknowns: StringListSchema,
+  /** Shown, never counted. See NoteSchema. */
+  notes: z.array(NoteSchema),
   model: z.string().min(1),
   mode: RunModeSchema,
 });

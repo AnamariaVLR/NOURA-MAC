@@ -2,7 +2,7 @@
   {
     "slug": "kelloggs-corn-flakes-500g",
     "barcode": "3159470000120",
-    "category": "food",
+    "category": "cereal",
     "name": "CORN FLAKES",
     "brand": "Kellogg's",
     "sizeLabel": "500 g",
@@ -27,12 +27,13 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3159470000120",
-    "fetchedAt": "2026-09-19T17:05:25.632Z"
+    "fetchedAt": "2026-09-19T17:05:25.632Z",
+    "subcategory": null
   },
   {
     "slug": "kelloggs-all-bran-fibre-plus-500g",
     "barcode": "3159470001424",
-    "category": "food",
+    "category": "cereal",
     "name": "All-Bran Fibre Plus",
     "brand": "Kellogg's",
     "sizeLabel": "500 g",
@@ -57,12 +58,13 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3159470001424",
-    "fetchedAt": "2026-09-19T17:05:26.579Z"
+    "fetchedAt": "2026-09-19T17:05:26.579Z",
+    "subcategory": null
   },
   {
     "slug": "kelloggs-special-k-500g",
     "barcode": "5050083296079",
-    "category": "food",
+    "category": "cereal",
     "name": "Cereales special K original",
     "brand": "Kellogg's",
     "sizeLabel": "500 g",
@@ -87,12 +89,13 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5050083296079",
-    "fetchedAt": "2026-09-19T17:05:27.562Z"
+    "fetchedAt": "2026-09-19T17:05:27.562Z",
+    "subcategory": null
   },
   {
     "slug": "al-rawabi-full-cream-yogurt-400g",
     "barcode": "6291030400241",
-    "category": "food",
+    "category": "yogurt",
     "name": "Full Fat Fresh Yoghurt",
     "brand": "Al Rawabi",
     "sizeLabel": "400 g",
@@ -119,12 +122,13 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291030400241",
-    "fetchedAt": "2026-09-19T17:05:28.506Z"
+    "fetchedAt": "2026-09-19T17:05:28.506Z",
+    "subcategory": "spoonable_yogurt"
   },
   {
     "slug": "puck-mango-yoghurt-150g",
     "barcode": "5711953167577",
-    "category": "food",
+    "category": "yogurt",
     "name": "Puck mango yoghurt",
     "brand": "Puck",
     "sizeLabel": "150 g",
@@ -153,7 +157,8 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5711953167577",
-    "fetchedAt": "2026-09-19T17:05:29.465Z"
+    "fetchedAt": "2026-09-19T17:05:29.465Z",
+    "subcategory": "spoonable_yogurt"
   },
   {
     "slug": "puck-gouda-slices-200g",
@@ -181,12 +186,13 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5711953023095",
-    "fetchedAt": "2026-09-19T17:05:30.396Z"
+    "fetchedAt": "2026-09-19T17:05:30.396Z",
+    "subcategory": null
   },
   {
     "slug": "president-butter-250g",
     "barcode": "3228020215106",
-    "category": "food",
+    "category": "fats_oils",
     "name": "Beurre gastronomique demi-sel",
     "brand": "Président",
     "sizeLabel": "250 g",
@@ -211,7 +217,8 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3228020215106",
-    "fetchedAt": "2026-09-19T17:05:31.334Z"
+    "fetchedAt": "2026-09-19T17:05:31.334Z",
+    "subcategory": "other_fats_oils"
   },
   {
     "slug": "hummus-classic-240g",
@@ -246,7 +253,8 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/8480000808585",
-    "fetchedAt": "2026-09-19T17:05:32.296Z"
+    "fetchedAt": "2026-09-19T17:05:32.296Z",
+    "subcategory": null
   },
   {
     "slug": "coca-cola-330ml",
@@ -277,7 +285,8 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5449000000996",
-    "fetchedAt": "2026-09-19T17:05:33.259Z"
+    "fetchedAt": "2026-09-19T17:05:33.259Z",
+    "subcategory": null
   },
   {
     "slug": "lipton-ice-tea-peach-500ml",
@@ -312,12 +321,13 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3502110005403",
-    "fetchedAt": "2026-09-19T17:05:34.195Z"
+    "fetchedAt": "2026-09-19T17:05:34.195Z",
+    "subcategory": null
   },
   {
     "slug": "alpro-oat-no-sugars-1l",
     "barcode": "5411188124689",
-    "category": "drink",
+    "category": "milk",
     "name": "Unsweetened Oat Drink",
     "brand": "alpro",
     "sizeLabel": "1 L",
@@ -344,12 +354,13 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5411188124689",
-    "fetchedAt": "2026-09-19T17:05:35.171Z"
+    "fetchedAt": "2026-09-19T17:05:35.171Z",
+    "subcategory": "plant_milk"
   },
   {
     "slug": "oatly-organic-oat-drink-1l",
     "barcode": "7394376123337",
-    "category": "drink",
+    "category": "milk",
     "name": "Organic oat drink",
     "brand": "Oatly",
     "sizeLabel": "1 L",
@@ -375,12 +386,13 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/7394376123337",
-    "fetchedAt": "2026-09-19T17:05:36.128Z"
+    "fetchedAt": "2026-09-19T17:05:36.128Z",
+    "subcategory": "plant_milk"
   },
   {
     "slug": "al-rawabi-low-fat-milk-1l",
     "barcode": "6291030201022",
-    "category": "drink",
+    "category": "milk",
     "name": "Al Rawabi low fat milk",
     "brand": "Al Rawabi",
     "sizeLabel": "1 L",
@@ -403,12 +415,13 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291030201022",
-    "fetchedAt": "2026-09-19T17:05:37.114Z"
+    "fetchedAt": "2026-09-19T17:05:37.114Z",
+    "subcategory": "dairy_milk"
   },
   {
     "slug": "al-rawabi-laban-1l",
     "barcode": "6291030301043",
-    "category": "drink",
+    "category": "yogurt",
     "name": "Rawabi up laban drink",
     "brand": "AL RAWABI",
     "sizeLabel": "1 L",
@@ -431,7 +444,8 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291030301043",
-    "fetchedAt": "2026-09-19T17:05:38.143Z"
+    "fetchedAt": "2026-09-19T17:05:38.143Z",
+    "subcategory": "drinking_yogurt"
   },
   {
     "slug": "al-ain-water-500ml",
@@ -459,7 +473,8 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291100850044",
-    "fetchedAt": "2026-09-19T17:05:44.393Z"
+    "fetchedAt": "2026-09-19T17:05:44.393Z",
+    "subcategory": null
   },
   {
     "slug": "nivea-sun-protect-bronze-spf20-200ml",
@@ -476,7 +491,8 @@
     "nutrition": null,
     "evidenceSource": "Open Beauty Facts",
     "evidenceSourceUrl": "https://world.openbeautyfacts.org/product/4005900462060",
-    "fetchedAt": "2026-09-19T17:05:46.140Z"
+    "fetchedAt": "2026-09-19T17:05:46.140Z",
+    "subcategory": null
   },
   {
     "slug": "garnier-honey-treasures-shampoo-300ml",
@@ -493,6 +509,7 @@
     "nutrition": null,
     "evidenceSource": "Open Beauty Facts",
     "evidenceSourceUrl": "https://world.openbeautyfacts.org/product/3600542462228",
-    "fetchedAt": "2026-09-19T17:05:47.097Z"
+    "fetchedAt": "2026-09-19T17:05:47.097Z",
+    "subcategory": null
   }
 ]

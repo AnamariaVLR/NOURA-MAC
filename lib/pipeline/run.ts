@@ -74,6 +74,7 @@ export async function runPipeline(args: {
           verdictJson: JSON.stringify(analysis.verdict),
           checksJson: JSON.stringify(analysis.checks),
           unknownsJson: JSON.stringify(analysis.unknowns),
+          notesJson: JSON.stringify(analysis.notes),
           model: analysis.model,
           mode: analysis.mode,
         },

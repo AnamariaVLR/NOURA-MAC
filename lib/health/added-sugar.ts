@@ -37,7 +37,7 @@
  * Where neither is available, the answer is UNKNOWN. It is never a pass.
  */
 
-import type { NutritionFacts, ProductCategory } from "../schemas";
+import type { NutritionFacts } from "../schemas";
 
 /**
  * Ingredient terms that establish added sugar.
@@ -171,6 +171,24 @@ const PLACEHOLDER_LISTS = new Set([
 const MIN_INGREDIENT_LENGTH = 3;
 
 /**
+ * Is there a real, readable ingredient list here?
+ *
+ * The single predicate for "a list was published", shared by the added-sugar
+ * resolution (U1.8) and the transparency check (U8.1) so the two cannot disagree
+ * about the same field. Before this existed, transparency used a minimum length
+ * of 10 characters while added sugar rejected placeholders by name, so "Dates" —
+ * a complete and honest ingredient list for a bag of dates — passed one and
+ * failed the other.
+ *
+ * A length threshold cannot do this job (DECISIONS §31): "Dates" is five
+ * characters and is a list, "n/a" is three and is the absence of one. So
+ * placeholders are rejected BY NAME.
+ */
+export function hasIngredientList(ingredientsText: string | null): boolean {
+  return detectAddedSugarIngredients(ingredientsText).kind !== "no-list";
+}
+
+/**
  * Looks for added-sugar ingredients in a published list.
  *
  * Returns "absent" only for a list we actually have and could read: that is the
@@ -287,7 +305,8 @@ export function resolveAddedSugar(
   return { state: "unknown", grams: null, basis: "no-evidence", terms: [] };
 }
 
-/** Categories that carry an added-sugar check at all. */
-export function hasAddedSugarCheck(category: ProductCategory): boolean {
-  return category === "food" || category === "drink";
-}
+/**
+ * Which categories carry an added-sugar check is no longer decided here: it is a
+ * property of the category rule (RUBRIC.md §4), so there is one list rather than
+ * two that can drift. See lib/health/categories/.
+ */

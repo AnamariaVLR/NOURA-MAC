@@ -1,29 +1,38 @@
 /**
- * Turns evidence into a checklist.
+ * Turns evidence into a checklist — RUBRIC.md §3 and §4.
  *
  * One function per rubric dimension. Each returns a `Check` whose `status` is
- * "pass", "fail" or "unknown". Pure, synchronous, no network, no model — so the
- * same evidence always produces the same checklist and every branch is testable.
+ * "pass", "fail" or "unknown", and each names the RUBRIC.md rule it implements
+ * and that rule's tag. Pure, synchronous, no network, no model — so the same
+ * evidence always produces the same checklist and every branch is testable.
  *
- * THE INVARIANT THIS FILE EXISTS TO PROTECT: a check is "pass" only when a value
- * was actually observed. Every function here reaches its "unknown" branch before it
- * can reach its "pass" branch, so a missing value cannot fall through into a tick.
- * `tests/unit/checks.test.ts` asserts this over every dimension.
+ * THE INVARIANT THIS FILE EXISTS TO PROTECT (rule D6): a check is "pass" only
+ * when a value was actually observed. Every function here reaches its "unknown"
+ * branch before it can reach its "pass" branch, so a missing value cannot fall
+ * through into a tick. tests/unit/rubric-unknown-sweep.test.ts asserts it over
+ * every category and every dimension.
+ *
+ * WHICH lines a check uses is not decided here. It comes from the product's
+ * category rule in lib/health/categories/, which is one file per §4 section. No
+ * threshold is written in this file.
  */
 
 import { isVerifiableSource } from "../schemas";
-import type { Check, CheckStatus, NutritionFacts, ProductCategory, SourceRef } from "../schemas";
-import { resolveAddedSugar, type AddedSugarVerdict } from "./added-sugar";
-import {
-  ADDITIVE_PASS_MAX,
-  DIMENSIONS,
-  DISQUALIFIER_MARGIN,
-  LABELS,
-  NOVA_PASS_MAX,
-  SEVERE_NUTRIENT_DISQUALIFIES,
-  THRESHOLDS,
-  type ComponentKey,
-} from "./rubric";
+import type {
+  Check,
+  CheckStatus,
+  Note,
+  NutritionFacts,
+  ProductCategory,
+  SourceRef,
+} from "../schemas";
+import { hasIngredientList, resolveAddedSugar, type AddedSugarVerdict } from "./added-sugar";
+import { assessAdditives, type AdditiveAssessment } from "./additives";
+import { basisFor, resolveSubcategory, ruleFor } from "./categories";
+import type { Basis, CategoryRule, CheckKey, NutrientLine } from "./categories/types";
+import { fibrePer100Kcal, proteinEnergyShare, resolveEnergyKcal } from "./energy";
+import { FIBRE, LABELS, PROTEIN, type ComponentKey } from "./rubric";
+import { isSevere } from "./tolerance";
 
 export type CertificationEvidence = {
   certificateType: string;
@@ -38,6 +47,8 @@ export type CertificationEvidence = {
 
 export type EvidenceInput = {
   category: ProductCategory;
+  /** RUBRIC.md §4 C4.0.1. Null resolves to the category's default. */
+  subcategory?: string | null;
   nutrition: NutritionFacts | null;
   novaGroup: number | null;
   additives: string[];
@@ -52,8 +63,9 @@ function round1(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-function perUnit(nutrition: NutritionFacts): string {
-  return nutrition.basis === "per_100ml" ? "per 100 ml" : "per 100 g";
+/** U9.1 — per 100 g for solids, per 100 ml for liquids. */
+function unitFor(basis: Basis): string {
+  return basis === "liquid" ? "per 100 ml" : "per 100 g";
 }
 
 function unknown(
@@ -75,20 +87,26 @@ function unknown(
 }
 
 /* -------------------------------------------------------------------------
- * Nutrients: saturated fat, salt
+ * Quantity checks: saturated fat, salt, total sugar
+ *
+ * RUBRIC.md §3 U2, U3 and the per-category total-sugar lines of §4.
+ *
+ * One function, because the shape of the rule is identical and only the line
+ * differs. The line arrives from the category rule and carries its own RUBRIC
+ * identifier, so the sentence a reader sees can name where the number came from.
  * ----------------------------------------------------------------------- */
 
-function nutrientCheck(
-  key: "saturatedFat" | "salt",
+function quantityCheck(
+  key: "saturatedFat" | "salt" | "totalSugars",
   value: number | null,
-  category: "food" | "drink",
-  nutrition: NutritionFacts | null,
+  line: NutrientLine,
+  basis: Basis,
   source: SourceRef,
 ): Check {
   const label = LABELS[key];
 
-  // Unknown first: there is no path from a null value to a pass.
-  if (value === null || nutrition === null) {
+  // D6 — unknown first. There is no path from a null value to a pass.
+  if (value === null) {
     return unknown(
       key,
       `${label} content is not published`,
@@ -97,14 +115,24 @@ function nutrientCheck(
     );
   }
 
-  const t = THRESHOLDS[category][key];
-  const unit = perUnit(nutrition);
+  const unit = unitFor(basis);
   const measured = `${round1(value)} g ${unit}`;
-  const passed = value <= t.good;
-  // Clearly above the rubric's high mark this is not merely a failed check — it
-  // overrides the rest of the list. A value within DISQUALIFIER_MARGIN of the mark
-  // is a plain failure: a hairline crossing is not a severe failure.
-  const severe = !passed && SEVERE_NUTRIENT_DISQUALIFIES && value >= t.bad * DISQUALIFIER_MARGIN;
+
+  // Rule 3 of the rubric header: the pass line is the "low" mark where the
+  // category has one. Where it has only a single sourced line — C4.1.1 fats and
+  // oils, C4.4.2 eggs — that line is the pass line, and D3 applies the declared
+  // value as given either way.
+  const passLine = line.low ?? line.high;
+  const passed = value <= passLine;
+  const high = value > line.high;
+
+  // V2.2 — C0's two-strength rule lives in `disqualifyAbove`. An EMRO marketing
+  // line fails; the general-population line disqualifies. The §2.2 tolerance is
+  // applied so a product is never condemned for a difference smaller than the law
+  // permits between a label and a laboratory.
+  const severe = isSevere(value, line.tolerance, line.disqualifyAbove ?? line.high);
+
+  const lowText = line.low === undefined ? null : `${line.low} g`;
 
   return {
     key,
@@ -113,27 +141,27 @@ function nutrientCheck(
     status: passed ? "pass" : "fail",
     claim: passed
       ? `Low ${label.toLowerCase()}`
-      : value >= t.bad
+      : high
         ? `High ${label.toLowerCase()}`
         : `Some ${label.toLowerCase()}`,
     detail: passed
-      ? `${measured}. Low is ${t.good} g or less.`
-      : value >= t.bad
-        ? `${measured}. That counts as high, which starts at ${t.bad} g.`
-        : `${measured}. More than the ${t.good} g that counts as low, but below the ${t.bad} g that counts as high.`,
+      ? `${measured}. Low is ${lowText ?? `${line.high} g`} or less.`
+      : high
+        ? `${measured}. That counts as high, which starts above ${line.high} g.`
+        : `${measured}. More than the ${lowText} that counts as low, but not yet high, which starts above ${line.high} g.`,
     evidence: { label, value: measured },
     source,
   };
 }
 
 /* -------------------------------------------------------------------------
- * Added sugar
+ * U1 — Added sugar
  *
- * The one check that is about presence rather than quantity. "No added sugar" is a
- * claim about what went into the product; the number on the nutrition panel is a
- * measurement of what came out of it, lactose and fructose included. The resolution
- * of the evidence lives in ./added-sugar.ts; this function only turns a conclusion
- * into a sentence.
+ * The one check decided on PRESENCE rather than quantity (U1.7). "No added
+ * sugar" is a claim about what went into the product; the number on the panel is
+ * a measurement of what came out of it, lactose and fructose included (U1.9).
+ * The resolution of the evidence lives in ./added-sugar.ts and implements U1.8;
+ * this function only turns a conclusion into a sentence.
  * ----------------------------------------------------------------------- */
 
 function addedSugarDetail(
@@ -167,16 +195,18 @@ function addedSugarDetail(
 function addedSugarCheck(
   nutrition: NutritionFacts | null,
   ingredientsText: string | null,
-  category: "food" | "drink",
+  line: NutrientLine,
+  basis: Basis,
   source: SourceRef,
 ): Check {
   const key: ComponentKey = "addedSugars";
   const label = LABELS[key];
-  const unit = nutrition ? perUnit(nutrition) : category === "drink" ? "per 100 ml" : "per 100 g";
+  const unit = unitFor(basis);
 
   const resolved = resolveAddedSugar(nutrition, ingredientsText);
   const detail = addedSugarDetail(resolved, nutrition, unit);
 
+  // U1.8 clauses 4 and 5 — a conflict and an absence both produce UNKNOWN.
   if (resolved.state === "unknown") {
     return unknown(key, "Whether sugar was added could not be established", detail, source);
   }
@@ -199,11 +229,11 @@ function addedSugarCheck(
     };
   }
 
-  // Present. Only a known quantity can be severe, and only clearly past the mark.
-  const t = THRESHOLDS[category].sugars;
+  // Present. U1.7: the check has already failed on presence. Only a KNOWN
+  // quantity can be severe — Noura does not apply its harshest consequence to a
+  // quantity it does not know (§7.1, DECISIONS §32).
+  const severe = isSevere(resolved.grams, line.tolerance, line.disqualifyAbove ?? line.high);
   const grams = resolved.grams;
-  const severe =
-    SEVERE_NUTRIENT_DISQUALIFIES && grams !== null && grams >= t.bad * DISQUALIFIER_MARGIN;
 
   return {
     key,
@@ -221,159 +251,152 @@ function addedSugarCheck(
 }
 
 /* -------------------------------------------------------------------------
- * Fibre and protein
+ * U4 — Fibre and protein
+ *
+ * U4.6: either target clears the check on its own. U4.3 expresses protein as a
+ * SHARE OF ENERGY, not an absolute mass, which is what S12 actually defines —
+ * the shipped 8 g/100 g had no source. Where energy is not published it is
+ * derived from the macronutrients by the Codex factors (U4.5).
  * ----------------------------------------------------------------------- */
 
 function nutrientDensityCheck(
   nutrition: NutritionFacts | null,
-  category: "food" | "drink",
+  basis: Basis,
   source: SourceRef,
 ): Check {
   const key: ComponentKey = "nutrientDensity";
   const label = LABELS[key];
-  const fibre = nutrition?.fibreG ?? null;
-  const protein = nutrition?.proteinG ?? null;
 
-  if (fibre === null && protein === null) {
+  const fibre = nutrition?.fibreG ?? null;
+  const fibrePerKcal = fibrePer100Kcal(nutrition);
+  const proteinShare = proteinEnergyShare(nutrition);
+
+  // D6 — unknown when NEITHER half resolves. Fibre resolves on a published
+  // figure alone; protein needs an energy figure it can be a share of, so a
+  // protein mass with no resolvable energy is not evidence of anything.
+  const fibreResolved = fibre !== null;
+  const proteinResolved = proteinShare !== null;
+  if (!fibreResolved && !proteinResolved) {
     return unknown(
       key,
       "Fibre and protein are not published",
-      "Neither figure appears in the evidence we could find, so this check could not be made.",
+      "Neither a fibre figure nor enough of the panel to express protein as a share of energy " +
+        "appears in the evidence we could find, so this check could not be made.",
       source,
     );
   }
 
-  const t = THRESHOLDS[category];
-  const unit = nutrition ? perUnit(nutrition) : "per 100 g";
-  // Either target clears the check on its own: a high-fibre cereal and a
-  // high-protein dairy product are both worth the tick, for different reasons.
-  const passed =
-    (fibre !== null && fibre >= t.fibreTarget) || (protein !== null && protein >= t.proteinTarget);
+  // U4.1 — HIGH FIBRE on either basis S12 allows.
+  const highFibre =
+    (fibre !== null && fibre >= FIBRE.highPer100g) ||
+    (fibrePerKcal !== null && fibrePerKcal >= FIBRE.highPer100Kcal);
+  // U4.3 — SOURCE OF PROTEIN.
+  const sourceOfProtein = proteinShare !== null && proteinShare >= PROTEIN.sourceOfEnergyShare;
+  const passed = highFibre || sourceOfProtein;
 
+  const unit = unitFor(basis);
   const measured = [
-    fibre !== null ? `${round1(fibre)} g fibre` : "fibre unknown",
-    protein !== null ? `${round1(protein)} g protein` : "protein unknown",
+    fibre !== null ? `${round1(fibre)} g fibre ${unit}` : "fibre unknown",
+    proteinShare !== null
+      ? `${Math.round(proteinShare * 100)}% of energy from protein`
+      : "protein share unknown",
   ].join(", ");
 
-  return {
-    key,
-    label,
-    status: passed ? "pass" : "fail",
-    claim: passed ? "A useful source of fibre or protein" : "Little fibre or protein",
-    detail: passed
-      ? `${measured} ${unit}. A useful amount is ${t.fibreTarget} g of fibre or ${t.proteinTarget} g of protein.`
-      : `${measured} ${unit}. A useful amount is ${t.fibreTarget} g of fibre or ${t.proteinTarget} g of protein; this has neither.`,
-    evidence: { label, value: `${measured} ${unit}` },
-    source,
-  };
-}
-
-/* -------------------------------------------------------------------------
- * Processing
- * ----------------------------------------------------------------------- */
-
-const NOVA_NAMES: Record<number, string> = {
-  1: "unprocessed or minimally processed",
-  2: "a processed culinary ingredient",
-  3: "processed",
-  4: "ultra-processed",
-};
-
-function processingCheck(novaGroup: number | null, source: SourceRef): Check {
-  const key: ComponentKey = "processing";
-  const label = LABELS[key];
-
-  if (novaGroup === null || !(novaGroup in NOVA_NAMES)) {
-    return unknown(
-      key,
-      "How processed this is could not be established",
-      "No processing classification was published for this product.",
-      source,
-    );
-  }
-
-  const passed = novaGroup <= NOVA_PASS_MAX;
+  const target =
+    `A useful amount is ${FIBRE.highPer100g} g of fibre per 100 g, or ` +
+    `${Math.round(PROTEIN.sourceOfEnergyShare * 100)}% of the energy coming from protein.`;
 
   return {
     key,
     label,
     status: passed ? "pass" : "fail",
     claim: passed
-      ? novaGroup === 1
-        ? "Unprocessed or minimally processed"
-        : "A processed culinary ingredient, not a formulation"
-      : novaGroup >= 4
-        ? "Ultra-processed"
-        : "Processed",
-    detail: passed
-      ? `Made from whole foods or simple ingredients rather than industrial formulation.`
-      : `Industrially formulated rather than made from whole foods. Published classification: ${NOVA_NAMES[novaGroup]}.`,
-    evidence: { label, value: NOVA_NAMES[novaGroup] },
-    source,
-  };
-}
-
-/* -------------------------------------------------------------------------
- * Additives
- * ----------------------------------------------------------------------- */
-
-function additivesCheck(
-  additives: string[],
-  ingredientsText: string | null,
-  category: ProductCategory,
-  source: SourceRef,
-): Check {
-  const key: ComponentKey = "additives";
-  const label = LABELS[key];
-
-  // No additive list AND no ingredient list means we simply do not know. An
-  // ingredient list with no additives flagged is genuine evidence of none.
-  if (additives.length === 0 && !ingredientsText) {
-    return unknown(
-      key,
-      "The additive list could not be checked",
-      "We found no published ingredient list, so additives could not be counted.",
-      source,
-    );
-  }
-
-  // The additive taxonomy we rely on is the E-number list used for food and drink.
-  // It does not cover cosmetics, so an empty result there means "our list does not
-  // apply", not "this product contains no additives". Reporting that as a pass
-  // would be a tick we did not earn.
-  if (additives.length === 0 && category === "cosmetic") {
-    return unknown(
-      key,
-      "We could not check the additives",
-      "The additive list we use covers food and drink, not cosmetics, so we cannot make this check for this product. Its full ingredient list is shown below.",
-      source,
-      "not assessable",
-    );
-  }
-
-  const count = additives.length;
-  const passed = count <= ADDITIVE_PASS_MAX;
-  const measured = count === 0 ? "none listed" : `${count} (${additives.slice(0, 6).join(", ")})`;
-
-  return {
-    key,
-    label,
-    status: passed ? "pass" : "fail",
-    claim: passed
-      ? "No additives listed"
-      : count === 1
-        ? "Contains one additive"
-        : `Contains ${count} additives`,
-    detail: passed
-      ? "The published ingredient list contains no additives."
-      : `A long additive list is a sign of heavy processing. It is not a safety warning: every additive here is permitted for sale. They are: ${additives.join(", ")}.`,
+      ? highFibre && sourceOfProtein
+        ? "A useful source of both fibre and protein"
+        : highFibre
+          ? "A useful source of fibre"
+          : "A useful source of protein"
+      : "Little fibre or protein",
+    detail: passed ? `${measured}. ${target}` : `${measured}. ${target} This has neither.`,
     evidence: { label, value: measured },
     source,
   };
 }
 
 /* -------------------------------------------------------------------------
- * UAE certification
+ * U6 / §5 — Additives
+ *
+ * A4: the count is a NOTE, not a failure. No retrieved source supports a
+ * zero-additive line, and S15 is explicit that authorisation follows a safety
+ * assessment. A5: the check fails on, and only on, a flagged additive (§5.4).
+ * ----------------------------------------------------------------------- */
+
+function additivesCheck(
+  assessment: AdditiveAssessment,
+  ingredientsText: string | null,
+  source: SourceRef,
+): Check {
+  const key: ComponentKey = "additives";
+  const label = LABELS[key];
+  const count = assessment.codes.length;
+
+  // D6 — no additive list AND no ingredient list means we do not know. An
+  // ingredient list with no additives flagged is genuine evidence of none.
+  if (count === 0 && !hasIngredientList(ingredientsText)) {
+    return unknown(
+      key,
+      "The additive list could not be checked",
+      "We found no published ingredient list, so additives could not be checked.",
+      source,
+    );
+  }
+
+  const listed = count === 0 ? "none listed" : `${count} (${assessment.codes.join(", ")})`;
+
+  if (assessment.failing.length > 0) {
+    const first = assessment.failing[0].flag;
+    const names = assessment.failing.map((f) => f.code).join(", ");
+    return {
+      key,
+      label,
+      // A6.8 — a flagged failure NEVER disqualifies. A warning label is a
+      // labelling duty and a population-exposure finding is about a diet rather
+      // than a product; neither justifies Noura's harshest output.
+      status: "fail",
+      claim:
+        assessment.failing.length === 1
+          ? `Contains ${first.label}`
+          : `Contains ${assessment.failing.length} additives regulators have flagged`,
+      detail: `${names}: ${first.basis} ${
+        count > assessment.failing.length
+          ? `The other additives here are permitted and are not a finding against the product.`
+          : ""
+      }`.trim(),
+      evidence: { label, value: listed },
+      source,
+    };
+  }
+
+  // A2 — the wording must not read as a clean bill of health. An additive that
+  // is not flagged has not been cleared by Noura; it has not been looked at.
+  return {
+    key,
+    label,
+    status: "pass",
+    claim: count === 0 ? "No additives listed" : `Contains ${count === 1 ? "one additive" : `${count} additives`}, none flagged`,
+    detail:
+      count === 0
+        ? "The published ingredient list contains no additives."
+        : "Every additive here is permitted for sale, and none appears on the short list of " +
+          "additives a regulator has put a warning on. That list is not a complete screen: an " +
+          "additive absent from it has not been cleared, only not checked.",
+    evidence: { label, value: listed },
+    source,
+  };
+}
+
+/* -------------------------------------------------------------------------
+ * U7 / §6 — UAE certification
  * ----------------------------------------------------------------------- */
 
 function certificationCheck(
@@ -383,16 +406,16 @@ function certificationCheck(
   const key: ComponentKey = "certification";
   const label = LABELS[key];
 
-  // Demo scaffolding is not evidence. Every shipped SAMPLE- certificate is
-  // SYNTHETIC, and a synthetic certificate must never produce a tick, a cross, or
-  // any statement that a real body certified a real product. Filtering here rather
-  // than at the call site means no future caller can forget.
+  // C6.1 — provenance. Demo scaffolding is not evidence. Every shipped SAMPLE-
+  // certificate is SYNTHETIC, and a synthetic certificate must never produce a
+  // tick, a cross, or any statement that a real body certified a real product.
+  // Filtering here rather than at the call site means no caller can forget.
   const real = certifications.filter((c) => isVerifiableSource(c.sourceKind));
   const discarded = certifications.length - real.length;
 
   if (real.length === 0) {
-    // Absence from our copy of the register is not evidence of absence from the
-    // register. Unknown, not failed — and unknown whether or not demo rows exist.
+    // D9 / C6.10 — absence from our copy of the register is not evidence of
+    // absence from the register. Unknown, not failed.
     return unknown(
       key,
       "We could not check UAE certification",
@@ -415,8 +438,8 @@ function certificationCheck(
       key,
       label,
       status: "fail",
-      // A suspended certificate is the one finding that overrides everything else
-      // in the verdict — see lib/health/verdict.ts.
+      // C6.4 / V2.1 — a suspended certificate is a live regulator warning about
+      // the assurance the product rests on, and overrides the rest of the list.
       disqualifying: true,
       claim: `Its ${c.certificateType} certificate is suspended`,
       detail: `Certificate ${c.certificateNumber} is recorded as suspended. Treat any claim resting on it with caution.`,
@@ -435,9 +458,10 @@ function certificationCheck(
       claim: accredited
         ? `Certified by an accredited body: ${types}`
         : `Holds a valid ${types} certificate`,
+      // C6.5 — stated in the copy, every time.
       detail: accredited
         ? `Certificate ${accredited.certificateNumber} was issued by ${accredited.bodyName}, a body on the UAE accreditation register. A certificate confirms the product meets that standard; it is not a statement that the product is nutritionally better.`
-        : `Certificate ${valid[0].certificateNumber} is recorded as valid, though our data does not name the body that issued it.`,
+        : `Certificate ${valid[0].certificateNumber} is recorded as valid, though our data does not name the body that issued it. A certificate confirms the product meets that standard; it is not a statement that the product is nutritionally better.`,
       evidence: { label, value: accredited ? `${types}, accredited body` : types },
       source,
     };
@@ -456,15 +480,29 @@ function certificationCheck(
 }
 
 /* -------------------------------------------------------------------------
- * Ingredient transparency
+ * U8 — Ingredient transparency
+ *
+ * U8.1: absence here IS observable, which is why this check never returns
+ * unknown — we looked, and there is no list (D10). U8.2 keeps it off products
+ * outside the standard's labelling scope, which is done by the category rule
+ * simply not listing the check: a fresh egg has no ingredient list to publish,
+ * and the shipped code failed it for that.
  * ----------------------------------------------------------------------- */
 
-function transparencyCheck(ingredientsText: string | null, source: SourceRef): Check {
+function transparencyCheck(
+  ingredientsText: string | null,
+  category: ProductCategory,
+  source: SourceRef,
+): Check {
   const key: ComponentKey = "transparency";
   const label = LABELS[key];
-  // Absence here IS observable, which is why this check never returns unknown:
-  // we looked, and there is no list.
-  const present = Boolean(ingredientsText && ingredientsText.trim().length > 10);
+  // The same predicate the added-sugar resolution uses, so the two checks cannot
+  // disagree about whether a list exists. It rejects placeholders by name rather
+  // than by length: "Dates" is a complete ingredient list (DECISIONS §31).
+  const present = hasIngredientList(ingredientsText);
+  // U8.3 — for cosmetics the duty is an INCI list, which is what S14 Art. 19
+  // requires. Noura checks that a list exists, not that the names are INCI.
+  const cosmetic = category === "cosmetic";
 
   return {
     key,
@@ -472,7 +510,9 @@ function transparencyCheck(ingredientsText: string | null, source: SourceRef): C
     status: present ? "pass" : "fail",
     claim: present ? "Publishes a full ingredient list" : "No ingredient list is published",
     detail: present
-      ? "A complete ingredient list is published, which is what makes the rest of these checks possible."
+      ? cosmetic
+        ? "A full ingredient list is published, which is what the EU cosmetics regulation requires. Noura has not checked those ingredients against the restricted-substance lists — it does not hold them."
+        : "A complete ingredient list is published, which is what makes the rest of these checks possible."
       : "Without a published ingredient list we cannot check additives or allergens for you, and neither can you.",
     evidence: { label, value: present ? "published" : "not found" },
     source,
@@ -480,34 +520,146 @@ function transparencyCheck(ingredientsText: string | null, source: SourceRef): C
 }
 
 /* -------------------------------------------------------------------------
+ * Notes — RUBRIC.md §3 U5, §5 A4, and the per-category notes of §4
+ *
+ * Shown to the reader, counted in nothing.
+ * ----------------------------------------------------------------------- */
+
+const NOVA_NAMES: Record<number, string> = {
+  1: "unprocessed or minimally processed",
+  2: "a processed culinary ingredient",
+  3: "processed",
+  4: "ultra-processed",
+};
+
+/**
+ * U5.1 — POLICY. The processing classification is a NOTE, not a check.
+ *
+ * S8 is tier 3 and under H2 a tier-3 source may not set a threshold; no retrieved
+ * tier-1 or tier-2 source uses NOVA. Demoting it also removes the processing
+ * double-count DECISIONS §5 flags, since the additive note measures the same
+ * thing from the ingredient side. §9 Q10 asks whether to overturn this.
+ */
+export function processingNote(novaGroup: number | null): Note | null {
+  if (novaGroup === null || !(novaGroup in NOVA_NAMES)) return null;
+  return {
+    rule: "U5.1",
+    label: "Level of processing",
+    text:
+      `Researchers classify this as ${NOVA_NAMES[novaGroup]}, based on whether the ingredient ` +
+      "list contains substances never used in a kitchen. That is a classification from the " +
+      "research literature rather than a regulator's standard, so Noura shows it and does not " +
+      "count it for or against the product.",
+    source: "S8 · tier 3",
+  };
+}
+
+/** A4 / A3.1 — the additive count and the sweetener list, both notes. */
+export function additiveNotes(assessment: AdditiveAssessment, basis: Basis): Note[] {
+  const notes: Note[] = [];
+
+  if (assessment.codes.length > 0) {
+    notes.push({
+      rule: "A4",
+      label: "Additives listed",
+      text:
+        `${assessment.codes.length} additive${assessment.codes.length === 1 ? "" : "s"}: ` +
+        `${assessment.codes.join(", ")}. A long additive list is a sign of heavy processing. It ` +
+        "is not a safety warning: every additive here is permitted for sale.",
+      source: "S15 · tier 1",
+    });
+  }
+
+  for (const { code, flag } of assessment.flaggedNotes) {
+    notes.push({
+      rule: flag.rule,
+      label: "Worth knowing",
+      text: `${code} is ${flag.label}. ${flag.basis} Noura does not fail the product on it, because ${flag.unmeasurable}.`,
+      source: flag.source,
+    });
+  }
+
+  if (assessment.sweeteners.length > 0) {
+    notes.push({
+      rule: "A3.1",
+      label: "Non-sugar sweeteners",
+      text:
+        `Sweetened with ${assessment.sweeteners.join(", ")}. ` +
+        (basis === "liquid"
+          ? "For drinks this is reported prominently and is not counted against the product: the " +
+            "lines that set beverages at zero sweeteners were drawn for marketing to children, " +
+            "and no source Noura holds sets a general-population limit."
+          : "Reported, not counted against the product."),
+      source: "S20-S22 · tier 1",
+    });
+  }
+
+  return notes;
+}
+
+/* -------------------------------------------------------------------------
  * Assembly
  * ----------------------------------------------------------------------- */
 
-/** Builds the checklist for a product, in the rubric's display order. */
+/** Builds the checklist for a product, in its category rule's display order. */
 export function evaluateChecks(input: EvidenceInput): Check[] {
-  const nutritionCategory: "food" | "drink" = input.category === "drink" ? "drink" : "food";
+  const rule = ruleFor(input.category);
+  const basis = basisFor(input.category, input.subcategory ?? null);
+  const lines = rule.lines(basis);
   const src = input.evidenceSource;
+  const assessment = assessAdditives(input.additives);
 
-  const build: Record<ComponentKey, () => Check> = {
-    addedSugars: () => addedSugarCheck(input.nutrition, input.ingredientsText, nutritionCategory, src),
+  // A line the category declares but a check needs and does not have is a
+  // programming error, not a product fact; it would silently become UNKNOWN.
+  // tests/unit/rubric-s4-categories.test.ts asserts every declared check has one.
+  const build: Record<CheckKey, () => Check> = {
+    addedSugars: () =>
+      addedSugarCheck(input.nutrition, input.ingredientsText, lines.addedSugars!, basis, src),
+    totalSugars: () =>
+      quantityCheck("totalSugars", input.nutrition?.sugarsG ?? null, lines.totalSugars!, basis, src),
     saturatedFat: () =>
-      nutrientCheck(
+      quantityCheck(
         "saturatedFat",
         input.nutrition?.saturatedFatG ?? null,
-        nutritionCategory,
-        input.nutrition,
+        lines.saturatedFat!,
+        basis,
         src,
       ),
-    salt: () =>
-      nutrientCheck("salt", input.nutrition?.saltG ?? null, nutritionCategory, input.nutrition, src),
-    nutrientDensity: () => nutrientDensityCheck(input.nutrition, nutritionCategory, src),
-    processing: () => processingCheck(input.novaGroup, src),
-    additives: () => additivesCheck(input.additives, input.ingredientsText, input.category, src),
+    salt: () => quantityCheck("salt", input.nutrition?.saltG ?? null, lines.salt!, basis, src),
+    nutrientDensity: () => nutrientDensityCheck(input.nutrition, basis, src),
+    additives: () => additivesCheck(assessment, input.ingredientsText, src),
     certification: () => certificationCheck(input.certifications, src),
-    transparency: () => transparencyCheck(input.ingredientsText, src),
+    transparency: () => transparencyCheck(input.ingredientsText, input.category, src),
   };
 
-  return DIMENSIONS[input.category].map((key) => build[key]());
+  return rule.checks.map((key) => build[key]());
+}
+
+/** Everything shown to the reader that is not a check. */
+export function collectNotes(input: EvidenceInput): Note[] {
+  const rule: CategoryRule = ruleFor(input.category);
+  const basis = basisFor(input.category, input.subcategory ?? null);
+  const assessment = assessAdditives(input.additives);
+
+  const categoryNotes: Note[] = rule.notes.map((n) => ({
+    rule: n.rule,
+    label: rule.label,
+    text: n.text,
+    source: n.source,
+  }));
+
+  const processing = processingNote(input.novaGroup);
+
+  return [
+    ...categoryNotes,
+    ...additiveNotes(assessment, basis),
+    ...(processing ? [processing] : []),
+  ];
+}
+
+/** The subcategory a product was judged in, for display and for ranking. */
+export function subcategoryFor(input: EvidenceInput) {
+  return resolveSubcategory(input.category, input.subcategory ?? null);
 }
 
 /* -------------------------------------------------------------------------
@@ -517,10 +669,10 @@ export function evaluateChecks(input: EvidenceInput): Check[] {
 /**
  * Does the declared energy agree with the macronutrients?
  *
- * 4 kcal/g carbohydrate, 9 kcal/g fat, 4 kcal/g protein — the Atwater factors. The
- * check needs TOTAL carbohydrate, not sugars: sugars are a subset, so reconciling
- * against them alone would flag every breakfast cereal on the shelf. Where total
- * carbohydrate is missing, we do not guess; we simply do not run the check.
+ * The Codex factors again (S6 §3.3.1, the same ones U4.5 uses to derive energy).
+ * The check needs TOTAL carbohydrate, not sugars: sugars are a subset, so
+ * reconciling against them alone would flag every breakfast cereal on the shelf.
+ * Where total carbohydrate is missing, we do not guess; we do not run the check.
  *
  * A flagged panel is reported as an unknown, never as a failed check. The fault
  * lies in the record, not in the product, and the user should be told which.
@@ -532,12 +684,16 @@ export function unexplainedEnergy(
   nutrition: NutritionFacts | null,
 ): { declared: number; explained: number } | null {
   if (!nutrition) return null;
-  const { energyKcal, carbohydratesG, fatG, proteinG } = nutrition;
+  const { energyKcal, carbohydratesG } = nutrition;
   if (energyKcal === null || energyKcal <= 0) return null;
   // Without total carbohydrate there is nothing to reconcile against.
   if (carbohydratesG === null) return null;
 
-  const explained = Math.round(carbohydratesG * 4 + (fatG ?? 0) * 9 + (proteinG ?? 0) * 4);
+  const withoutDeclared = resolveEnergyKcal({ ...nutrition, energyKcal: null });
+  const explained = Math.round(
+    withoutDeclared?.kcal ??
+      carbohydratesG * 4 + (nutrition.fatG ?? 0) * 9 + (nutrition.proteinG ?? 0) * 4,
+  );
   const gap = energyKcal - explained;
   if (gap < ENERGY_GAP_KCAL) return null;
   // A large gap on a small base is noise; a large gap that doubles the figure is not.

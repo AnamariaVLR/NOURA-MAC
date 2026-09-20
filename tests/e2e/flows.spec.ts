@@ -11,6 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { resolve } from "node:path";
 import {
   BETTER_DRINKS,
+  OAT_DRINK,
   SCANNED_PRODUCT,
   addChecks,
   clearChecks,
@@ -212,4 +213,38 @@ test("admin: a check recorded on the form appears as a verified price", async ({
   const fresh = page.locator('[data-testid="queue-row"][data-staleness="fresh"]');
   expect(await fresh.count()).toBeGreaterThan(0);
   await expect(fresh.first()).toContainText("AED 4.25");
+});
+
+/* ===========================================================================
+ * 5. The audit defect, at the UI level
+ *
+ * Scanning a cola once surfaced an AED 24.00 oat drink above an AED 1.75 water,
+ * because the oat drink had more checkable dimensions and the ranking counted
+ * passes. RUBRIC.md §8 fixes that twice over: R1 counts failures instead, and R6
+ * binds comparison to the subcategory, so an oat drink — which is milk/plant_milk
+ * — is no longer a candidate against a drink at all.
+ *
+ * This test asserts the outcome a shopper sees, not the comparator.
+ * ========================================================================= */
+test("audit defect: an expensive out-of-category product is never the alternative", async ({
+  page,
+}) => {
+  await addChecks([
+    { productSlug: SCANNED_PRODUCT, retailerSlug: "carrefour-uae", priceAed: 2.75 },
+    // Fresh, in stock, and the most expensive thing in the catalogue.
+    { productSlug: OAT_DRINK, retailerSlug: "spinneys", priceAed: 24.0 },
+    // Fresh, in stock, cheap, and actually a drink.
+    { productSlug: BETTER_DRINKS[0], retailerSlug: "carrefour-uae", priceAed: 1.75 },
+  ]);
+
+  await scan(page);
+
+  const alternatives = page.getByTestId("alternatives");
+  await expect(alternatives).toBeVisible();
+  // The oat drink is in a different category and must not appear at any rank.
+  await expect(alternatives).not.toContainText(/Oat Drink/i);
+  await expect(alternatives).not.toContainText(/AED 24\.00/);
+  // The water does, and it is first.
+  const first = alternatives.locator("> li").first();
+  await expect(first).toContainText(/AED 1\.75/);
 });

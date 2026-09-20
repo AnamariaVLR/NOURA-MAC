@@ -124,5 +124,19 @@ export async function withoutListings(productSlug: string, body: () => Promise<v
  */
 export const SCANNED_PRODUCT = "coca-cola-330ml";
 
-/** Drinks that beat the scanned product on the checklist. */
-export const BETTER_DRINKS = ["al-ain-water-500ml", "oatly-organic-oat-drink-1l"] as const;
+/**
+ * Products that beat the scanned cola on the checklist AND are in its category.
+ *
+ * Both halves matter. Under RUBRIC.md §4's eleven categories an oat drink is
+ * `milk/plant_milk`, not `drink`, so it can no longer be offered as an
+ * alternative to a cola at all — which is the structural half of the audit fix
+ * (§8 R6). OAT_DRINK below is kept precisely so a test can assert that.
+ */
+export const BETTER_DRINKS = ["al-ain-water-500ml", "lipton-ice-tea-peach-500ml"] as const;
+
+/**
+ * The AED 24.00 oat drink from the audit defect. It is in a different category
+ * from the cola, so however cheap, fresh and in stock its listing is, it must
+ * never appear in the cola's alternatives.
+ */
+export const OAT_DRINK = "oatly-organic-oat-drink-1l";

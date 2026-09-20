@@ -29,8 +29,12 @@ model Product {
   brand     String?
   /// EAN-13 / UPC. Null when identification never saw a barcode.
   barcode   String? @unique
-  /// "food" | "drink" | "supplement" | "cosmetic" — ProductCategory in lib/schemas.ts
+  /// One of the eleven values of ProductCategory in lib/schemas.ts. The rules for
+  /// each live in lib/health/categories/, one file per RUBRIC.md §4 section.
   category  String
+  /// RUBRIC.md §4 C4.0.1. Selects the per-100 basis and bounds the alternative
+  /// ranking. Null resolves to the category's default rather than to a guess.
+  subcategory String?
   /// Vendor-neutral pack size as written on the pack, e.g. "500 ml", "250 g".
   sizeLabel String?
   imageUrl  String?
@@ -63,6 +67,7 @@ model Product {
   scans          Scan[]
 
   @@index([category])
+  @@index([category, subcategory])
   @@index([slug])
 }
 
@@ -236,6 +241,9 @@ model HealthAnalysis {
   checksJson String
   /// JSON: string[] — what we could not determine, shown as "unknown".
   unknownsJson String
+  /// JSON: NoteSchema[] — shown to the reader, never counted. RUBRIC.md §3 U5.1,
+  /// §5 A4, and the per-category notes in §4.
+  notesJson    String @default("[]")
 
   /// Model that wrote the prose, or "deterministic" in mock mode.
   model String

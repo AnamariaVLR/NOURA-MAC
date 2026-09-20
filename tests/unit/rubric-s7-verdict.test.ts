@@ -1,3 +1,10 @@
+/**
+ * RUBRIC.md §7 — Verdict mapping.
+ *
+ * V0 to V5, in the order they are applied, plus §7.1's two disqualifiers. Every
+ * number here is POLICY and the tests say so: no retrieved scheme maps a pass
+ * count to a verdict, and §9 Q7 still asks a nutritionist to set these.
+ */
 import { describe, expect, it } from "vitest";
 import { VERDICT_LABEL, isVerified, verdictFor } from "@/lib/health/verdict";
 import {
@@ -6,6 +13,7 @@ import {
   MIN_COVERAGE,
   MIN_KNOWN_FOR_GOOD_CHOICE,
 } from "@/lib/health/rubric";
+import { ruleFor } from "@/lib/health/categories";
 import { VerdictResultSchema, type Check, type CheckStatus } from "@/lib/schemas";
 
 const source = { name: "Open Food Facts", url: null, lastVerifiedAt: "2026-01-01T00:00:00.000Z" };
@@ -173,5 +181,33 @@ describe("the arithmetic excludes unknowns from the pass rate", () => {
   it("mentions the unchecked dimensions in its reason", () => {
     expect(verdictFor(list(4, 1, 3)).reason).toMatch(/3 could not be checked/);
     expect(verdictFor(list(4, 1)).reason).not.toMatch(/could not/);
+  });
+});
+
+
+/* ===========================================================================
+ * V0 — D12, the categories Noura declines to judge at all.
+ * ========================================================================= */
+describe("V0 — an unsupported category declines before any arithmetic", () => {
+  it("cosmetics return COULD NOT VERIFY even on a perfect pass rate", () => {
+    const result = verdictFor(list(4, 0), ruleFor("cosmetic"));
+    expect(result.verdict).toBe("could_not_verify");
+    expect(result.reason).toContain("cannot assess cosmetics");
+  });
+
+  it("supplements do the same", () => {
+    const result = verdictFor(list(5, 0), ruleFor("supplement"));
+    expect(result.verdict).toBe("could_not_verify");
+  });
+
+  it("a supported category is unaffected by the new argument", () => {
+    expect(verdictFor(list(4, 0), ruleFor("cereal")).verdict).toBe("good_choice");
+    expect(verdictFor(list(4, 0)).verdict).toBe("good_choice");
+  });
+
+  it("the counts are still reported, so the page can show what was checked", () => {
+    const result = verdictFor(list(2, 1), ruleFor("cosmetic"));
+    expect(result.counts.known).toBe(3);
+    expect(result.counts.applicable).toBe(3);
   });
 });

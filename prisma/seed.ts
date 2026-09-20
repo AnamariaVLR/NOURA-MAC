@@ -23,6 +23,7 @@ type FetchedProduct = {
   slug: string;
   barcode: string;
   category: string;
+  subcategory?: string | null;
   name: string;
   brand: string | null;
   sizeLabel: string;
@@ -93,6 +94,7 @@ export async function runSeed(client: PrismaClient = prisma): Promise<SeedSummar
       name: data.name,
       brand: data.brand,
       category: entry.category,
+      subcategory: entry.subcategory,
       sizeLabel: entry.sizeLabel,
       imageUrl: data.imageUrl,
       ingredientsText: data.ingredientsText,
