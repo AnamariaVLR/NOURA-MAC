@@ -96,6 +96,26 @@ export const VerdictSchema = z.enum([
 ]);
 export type Verdict = z.infer<typeof VerdictSchema>;
 
+/**
+ * How a scan arrived at its product, and what the result page is therefore
+ * entitled to claim. Provenance, like everything else here — see DECISIONS §73.
+ */
+export const MatchSourceSchema = z.enum(["BARCODE", "NAME_AUTO", "USER_CONFIRMED"]);
+export type MatchSource = z.infer<typeof MatchSourceSchema>;
+
+/** One option in a "Which one is this?" question. */
+export const MatchCandidateSchema = z.object({
+  productId: z.string().min(1),
+  slug: z.string().min(1),
+  name: z.string().min(1),
+  brand: z.string().nullable(),
+  sizeLabel: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  /** What this option adds that the scan did not read — the reason we are asking. */
+  variant: z.array(z.string()),
+});
+export type MatchCandidate = z.infer<typeof MatchCandidateSchema>;
+
 /** A check is "pass" only when a value was observed. Missing data is "unknown". */
 export const CheckStatusSchema = z.enum(["pass", "fail", "unknown"]);
 export type CheckStatus = z.infer<typeof CheckStatusSchema>;

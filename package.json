@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "db:push": "tsx scripts/prisma-provider.ts && prisma db push --skip-generate",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "rm -f prisma/dev.db && npm run db:push && npm run db:seed",
+    "db:reset": "rm -f prisma/dev.db && npx prisma generate && npm run db:push && npm run db:seed && npm run db:where",
     "setup": "tsx scripts/prisma-provider.ts && prisma generate && npm run db:push && npm run db:seed",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -27,7 +27,8 @@
     "db:migrate:new": "tsx scripts/prisma-provider.ts && prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
     "icons": "tsx scripts/make-icons.ts",
     "qr": "tsx scripts/make-qr.ts",
-    "pilot:url": "tsx scripts/pilot-url.ts"
+    "pilot:url": "tsx scripts/pilot-url.ts",
+    "db:where": "tsx scripts/db-where.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

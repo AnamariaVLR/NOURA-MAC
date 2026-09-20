@@ -1106,3 +1106,97 @@ here to check"; it just had never been run.
 product to run against is a rule nobody has tested. Three of the eight category
 rules had no product in the catalogue before this session, and the first one to
 get one was wrong.
+
+## 73. A tie is a question for the shopper
+
+The matcher scored `shared ÷ max(queryTokens, candidateTokens)` and accepted
+anything over 0.5. That punishes a CORRECT read for being short. On the first
+live scans the model looked at an Almarai carton, read `Milk` / `Almarai`, and
+the catalogue entry "Almarai milk full fat" scored 0.25 — one shared token over
+four — lifted to 0.40 by the brand bonus, and was rejected. Every token the
+model read was right and present. The entry lost for being more descriptive than
+the front of the pack.
+
+**Containment** asks the question that matters: is everything the model read
+present in this product's name? Asymmetric, which is correct, because the model
+sees a pack front and the catalogue holds a full product title.
+
+Containment alone would be worse than what it replaced, because "Milk" is
+contained in every milk. It finds more candidates, so the matcher's job moves
+from scoring to deciding — and the rule is:
+
+> **A tie is a question for the shopper. Never a guess, never a dead end.**
+
+`decideMatch` returns a decision, not a product:
+
+- **auto** — one candidate, and the scan established enough to tell it from its
+  neighbours. Still labelled "matched by name, confirm below", still one tap from
+  being corrected.
+- **confirm** — one or more candidates the scan cannot separate. Ask. **No
+  HealthAnalysis row is created until it is answered**, because a verdict about
+  the wrong variant is worse than no verdict.
+- **none** — nothing contains what was read. Say so, and queue it in
+  /admin/missing.
+
+**What "established enough" means.** A candidate may carry information the scan
+never saw: "Almarai milk full fat" adds `full` and `fat` to a scan that read
+`Milk`. Auto-matching would be choosing a variant on the shopper's behalf. So a
+candidate is separable only when the tokens it adds beyond the query and the
+brand were themselves seen somewhere in the scan — in the size, or in the text
+the model transcribed — **and** the size agrees. That is the rule behind "never
+auto-match a product with a different size or variant from what the model read".
+
+Auto-match additionally requires a brand. A brandless read of "milk" identifies
+nothing, however few candidates happen to be in the catalogue.
+
+**Provenance** is on the page, because the three cases claim different things:
+"Matched by barcode", "Matched by name, confirm below", "You confirmed this
+product". Only the last is the shopper's own statement, and only it suppresses
+the "Not this product?" escape hatch.
+
+The old `nameSimilarity` and `pickBestLocalMatch` are deleted rather than left
+exported. Two matchers in a tree is an invitation to call the wrong one.
+
+## 74. The model annotates what it reads, and the annotation is not the name
+
+A second live scan of the same carton came back as `Milk (Halib)` — the model
+transliterating the Arabic as a courtesy. Containment then required `halib` to
+appear in a catalogue name, it appears in none, and a correct read became a dead
+end again.
+
+A parenthesis in a name the MODEL produced is a gloss, not part of the product's
+name. `readName()` strips it before tokenising. That is a normalisation of our
+own output, not a loosening of the rule: every remaining token must still be
+fully contained, and a test asserts that `Oat Milk (Halib)` still matches
+nothing.
+
+The stripped words are kept in the set of things the scan *saw*, so they can
+never later count as a variant the shopper failed to establish.
+
+Worth recording as a pattern rather than a one-off: **the model's output is
+prose, not a key.** It will pluralise, transliterate, expand abbreviations and
+add asides, and each of those is a correct reading that a literal matcher
+rejects. The barcode salvage in §72's commit is the same lesson in a different
+field.
+
+## 75. The database was the wrong file for most of a session
+
+`npm run db:reset` reported seeding 35 products. The app served 17, including a
+product that had been deleted from the catalogue two hours earlier. Nothing
+errored. Both numbers were true, for different files.
+
+A relative SQLite URL like `file:./dev.db` is resolved by the **generated
+client** against the directory of the schema it was generated from — not against
+the current working directory, and not against `DATABASE_URL`'s own location. A
+`prisma generate` had run inside a git worktree of this repo, so every query
+from the main checkout went to `.claude/worktrees/noura-brand/prisma/dev.db`.
+`rm -f prisma/dev.db` then deleted a file nothing was reading.
+
+This cost about an hour and produced three wrong conclusions along the way. The
+guard is `npm run db:where`, which prints the file actually open and exits
+non-zero when it is not this checkout's, and `npm run db:reset` now runs
+`prisma generate` first and `db:where` last.
+
+The general lesson: **when a number does not match what the code should have
+produced, check which database answered before checking the code.** A silent
+redirection looks exactly like a logic bug and is much cheaper to rule out.

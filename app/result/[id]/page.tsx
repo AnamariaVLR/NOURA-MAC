@@ -30,10 +30,13 @@ import { formatAed, formatDate } from "@/lib/format";
 import { findAlternatives } from "@/lib/recommend/alternatives";
 import { freshnessLabel } from "@/lib/retail/freshness";
 import { bestPrice, searchUaeListings } from "@/lib/retail/search";
+import { ConfirmProduct, NotThisProduct } from "@/components/confirm-product";
 import { resolveSubcategory, ruleFor } from "@/lib/health/categories";
 import {
   CheckSchema,
   IdentificationSchema,
+  MatchCandidateSchema,
+  MatchSourceSchema,
   NoteSchema,
   NutritionFactsSchema,
   ProductCategorySchema,
@@ -70,25 +73,89 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
   const identification = parseJsonColumn(scan.identificationJson, IdentificationWithMetaSchema);
 
+  const offered =
+    parseJsonColumn(scan.candidatesJson, z.array(MatchCandidateSchema)) ?? [];
+
+  // A TIE IS A QUESTION. Nothing has been evaluated yet; the analysis runs when
+  // this is answered. See lib/pipeline/match.ts and /api/scan/[id]/confirm.
+  if (scan.status === "needs_confirmation" && offered.length > 0) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <ConfirmProduct
+            scanId={scan.id}
+            candidates={offered}
+            heading="Which one is this?"
+            subheading={
+              identification
+                ? `We read “${identification.name}”${
+                    identification.brand ? ` by ${identification.brand}` : ""
+                  } off the pack, which is not enough to tell these apart. Nothing has been checked yet.`
+                : "We could not tell these apart from the photo. Nothing has been checked yet."
+            }
+          />
+        </Card>
+
+        {scan.imagePath || scan.imageBlobUrl || scan.imageBytes ? (
+          <Card>
+            <SectionTitle>Your photo</SectionTitle>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/image/${scan.id}`}
+              alt="The product you photographed"
+              className="max-h-56 w-full rounded-xl border border-line bg-paper object-contain"
+            />
+          </Card>
+        ) : null}
+
+        <Link href="/" className="block text-center text-[13px] underline underline-offset-2">
+          Scan something else
+        </Link>
+      </div>
+    );
+  }
+
   if (!scan.product || !scan.analysis) {
     return (
       <div className="space-y-4">
         <EmptyState
-          title="We could not verify this product"
+          title="We don&rsquo;t have this product yet"
           body={
             scan.error ??
-            "We found no published information about it. Rather than guess, we are showing you nothing."
+            "It is not in our catalogue and not in the open databases we read. We have noted it."
           }
         />
         {identification ? (
           <Card>
-            <SectionTitle>What we thought we saw</SectionTitle>
+            <SectionTitle>What we read off the pack</SectionTitle>
             <p className="text-[14px] font-medium" data-testid="product-name">
               {identification.name}
             </p>
             <p className="mt-0.5 text-[12px] text-ink-soft">
               {identification.brand ?? "Brand unknown"}
+              {identification.sizeLabel ? ` · ${identification.sizeLabel}` : ""}
             </p>
+            {identification.visibleText ? (
+              <p className="mt-2 rounded-xl border border-line bg-paper px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
+                “{identification.visibleText}”
+              </p>
+            ) : null}
+            <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
+              This has been added to the list of products to add. Nothing about you was recorded
+              with it.
+            </p>
+          </Card>
+        ) : null}
+
+        {scan.imagePath || scan.imageBlobUrl || scan.imageBytes ? (
+          <Card>
+            <SectionTitle>Your photo</SectionTitle>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/image/${scan.id}`}
+              alt="The product you photographed"
+              className="max-h-56 w-full rounded-xl border border-line bg-paper object-contain"
+            />
           </Card>
         ) : null}
         <Link href="/" className="block text-center text-[13px] underline underline-offset-2">
@@ -139,6 +206,18 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
   // Demo scaffolding is never shown as verification. The enum decides, not a prefix.
   const realCertifications = product.certifications.filter((c) => isVerifiableSource(c.source));
+
+  // Provenance. What the page is entitled to claim depends on how the product
+  // was arrived at, and the three cases say genuinely different things.
+  const matchSource = MatchSourceSchema.safeParse(scan.matchSource).data ?? null;
+  const matchLabel =
+    matchSource === "USER_CONFIRMED"
+      ? "You confirmed this product"
+      : matchSource === "BARCODE"
+        ? "Matched by barcode"
+        : matchSource === "NAME_AUTO"
+          ? "Matched by name, confirm below"
+          : "Matched from your photo";
   const unit = nutrition?.basis === "per_100ml" ? "per 100 ml" : "per 100 g";
 
   return (
@@ -180,7 +259,19 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
         {verdict ? <VerdictBanner verdict={verdict.verdict} reason={verdict.reason} /> : null}
 
+        {/* An automatic match is still a guess the app made, so it is always one
+            tap from being corrected. A confirmed one is not re-offered. */}
+        {matchSource !== "USER_CONFIRMED" && offered.length > 0 ? (
+          <NotThisProduct scanId={scan.id} candidates={offered} />
+        ) : null}
+
         <dl className="mt-3 space-y-2 text-[12.5px]">
+          <div className="flex justify-between gap-3">
+            <dt className="text-ink-soft">How we found it</dt>
+            <dd className="text-right font-medium" data-testid="match-provenance">
+              {matchLabel}
+            </dd>
+          </div>
           <div className="flex justify-between gap-3">
             <dt className="text-ink-soft">Product information</dt>
             <dd className="text-right font-medium">{product.evidenceSource}</dd>

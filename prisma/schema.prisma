@@ -215,10 +215,24 @@ model Scan {
   imageBlobUrl String?
   imageBytes   Bytes?
 
-  /// "complete" | "failed"
-  status String
+  /// "complete" | "needs_confirmation" | "failed"
+  ///
+  /// `needs_confirmation` is a scan that found candidates it cannot separate.
+  /// NOTHING IS EVALUATED in that state — there is no HealthAnalysis row until
+  /// the shopper taps one. A verdict about the wrong variant is worse than no
+  /// verdict, so the analysis waits for the answer.
+  status         String
+  /// How the product was arrived at, and what the result page therefore claims:
+  ///   BARCODE         — "matched by barcode"
+  ///   NAME_AUTO       — "matched by name, confirm below"
+  ///   USER_CONFIRMED  — "You confirmed this product"
+  /// Null while a scan is still waiting to be confirmed, or when it failed.
+  matchSource    String?
+  /// JSON: the candidates offered for confirmation. Kept after the answer too,
+  /// so a shopper can change their mind without re-scanning.
+  candidatesJson String?
   /// "live" (Anthropic API) | "mock" (no ANTHROPIC_API_KEY)
-  mode   String
+  mode           String
 
   /// JSON: IdentificationSchema — what stage 2 thought the product was.
   identificationJson String
@@ -284,4 +298,35 @@ model RateLimit {
   updatedAt   DateTime @updatedAt
 
   @@index([windowStart])
+}
+
+/// A product a shopper scanned that the catalogue does not have.
+///
+/// The pilot's most useful output is a list of what it could not identify, so
+/// this is a queue rather than a log line: /admin/missing shows what the model
+/// read, how often it has been seen, and the scan image to check it against.
+///
+/// It stores only what the model read off the pack. No user key, because who
+/// scanned it is not part of the question.
+model MissingProduct {
+  id          String @id @default(cuid())
+  /// Lowercased "brand|name" — so the same product seen twice is one row.
+  fingerprint String @unique
+
+  name        String
+  brand       String?
+  sizeLabel   String?
+  category    String
+  subcategory String?
+  /// What the model transcribed off the pack, to sanity-check its reading.
+  visibleText String?
+  /// The most recent scan of it, for the photo. Not a relation: a scan can be
+  /// deleted (§27) and that must not delete the queue entry.
+  lastScanId  String?
+
+  timesSeen Int      @default(1)
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @updatedAt
+
+  @@index([lastSeen])
 }

@@ -9,7 +9,11 @@
  * interfere with each other and the repository never accumulates prices nobody
  * checked.
  */
+import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+
+/** Matches playwright.config.ts. Used when a fixture needs an origin before navigating. */
+const BASE_URL = `http://127.0.0.1:${process.env.PORT ?? 3100}`;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -172,4 +176,88 @@ export async function signInAsAdmin(page: import("@playwright/test").Page): Prom
   await page.getByTestId("admin-password").fill(ADMIN_PASSWORD);
   await page.getByTestId("admin-login-submit").click();
   await page.waitForURL(/\/admin\/(?!login)/, { timeout: 20_000 });
+}
+
+/* ===========================================================================
+ * Scans awaiting confirmation.
+ *
+ * Driving the real pipeline to produce one needs a model call and a photo the
+ * model reads ambiguously, which is neither cheap nor deterministic. The
+ * DECISION is unit-tested exhaustively in tests/unit/match.test.ts; what the
+ * end-to-end test is for is the shopper tapping an option on a 390px screen, so
+ * the state it starts from is written directly.
+ * ========================================================================= */
+
+export async function productIdByName(name: string): Promise<string> {
+  const product = await prisma().product.findFirst({ where: { name: { contains: name } } });
+  if (!product) throw new Error(`No seeded product matching ${JSON.stringify(name)}.`);
+  return product.id;
+}
+
+/**
+ * Creates a scan in `needs_confirmation`, owned by this browser.
+ *
+ * The scan has to belong to the browser's cookie or /result/[id] answers 404,
+ * and the app only mints that cookie when a scan is POSTed — visiting a page
+ * does not. So the browser identity is established here instead.
+ *
+ * This forges a cookie, which the admin fixture deliberately does not do. The
+ * difference is what the cookie IS: `noura_user` is an anonymous UUID naming a
+ * browser, with no authority attached, and creating one is exactly what the app
+ * would do on the first scan. `noura_admin` is a credential, so that one is
+ * obtained by typing the password like an operator would.
+ */
+export async function seedPendingScan(
+  page: import("@playwright/test").Page,
+  productNames: string[],
+): Promise<{ id: string }> {
+  const userKey = randomUUID();
+  const { origin } = new URL(page.url() === "about:blank" ? BASE_URL : page.url());
+  await page.context().addCookies([
+    { name: "noura_user", value: userKey, url: origin, httpOnly: true, sameSite: "Lax" },
+  ]);
+
+  const candidates = [];
+  for (const name of productNames) {
+    const product = await prisma().product.findFirst({ where: { name: { contains: name } } });
+    if (!product) throw new Error(`No seeded product matching ${JSON.stringify(name)}.`);
+    candidates.push({
+      productId: product.id,
+      slug: product.slug,
+      name: product.name,
+      brand: product.brand,
+      sizeLabel: product.sizeLabel,
+      imageUrl: product.imageUrl,
+      variant: ["full", "fat"],
+    });
+  }
+
+  const scan = await prisma().scan.create({
+    data: {
+      userKey,
+      status: "needs_confirmation",
+      mode: "mock",
+      identificationJson: JSON.stringify({
+        name: "Milk",
+        brand: "Almarai",
+        barcode: null,
+        category: "milk",
+        subcategory: null,
+        sizeLabel: "1 L",
+        confidence: 0.75,
+        visibleText: "Almarai",
+        method: "none",
+      }),
+      candidatesJson: JSON.stringify(candidates),
+    },
+  });
+
+  return { id: scan.id };
+}
+
+/** Scans and their analyses, gone. */
+export async function clearScans(): Promise<void> {
+  await prisma().healthAnalysis.deleteMany({});
+  await prisma().scan.deleteMany({});
+  await prisma().missingProduct.deleteMany({});
 }

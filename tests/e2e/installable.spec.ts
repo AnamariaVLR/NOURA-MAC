@@ -7,12 +7,20 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 import { resolve } from "node:path";
-import { addChecks, clearChecks, disconnect } from "./fixtures";
+import {
+  addChecks,
+  clearChecks,
+  clearScans,
+  disconnect,
+  productIdByName,
+  seedPendingScan,
+} from "./fixtures";
 
 const FIXTURE = resolve(__dirname, "../../fixtures/product.png");
 
 test.beforeEach(async () => {
   await clearChecks();
+  await clearScans();
 });
 
 test.afterAll(async () => {
@@ -193,4 +201,72 @@ test("390px: the admin form asks for a password, and takes one", async ({ page }
   await page.waitForURL(/\/admin\/listings/, { timeout: 20_000 });
   await expect(page.getByTestId("listing-queue")).toBeVisible();
   await assertNoHorizontalOverflow(page, "admin listings");
+});
+
+/* ===========================================================================
+ * The confirmation flow, at 390px.
+ *
+ * A tie is a question for the shopper. This drives the question the way a
+ * shopper would: by tapping, with a thumb, on a phone-sized screen.
+ * ========================================================================= */
+test("390px: a scan it cannot separate asks, and nothing is judged until answered", async ({
+  page,
+}) => {
+  // Seed a scan that is awaiting confirmation, the way the pipeline would.
+  const scan = await seedPendingScan(page, ["Almarai milk full fat", "Al Rawabi low fat milk"]);
+
+  await page.goto(`/result/${scan.id}`);
+
+  const question = page.getByTestId("confirm-product");
+  await expect(question).toBeVisible();
+  await expect(question).toContainText(/which one is this/i);
+  // The promise that nothing has been decided yet has to be on the screen.
+  await expect(question).toContainText(/nothing has been checked yet/i);
+
+  // No verdict anywhere: the analysis has not run.
+  await expect(page.getByTestId("checklist")).toHaveCount(0);
+  await expect(page.getByTestId("verdict")).toHaveCount(0);
+
+  const options = page.getByTestId("confirm-option");
+  await expect(options).toHaveCount(2);
+
+  // Each option is a real tap target on a phone.
+  const box = await options.first().boundingBox();
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  // Answer it.
+  await options.first().click();
+
+  await expect(page.getByTestId("checklist")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("match-provenance")).toContainText("You confirmed this product");
+  // A confirmed match is not re-offered.
+  await expect(page.getByTestId("not-this-product")).toHaveCount(0);
+});
+
+test("the confirm endpoint refuses a product it never offered", async ({ page }) => {
+  const scan = await seedPendingScan(page, ["Almarai milk full fat"]);
+  const other = await productIdByName("Coca-Cola");
+
+  // page.request, not the bare `request` fixture: this has to carry the
+  // browser's noura_user cookie, or the endpoint answers 404 for "not your
+  // scan" and never reaches the rule under test.
+  const res = await page.request.post(`/api/scan/${scan.id}/confirm`, {
+    form: { productId: other },
+  });
+  expect(res.status()).toBe(400);
+  expect(await res.text()).toContain("not one of the options");
+
+  // And a scan that is not yours is a 404 whatever you send — the two refusals
+  // are different and both matter.
+  const stranger = await page.context().browser()!.newContext();
+  const anonymous = await stranger.request.post(`/api/scan/${scan.id}/confirm`, {
+    form: { productId: other },
+  });
+  expect(anonymous.status()).toBe(404);
+  await stranger.close();
 });

@@ -58,6 +58,7 @@ ANTHROPIC_MODEL="claude-sonnet-5"
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run setup` | Generate client, push schema, seed |
 | `npm run db:reset` | Delete the SQLite file and rebuild it from seed |
+| `npm run db:where` | Which database is actually open, and what is in it |
 | `npm run seed:fetch` | Re-fetch product evidence from Open Food Facts |
 | `npm run seed:moiat -- file.csv` | Import the real MOIAT conformity register |
 | `npm run listings:export -- checks.csv` | Write the price-check queue as CSV |
@@ -77,6 +78,7 @@ ANTHROPIC_MODEL="claude-sonnet-5"
 | `/history` | This browser's past scans (no auth in the MVP) |
 | `/admin/login` | The one way into `/admin`. One password, 30-day cookie |
 | `/admin/listings` | Record price checks; the queue, sorted by staleness |
+| `/admin/missing` | Products a shopper scanned that the catalogue does not have |
 | `/admin/seed` | Dev tool: reload seed data, inspect what is loaded |
 
 ### Environment
@@ -319,6 +321,37 @@ hand-verified check**, the candidate's own verdict must be VERIFIED, and it must
 rank **strictly** above the scanned product. Up to three survive, shown with medal
 ranks, a price in AED and a "Why" built from the checks it passes that the scanned
 product fails. If none survive the page says *"No better verified option found."*
+
+### Which product is this?
+
+Stage 3 has to decide which catalogue product the shopper is holding, and the
+rule is:
+
+> **A tie is a question for the shopper. Never a guess, never a dead end.**
+
+`lib/pipeline/match.ts` uses **containment** — is everything the model read
+present in this product's name? — rather than a symmetric similarity score. The
+old score punished a correct read for being short: a scan that read `Milk` /
+`Almarai` scored 0.25 against "Almarai milk full fat" and was rejected, even
+though every token it read was right and present.
+
+Containment finds more candidates, so the matcher returns a **decision**:
+
+| | When | What the page says |
+|---|---|---|
+| **auto** | One candidate, the size agrees, and it adds nothing the scan did not read | "Matched by name, confirm below", with a one-tap **Not this product?** |
+| **confirm** | Candidates the scan cannot separate | **"Which one is this?"** — up to four options. **No verdict is computed until one is tapped** |
+| **none** | Nothing contains what was read | "We don't have this product yet", and a row in `/admin/missing` |
+
+A candidate is separable only when the words it adds beyond the query and the
+brand were themselves seen in the scan — in the size, or in the text the model
+transcribed — **and** the size agrees. That is what stops the app choosing
+between `full fat` and `lacto free` on the shopper's behalf. Auto-matching also
+requires a brand: a brandless read of "milk" identifies nothing.
+
+Provenance is on the result page, because the three cases claim different
+things: *matched by barcode*, *matched by name, confirm below*, and *you
+confirmed this product*.
 
 ### Installing it on a phone
 

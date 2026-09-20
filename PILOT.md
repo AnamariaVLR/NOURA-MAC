@@ -215,15 +215,28 @@ shelf.
 
 ## 6. The five things most likely to go wrong
 
+### 0. Noura asks "Which one is this?"
+
+Not a problem — it is the app refusing to guess. It found products that match
+what it read off the pack but cannot tell them apart: usually a size it could
+not see, or a variant like *full fat* against *lacto free*.
+
+**Nothing has been checked at that point.** Tap the right one and the checks run
+against it. If Noura matched automatically and got it wrong, tap **Not this
+product?** under the verdict and pick again.
+
 ### 1. You scan a product and Noura says it cannot find it
 
 **Most likely thing to happen.** Open Food Facts has a few million products and
 UAE shelves have plenty it has never seen.
 
 **What to do:** nothing is broken. Try again with the barcode square in the
-frame and in focus. If it still misses, that product is not in the open database
-— note it down. A pilot's most useful output is a list of what it could not
-identify.
+frame and in focus. If it still misses, that product is not in the open database.
+
+**You do not need to note it down** — Noura already did. Everything it could not
+identify is at `__LIVE_URL__/admin/missing`, with what the model read off the
+pack, how many times it has been seen, and a link to the photo. That list is the
+pilot's most useful output.
 
 ### 2. Every scan returns Coca-Cola
 
@@ -278,3 +291,7 @@ open to the public. Set it in Vercel and redeploy.
 2. **Verdicts that felt wrong**, with what you expected instead. That is the
    input a nutritionist review needs.
 3. **How long a price check actually takes** in a real aisle, holding a basket.
+4. **How often you get "Which one is this?"**, and whether the options were
+   enough to answer it. Too many questions is annoying; a wrong automatic match
+   is worse, and the balance between them is a judgement I would rather you made
+   from real scans than I made from a rule.

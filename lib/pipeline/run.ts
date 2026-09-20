@@ -14,11 +14,52 @@
  * than the moment the photo was taken.
  */
 import { prisma } from "../db";
+import type { Identification } from "../schemas";
 import { analyseProduct, type CertificationWithBody } from "./analyze";
 import { gatherEvidence } from "./evidence";
 import { identifyProduct } from "./identify";
 
-export type RunResult = { scanId: string; status: "complete" | "failed" };
+export type RunResult = {
+  scanId: string;
+  status: "complete" | "needs_confirmation" | "failed";
+};
+
+/**
+ * Records a product the catalogue does not have, so /admin/missing can show it.
+ *
+ * Fingerprinted on brand + name, so the same product scanned by five people is
+ * one row with timesSeen 5 rather than five rows. Failing here must never fail
+ * the scan: the shopper's page does not depend on the queue.
+ */
+async function queueMissingProduct(
+  identification: Identification,
+  scanId: string | null,
+): Promise<void> {
+  const fingerprint = `${identification.brand ?? ""}|${identification.name}`
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  if (fingerprint === "|" || fingerprint.length < 2) return;
+
+  try {
+    await prisma.missingProduct.upsert({
+      where: { fingerprint },
+      create: {
+        fingerprint,
+        name: identification.name,
+        brand: identification.brand,
+        sizeLabel: identification.sizeLabel,
+        category: identification.category,
+        subcategory: identification.subcategory,
+        visibleText: identification.visibleText,
+        lastScanId: scanId,
+      },
+      update: { timesSeen: { increment: 1 }, lastScanId: scanId },
+    });
+  } catch (error) {
+    console.error("[pipeline] could not queue missing product:", error);
+  }
+}
 
 export type StoredImageRef = {
   imagePath?: string | null;
@@ -62,20 +103,49 @@ export async function runPipeline(args: {
 
   const evidence = await gatherEvidence(identification);
 
+  const image = {
+    imagePath: args.image.imagePath ?? null,
+    imageBlobUrl: args.image.imageBlobUrl ?? null,
+    imageBytes: args.image.imageBytes ? new Uint8Array(args.image.imageBytes) : null,
+    imageMime: args.image.imageMime ?? args.mime,
+  };
+  const identificationJson = JSON.stringify({
+    ...identification,
+    note: note ?? evidence.note,
+    method: evidence.method,
+  });
+
+  // A TIE IS A QUESTION. The matcher found products it could not separate, so
+  // the scan stops here: no HealthAnalysis row is created, because a verdict
+  // about the wrong variant is worse than no verdict. /result/[id] renders the
+  // question and /api/scan/[id]/confirm finishes the job.
+  if (!evidence.product && evidence.candidates && evidence.candidates.length > 0) {
+    const scan = await prisma.scan.create({
+      data: {
+        userKey: args.userKey,
+        ...image,
+        status: "needs_confirmation",
+        mode,
+        identificationJson,
+        candidatesJson: JSON.stringify(evidence.candidates),
+      },
+    });
+    return { scanId: scan.id, status: "needs_confirmation" };
+  }
+
   if (!evidence.product) {
     const scan = await prisma.scan.create({
       data: {
         userKey: args.userKey,
-        imagePath: args.image.imagePath ?? null,
-        imageBlobUrl: args.image.imageBlobUrl ?? null,
-        imageBytes: args.image.imageBytes ? new Uint8Array(args.image.imageBytes) : null,
-        imageMime: args.image.imageMime ?? args.mime,
+        ...image,
         status: "failed",
         mode,
-        identificationJson: JSON.stringify({ ...identification, note, method: evidence.method }),
+        identificationJson,
         error: evidence.note ?? "No published evidence was found for this product.",
       },
     });
+    // The pilot's most useful output is a list of what it could not identify.
+    await queueMissingProduct(identification, scan.id);
     return { scanId: scan.id, status: "failed" };
   }
 
@@ -89,17 +159,12 @@ export async function runPipeline(args: {
   const scan = await prisma.scan.create({
     data: {
       userKey: args.userKey,
-      imagePath: args.image.imagePath ?? null,
-      imageBlobUrl: args.image.imageBlobUrl ?? null,
-      imageBytes: args.image.imageBytes ? new Uint8Array(args.image.imageBytes) : null,
-      imageMime: args.image.imageMime ?? args.mime,
+      ...image,
       status: "complete",
       mode,
-      identificationJson: JSON.stringify({
-        ...identification,
-        note: note ?? evidence.note,
-        method: evidence.method,
-      }),
+      identificationJson,
+      matchSource: evidence.matchSource ?? null,
+      candidatesJson: evidence.candidates ? JSON.stringify(evidence.candidates) : null,
       productId: evidence.product.id,
       analysis: {
         create: {

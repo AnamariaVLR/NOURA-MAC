@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  NAME_MATCH_THRESHOLD,
-  nameSimilarity,
-  pickBestLocalMatch,
-  tokenise,
-} from "@/lib/pipeline/evidence";
+import { tokenise } from "@/lib/pipeline/evidence";
 import { nutritionIsUsable, toEvidence } from "@/lib/evidence/openfoodfacts";
 import { mockIdentification, salvage } from "@/lib/pipeline/identify";
 import { IdentificationSchema, NutritionFactsSchema } from "@/lib/schemas";
@@ -16,66 +11,7 @@ describe("tokenise", () => {
   });
 });
 
-describe("nameSimilarity", () => {
-  it("scores an exact name as 1", () => {
-    expect(nameSimilarity({ name: "Oat Drink", brand: "Alpro" }, { name: "Oat Drink", brand: "Alpro" })).toBe(
-      1,
-    );
-  });
 
-  it("scores unrelated products near zero", () => {
-    expect(
-      nameSimilarity(
-        { name: "Corn Flakes", brand: "Kellogg's" },
-        { name: "Sunscreen Spray", brand: "Nivea" },
-      ),
-    ).toBe(0);
-  });
-
-  it("weights a brand match, because brand is the strongest non-barcode cue", () => {
-    const withBrand = nameSimilarity(
-      { name: "Oat Drink", brand: "Alpro" },
-      { name: "Oat Drink No Sugars", brand: "Alpro" },
-    );
-    const withoutBrand = nameSimilarity(
-      { name: "Oat Drink", brand: null },
-      { name: "Oat Drink No Sugars", brand: "Alpro" },
-    );
-    expect(withBrand).toBeGreaterThan(withoutBrand);
-  });
-
-  it("never exceeds 1 even when the brand bonus applies", () => {
-    expect(
-      nameSimilarity({ name: "Laban", brand: "Al Rawabi" }, { name: "Laban", brand: "Al Rawabi" }),
-    ).toBeLessThanOrEqual(1);
-  });
-
-  it("returns 0 when either side has no usable tokens", () => {
-    expect(nameSimilarity({ name: "a", brand: null }, { name: "Corn Flakes", brand: null })).toBe(0);
-  });
-});
-
-describe("pickBestLocalMatch", () => {
-  const candidates = [
-    { name: "Corn Flakes", brand: "Kellogg's" },
-    { name: "Unsweetened Oat Drink", brand: "Alpro" },
-    { name: "Organic Oat Drink", brand: "Oatly" },
-  ];
-
-  it("picks the closest candidate above the threshold", () => {
-    const result = pickBestLocalMatch({ name: "Organic Oat Drink", brand: "Oatly" }, candidates);
-    expect(result?.match.brand).toBe("Oatly");
-    expect(result!.score).toBeGreaterThanOrEqual(NAME_MATCH_THRESHOLD);
-  });
-
-  it("returns null rather than the wrong product when nothing is close enough", () => {
-    expect(pickBestLocalMatch({ name: "Sunscreen Spray", brand: "Nivea" }, candidates)).toBeNull();
-  });
-
-  it("returns null for an empty catalogue", () => {
-    expect(pickBestLocalMatch({ name: "Anything", brand: null }, [])).toBeNull();
-  });
-});
 
 describe("nutritionIsUsable", () => {
   const facts = (o: Record<string, number | null>) => NutritionFactsSchema.parse({ basis: "per_100g", ...o });
