@@ -14,6 +14,7 @@ import {
   BETTER_DRINK_RETAILERS,
   OAT_DRINK,
   SCANNED_PRODUCT,
+  signInAsAdmin,
   addChecks,
   clearChecks,
   disconnect,
@@ -191,6 +192,8 @@ test("stale listing: a fresh check outranks a lapsed cheaper one", async ({ page
  * The admin form, which is how real checks get in
  * ========================================================================= */
 test("admin: a check recorded on the form appears as a verified price", async ({ page }) => {
+  // /admin is behind a password now; the operator signs in once per phone.
+  await signInAsAdmin(page);
   await page.goto("/admin/listings");
   await expect(page.getByRole("heading", { name: /Price checks/i })).toBeVisible();
 

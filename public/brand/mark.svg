@@ -1,0 +1,18 @@
+<!--
+  The Noura mark: a check inside a ring.
+
+  Drawn as paths, with no text element, on purpose. sharp renders SVG through
+  librsvg, whose text support depends on the fonts installed on whatever machine
+  runs the build — a wordmark set in a font would render differently on a laptop
+  and on a CI box, or not at all. Paths render identically everywhere.
+
+  Every icon in public/ is generated from this file by scripts/make-icons.ts.
+  Change this and re-run `npm run icons`; never hand-edit a PNG.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Noura">
+  <rect width="512" height="512" rx="112" fill="#6f8067"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#ffffff" stroke-width="26" opacity="0.5"/>
+  <path d="M176 262 L232 318 L342 206"
+        fill="none" stroke="#ffffff" stroke-width="46"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

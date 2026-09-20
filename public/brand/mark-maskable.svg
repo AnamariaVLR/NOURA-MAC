@@ -1,0 +1,16 @@
+<!--
+  The same mark, sized for a maskable icon.
+
+  Android crops a maskable icon to whatever shape the launcher uses — circle,
+  squircle, teardrop — and only guarantees the central 80% survives. So the tile
+  is edge to edge with no corner radius (the launcher supplies the shape) and the
+  mark is scaled to sit inside that safe circle. Using the standard icon here is
+  the classic bug: the check loses its ends on a round launcher.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Noura">
+  <rect width="512" height="512" fill="#6f8067"/>
+  <circle cx="256" cy="256" r="118" fill="none" stroke="#ffffff" stroke-width="21" opacity="0.5"/>
+  <path d="M193 260 L237 304 L323 216"
+        fill="none" stroke="#ffffff" stroke-width="36"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

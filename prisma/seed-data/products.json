@@ -13,6 +13,7 @@
     ],
     "additives": [],
     "novaGroup": 3,
+    "subcategory": null,
     "nutrition": {
       "basis": "per_100g",
       "energyKcal": 376.666666666667,
@@ -27,8 +28,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3159470000120",
-    "fetchedAt": "2026-09-19T17:05:25.632Z",
-    "subcategory": null
+    "fetchedAt": "2026-09-20T14:13:49.550Z"
   },
   {
     "slug": "kelloggs-all-bran-fibre-plus-500g",
@@ -44,6 +44,7 @@
     ],
     "additives": [],
     "novaGroup": 4,
+    "subcategory": null,
     "nutrition": {
       "basis": "per_100g",
       "energyKcal": 334,
@@ -58,8 +59,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3159470001424",
-    "fetchedAt": "2026-09-19T17:05:26.579Z",
-    "subcategory": null
+    "fetchedAt": "2026-09-20T14:13:50.192Z"
   },
   {
     "slug": "kelloggs-special-k-500g",
@@ -75,6 +75,7 @@
     ],
     "additives": [],
     "novaGroup": 3,
+    "subcategory": null,
     "nutrition": {
       "basis": "per_100g",
       "energyKcal": 392,
@@ -89,8 +90,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5050083296079",
-    "fetchedAt": "2026-09-19T17:05:27.562Z",
-    "subcategory": null
+    "fetchedAt": "2026-09-20T14:13:50.873Z"
   },
   {
     "slug": "al-rawabi-full-cream-yogurt-400g",
@@ -108,6 +108,7 @@
       "E440"
     ],
     "novaGroup": 4,
+    "subcategory": "spoonable_yogurt",
     "nutrition": {
       "basis": "per_100g",
       "energyKcal": 71,
@@ -122,8 +123,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291030400241",
-    "fetchedAt": "2026-09-19T17:05:28.506Z",
-    "subcategory": "spoonable_yogurt"
+    "fetchedAt": "2026-09-20T14:13:51.539Z"
   },
   {
     "slug": "puck-mango-yoghurt-150g",
@@ -143,6 +143,7 @@
       "E440"
     ],
     "novaGroup": 4,
+    "subcategory": "spoonable_yogurt",
     "nutrition": {
       "basis": "per_100g",
       "energyKcal": 82,
@@ -157,8 +158,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5711953167577",
-    "fetchedAt": "2026-09-19T17:05:29.465Z",
-    "subcategory": "spoonable_yogurt"
+    "fetchedAt": "2026-09-20T14:13:52.178Z"
   },
   {
     "slug": "puck-gouda-slices-200g",
@@ -172,6 +172,7 @@
     "allergens": [],
     "additives": [],
     "novaGroup": null,
+    "subcategory": null,
     "nutrition": {
       "basis": "per_100g",
       "energyKcal": 353,
@@ -186,8 +187,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5711953023095",
-    "fetchedAt": "2026-09-19T17:05:30.396Z",
-    "subcategory": null
+    "fetchedAt": "2026-09-20T14:13:52.816Z"
   },
   {
     "slug": "president-butter-250g",
@@ -203,6 +203,7 @@
     ],
     "additives": [],
     "novaGroup": 2,
+    "subcategory": "other_fats_oils",
     "nutrition": {
       "basis": "per_100g",
       "energyKcal": 727,
@@ -217,8 +218,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3228020215106",
-    "fetchedAt": "2026-09-19T17:05:31.334Z",
-    "subcategory": "other_fats_oils"
+    "fetchedAt": "2026-09-20T14:13:53.492Z"
   },
   {
     "slug": "hummus-classic-240g",
@@ -239,6 +239,7 @@
       "E330"
     ],
     "novaGroup": 3,
+    "subcategory": null,
     "nutrition": {
       "basis": "per_100g",
       "energyKcal": 311,
@@ -253,8 +254,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/8480000808585",
-    "fetchedAt": "2026-09-19T17:05:32.296Z",
-    "subcategory": null
+    "fetchedAt": "2026-09-20T14:13:54.134Z"
   },
   {
     "slug": "coca-cola-330ml",
@@ -271,6 +271,7 @@
       "E338"
     ],
     "novaGroup": 4,
+    "subcategory": null,
     "nutrition": {
       "basis": "per_100ml",
       "energyKcal": 42,
@@ -285,8 +286,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5449000000996",
-    "fetchedAt": "2026-09-19T17:05:33.259Z",
-    "subcategory": null
+    "fetchedAt": "2026-09-20T14:13:54.782Z"
   },
   {
     "slug": "lipton-ice-tea-peach-500ml",
@@ -307,6 +307,7 @@
       "E960A"
     ],
     "novaGroup": 4,
+    "subcategory": null,
     "nutrition": {
       "basis": "per_100ml",
       "energyKcal": 13,
@@ -321,8 +322,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3502110005403",
-    "fetchedAt": "2026-09-19T17:05:34.195Z",
-    "subcategory": null
+    "fetchedAt": "2026-09-20T14:13:55.428Z"
   },
   {
     "slug": "alpro-oat-no-sugars-1l",
@@ -340,6 +340,7 @@
       "E418"
     ],
     "novaGroup": 4,
+    "subcategory": "plant_milk",
     "nutrition": {
       "basis": "per_100ml",
       "energyKcal": 44,
@@ -354,8 +355,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5411188124689",
-    "fetchedAt": "2026-09-19T17:05:35.171Z",
-    "subcategory": "plant_milk"
+    "fetchedAt": "2026-09-20T14:13:56.116Z"
   },
   {
     "slug": "oatly-organic-oat-drink-1l",
@@ -372,6 +372,7 @@
     ],
     "additives": [],
     "novaGroup": 3,
+    "subcategory": "plant_milk",
     "nutrition": {
       "basis": "per_100ml",
       "energyKcal": 39,
@@ -386,8 +387,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/7394376123337",
-    "fetchedAt": "2026-09-19T17:05:36.128Z",
-    "subcategory": "plant_milk"
+    "fetchedAt": "2026-09-20T14:13:56.933Z"
   },
   {
     "slug": "al-rawabi-low-fat-milk-1l",
@@ -401,6 +401,7 @@
     "allergens": [],
     "additives": [],
     "novaGroup": null,
+    "subcategory": "dairy_milk",
     "nutrition": {
       "basis": "per_100ml",
       "energyKcal": 43,
@@ -415,8 +416,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291030201022",
-    "fetchedAt": "2026-09-19T17:05:37.114Z",
-    "subcategory": "dairy_milk"
+    "fetchedAt": "2026-09-20T14:13:57.574Z"
   },
   {
     "slug": "al-rawabi-laban-1l",
@@ -430,6 +430,7 @@
     "allergens": [],
     "additives": [],
     "novaGroup": null,
+    "subcategory": "drinking_yogurt",
     "nutrition": {
       "basis": "per_100ml",
       "energyKcal": 31,
@@ -444,8 +445,7 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291030301043",
-    "fetchedAt": "2026-09-19T17:05:38.143Z",
-    "subcategory": "drinking_yogurt"
+    "fetchedAt": "2026-09-20T14:14:02.808Z"
   },
   {
     "slug": "al-ain-water-500ml",
@@ -459,6 +459,7 @@
     "allergens": [],
     "additives": [],
     "novaGroup": null,
+    "subcategory": null,
     "nutrition": {
       "basis": "per_100ml",
       "energyKcal": 0,
@@ -473,8 +474,615 @@
     },
     "evidenceSource": "Open Food Facts",
     "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291100850044",
-    "fetchedAt": "2026-09-19T17:05:44.393Z",
-    "subcategory": null
+    "fetchedAt": "2026-09-20T14:14:08.053Z"
+  },
+  {
+    "slug": "borges-extra-virgin-olive-oil-500ml",
+    "barcode": "8410179100036",
+    "category": "fats_oils",
+    "name": "Extra Virgin Olive Oil",
+    "brand": "Borges",
+    "sizeLabel": "500 ml",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/841/017/910/0036/front_en.74.400.jpg",
+    "ingredientsText": "Extra virgin olive oil.",
+    "allergens": [],
+    "additives": [],
+    "novaGroup": 2,
+    "subcategory": "olive_oil",
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 900,
+      "carbohydratesG": 0,
+      "sugarsG": 0,
+      "addedSugarsG": 0,
+      "fatG": 100,
+      "saturatedFatG": 15,
+      "saltG": 0,
+      "fibreG": 0,
+      "proteinG": 0
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/8410179100036",
+    "fetchedAt": "2026-09-20T14:14:10.269Z"
+  },
+  {
+    "slug": "borges-extra-virgin-olive-oil-1l",
+    "barcode": "8410179101118",
+    "category": "fats_oils",
+    "name": "Extra virgin olive oil",
+    "brand": "BORGES",
+    "sizeLabel": "1 L",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/841/017/910/1118/front_en.15.400.jpg",
+    "ingredientsText": "Extra Virgin Olive Oil.",
+    "allergens": [],
+    "additives": [],
+    "novaGroup": 2,
+    "subcategory": "olive_oil",
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 900,
+      "carbohydratesG": 0,
+      "sugarsG": 0,
+      "addedSugarsG": null,
+      "fatG": 100,
+      "saturatedFatG": 16,
+      "saltG": 0,
+      "fibreG": 0,
+      "proteinG": 0
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/8410179101118",
+    "fetchedAt": "2026-09-20T14:14:15.513Z"
+  },
+  {
+    "slug": "rahma-extra-virgin-olive-oil-250ml",
+    "barcode": "6291003053498",
+    "category": "fats_oils",
+    "name": "Extra Virgin Olive Oil 2yrs prod",
+    "brand": "Rahma",
+    "sizeLabel": "250 ml",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/629/100/305/3498/front_fr.28.400.jpg",
+    "ingredientsText": null,
+    "allergens": [],
+    "additives": [],
+    "novaGroup": 2,
+    "subcategory": "olive_oil",
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 800,
+      "carbohydratesG": 0,
+      "sugarsG": 0,
+      "addedSugarsG": null,
+      "fatG": 93.3333333333333,
+      "saturatedFatG": 15.3333333333333,
+      "saltG": 0,
+      "fibreG": 0,
+      "proteinG": 0
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291003053498",
+    "fetchedAt": "2026-09-20T14:14:17.775Z"
+  },
+  {
+    "slug": "almarai-full-fat-milk-1l",
+    "barcode": "6281007032261",
+    "category": "milk",
+    "name": "Almarai milk full fat",
+    "brand": "Almarai",
+    "sizeLabel": "1 L",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/628/100/703/2261/front_en.48.400.jpg",
+    "ingredientsText": "Added Sodium fluoride",
+    "allergens": [],
+    "additives": [],
+    "novaGroup": 1,
+    "subcategory": "dairy_milk",
+    "nutrition": {
+      "basis": "per_100ml",
+      "energyKcal": 62,
+      "carbohydratesG": 5.12,
+      "sugarsG": 5.08,
+      "addedSugarsG": 0,
+      "fatG": 3.28,
+      "saturatedFatG": 2.04,
+      "saltG": 0.125,
+      "fibreG": null,
+      "proteinG": 3.04
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6281007032261",
+    "fetchedAt": "2026-09-20T14:14:22.964Z"
+  },
+  {
+    "slug": "nadec-milk-1l",
+    "barcode": "6281057010011",
+    "category": "milk",
+    "name": "نادك حليب 1 لتر",
+    "brand": "nadec",
+    "sizeLabel": "1 L",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/628/105/701/0011/front_en.53.400.jpg",
+    "ingredientsText": "100% Fresh Cow's Milk, Fortified with Vitamins (A, D3), Fat min. 3%, Non-Fat Solids min. 8.5%.",
+    "allergens": [
+      "milk"
+    ],
+    "additives": [],
+    "novaGroup": 1,
+    "subcategory": "dairy_milk",
+    "nutrition": {
+      "basis": "per_100ml",
+      "energyKcal": 58,
+      "carbohydratesG": 4.7,
+      "sugarsG": 4.7,
+      "addedSugarsG": 0,
+      "fatG": 3,
+      "saturatedFatG": 1.8,
+      "saltG": 0.125,
+      "fibreG": 0,
+      "proteinG": 3.1
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6281057010011",
+    "fetchedAt": "2026-09-20T14:14:28.683Z"
+  },
+  {
+    "slug": "nada-greek-style-yoghurt",
+    "barcode": "6281018130246",
+    "category": "yogurt",
+    "name": "Greek Style Yoghurt",
+    "brand": "nada",
+    "sizeLabel": "160 g",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/628/101/813/0246/front_fr.15.400.jpg",
+    "ingredientsText": "Fresh Cow's Full Fat Milk, Milk Cream, Milk Protein, Culture, Vitamin &quot;A&quot;, Vitamin &quot;D&quot;",
+    "allergens": [
+      "milk"
+    ],
+    "additives": [],
+    "novaGroup": 4,
+    "subcategory": "spoonable_yogurt",
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 111,
+      "carbohydratesG": 5,
+      "sugarsG": null,
+      "addedSugarsG": 0,
+      "fatG": 7,
+      "saturatedFatG": 5,
+      "saltG": null,
+      "fibreG": null,
+      "proteinG": 7
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6281018130246",
+    "fetchedAt": "2026-09-20T14:14:30.844Z"
+  },
+  {
+    "slug": "activia-low-fat-stirred-yoghurt",
+    "barcode": "6281022118209",
+    "category": "yogurt",
+    "name": "low fat stirred yoghurt",
+    "brand": "Activia",
+    "sizeLabel": "180 g",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/628/102/211/8209/front_en.15.400.jpg",
+    "ingredientsText": "fresh skimmed cow's milk, fruit preparation, strawberry, blackberry, blueberry, mulberry, raspberry, stabilizers, e1442, e407, acidity regulator, e331, flavor, color, e163, skimmed milk powder, fresh cream, sugar, dietary fiber, fructose, natural sweetener stevia, e960, vitamins c, d, a, probiotic culture, bifidobacterium lactis",
+    "allergens": [
+      "milk"
+    ],
+    "additives": [
+      "E1442",
+      "E163",
+      "E331",
+      "E407",
+      "E960"
+    ],
+    "novaGroup": 4,
+    "subcategory": "spoonable_yogurt",
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 79,
+      "carbohydratesG": 13.5,
+      "sugarsG": 12.5,
+      "addedSugarsG": 2.08333333333333,
+      "fatG": 1,
+      "saturatedFatG": 0.7,
+      "saltG": 0.44,
+      "fibreG": null,
+      "proteinG": 4
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6281022118209",
+    "fetchedAt": "2026-09-20T14:14:36.041Z"
+  },
+  {
+    "slug": "fermiers-de-loue-free-range-eggs-6",
+    "barcode": "3251320080617",
+    "category": "eggs",
+    "name": "6 oeufs fermiers label rouge de",
+    "brand": "Fermiers de Loué",
+    "sizeLabel": "6 eggs",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/325/132/008/0617/front_fr.111.400.jpg",
+    "ingredientsText": "Œufs",
+    "allergens": [
+      "eggs"
+    ],
+    "additives": [],
+    "novaGroup": 1,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 140,
+      "carbohydratesG": 0.3,
+      "sugarsG": 0.3,
+      "addedSugarsG": 0,
+      "fatG": 9.8,
+      "saturatedFatG": 2.6,
+      "saltG": 0.3,
+      "fibreG": 0,
+      "proteinG": 12.7
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3251320080617",
+    "fetchedAt": "2026-09-20T14:14:38.211Z"
+  },
+  {
+    "slug": "carrefour-fresh-eggs-12",
+    "barcode": "3270190205685",
+    "category": "eggs",
+    "name": "12 œufs frais",
+    "brand": "Carrefour Original",
+    "sizeLabel": "12 eggs",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/327/019/020/5685/front_fr.154.400.jpg",
+    "ingredientsText": "eggs class a chicken reared in the open air,",
+    "allergens": [
+      "eggs"
+    ],
+    "additives": [],
+    "novaGroup": null,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 280,
+      "carbohydratesG": 0.7,
+      "sugarsG": 0.7,
+      "addedSugarsG": 0,
+      "fatG": 10,
+      "saturatedFatG": 2.7,
+      "saltG": 0.33,
+      "fibreG": null,
+      "proteinG": 12
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3270190205685",
+    "fetchedAt": "2026-09-20T14:14:43.414Z"
+  },
+  {
+    "slug": "almarai-sliced-white-bread",
+    "barcode": "6281007044417",
+    "category": "bread",
+    "name": "Sliced Bread white",
+    "brand": "Almarai",
+    "sizeLabel": "600 g",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/628/100/704/4417/front_en.4.400.jpg",
+    "ingredientsText": "Wheat Flour. Water, Sugar, Wheat Gtuten. Salt. Vegetable Oil (Palm), Yeast. Emulsifiers (E472e. Vegetable Oil Origin;E471).Full Fat Soya Flour, Preservative (E282). Flour Treatment Agent (E300). Contains Wheat Gluten, Soya and traces of Milk Nutrition Facts % Daily Value* Average per 100g",
+    "allergens": [
+      "gluten",
+      "soybeans"
+    ],
+    "additives": [
+      "E282",
+      "E300",
+      "E471",
+      "E472E"
+    ],
+    "novaGroup": 4,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 263.333333333333,
+      "carbohydratesG": 50,
+      "sugarsG": null,
+      "addedSugarsG": 11.4583333333333,
+      "fatG": 3.33333333333333,
+      "saturatedFatG": null,
+      "saltG": null,
+      "fibreG": null,
+      "proteinG": 10
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6281007044417",
+    "fetchedAt": "2026-09-20T14:14:48.618Z"
+  },
+  {
+    "slug": "village-bakery-wholemeal-pittas",
+    "barcode": "4088600276267",
+    "category": "bread",
+    "name": "soft wholemeal pittas",
+    "brand": "VILLAGE BAKERY",
+    "sizeLabel": "6 x 60 g",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/408/860/027/6267/front_en.36.400.jpg",
+    "ingredientsText": "Wholemeal Wheat Flour, Water, Yeast, Salt, Spirit Vinegar, Preservative: Calcium Propionate; Wheat Starch.",
+    "allergens": [
+      "gluten"
+    ],
+    "additives": [
+      "E282"
+    ],
+    "novaGroup": 3,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 236.666666666667,
+      "carbohydratesG": 42,
+      "sugarsG": 1.7,
+      "addedSugarsG": 0,
+      "fatG": 1.3,
+      "saturatedFatG": 0.3,
+      "saltG": 0.85,
+      "fibreG": 8.1,
+      "proteinG": 10
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/4088600276267",
+    "fetchedAt": "2026-09-20T14:14:50.781Z"
+  },
+  {
+    "slug": "tesco-wholemeal-pittas-6",
+    "barcode": "5000119095282",
+    "category": "bread",
+    "name": "Wholemeal Pittas",
+    "brand": "Tesco",
+    "sizeLabel": "6 pittas",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/500/011/909/5282/front_en.43.400.jpg",
+    "ingredientsText": "Wholemeal Wheat Flour, Water, Yeast, Spirit vinegar, Salt, Preservative (Calcium Propionate), Wheat Starch",
+    "allergens": [
+      "gluten"
+    ],
+    "additives": [
+      "E282"
+    ],
+    "novaGroup": 3,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 241.071428571429,
+      "carbohydratesG": 42.3,
+      "sugarsG": 2.8,
+      "addedSugarsG": 0,
+      "fatG": 1.2,
+      "saturatedFatG": 0.2,
+      "saltG": 0.59,
+      "fibreG": 9.7,
+      "proteinG": 10.3
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5000119095282",
+    "fetchedAt": "2026-09-20T14:14:55.976Z"
+  },
+  {
+    "slug": "weetabix-original-430g",
+    "barcode": "5010029000023",
+    "category": "cereal",
+    "name": "Weetabix",
+    "brand": "Weetabix",
+    "sizeLabel": "430 g",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/501/002/900/0023/front_en.121.400.jpg",
+    "ingredientsText": "Whole wheat (95%), malted barley extract, sugar, salt, niacin, iron, riboflavin (b2), thiamin (b1), folic acid.",
+    "allergens": [
+      "gluten"
+    ],
+    "additives": [],
+    "novaGroup": 3,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 362,
+      "carbohydratesG": 69,
+      "sugarsG": 4.2,
+      "addedSugarsG": 0,
+      "fatG": 2,
+      "saturatedFatG": 0.6,
+      "saltG": 0.28,
+      "fibreG": 10,
+      "proteinG": 12
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5010029000023",
+    "fetchedAt": "2026-09-20T14:14:58.226Z"
+  },
+  {
+    "slug": "bjorg-granola-chocolat-350g",
+    "barcode": "3229820798110",
+    "category": "cereal",
+    "name": "Granola chocolat",
+    "brand": "Bjorg",
+    "sizeLabel": "350 g",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/322/982/079/8110/front_fr.124.400.jpg",
+    "ingredientsText": "oatmeal 68%, unrefined cane sugar 9,7%, dark chocolate 7% (cocoa paste, unrefined cane sugar, cocoa butter), sunflower oil, inulin, lean cocoa powder 2,7%, extruded rice (whole rice flour),",
+    "allergens": [
+      "gluten"
+    ],
+    "additives": [
+      "E306"
+    ],
+    "novaGroup": 4,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 420,
+      "carbohydratesG": 62,
+      "sugarsG": 12,
+      "addedSugarsG": 11.01,
+      "fatG": 13,
+      "saturatedFatG": 3.1,
+      "saltG": 0.01,
+      "fibreG": 7.5,
+      "proteinG": 10
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3229820798110",
+    "fetchedAt": "2026-09-20T14:15:03.451Z"
+  },
+  {
+    "slug": "pringles-original-175g",
+    "barcode": "5053990156009",
+    "category": "snacks",
+    "name": "Original",
+    "brand": "Pringles",
+    "sizeLabel": "175 g",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/505/399/015/6009/front_fr.288.400.jpg",
+    "ingredientsText": "Pommes de terre déshydratées, huiles végétales (tournesol, palme, mais) en proportion variable, farine de blé, farine de mais, farine de riz, maltodextrine, émulsifiant (E471), sel, colorant (norbixine de rocou).",
+    "allergens": [
+      "gluten"
+    ],
+    "additives": [
+      "E160B",
+      "E160BII",
+      "E471"
+    ],
+    "novaGroup": 4,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 528,
+      "carbohydratesG": 54,
+      "sugarsG": 0.9,
+      "addedSugarsG": 0,
+      "fatG": 31,
+      "saturatedFatG": 3,
+      "saltG": 1,
+      "fibreG": 4.1,
+      "proteinG": 6.2
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/5053990156009",
+    "fetchedAt": "2026-09-20T14:15:08.646Z"
+  },
+  {
+    "slug": "chips-oman-15g",
+    "barcode": "9501100014122",
+    "category": "snacks",
+    "name": "Chips Oman",
+    "brand": "Oman",
+    "sizeLabel": "15 g",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/950/110/001/4122/front_en.8.400.jpg",
+    "ingredientsText": "fresh potato, palm oil, natural chilli flavour, flavour enhancer (E621), salt, milk protein, soya, anti-caking agent (e552)",
+    "allergens": [
+      "milk",
+      "soybeans"
+    ],
+    "additives": [
+      "E552",
+      "E621"
+    ],
+    "novaGroup": 4,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 553.333333333333,
+      "carbohydratesG": 53.3333333333333,
+      "sugarsG": 0.666666666666667,
+      "addedSugarsG": 0,
+      "fatG": 35.3333333333333,
+      "saturatedFatG": 10.6666666666667,
+      "saltG": 1.25,
+      "fibreG": 4.66666666666667,
+      "proteinG": 6
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/9501100014122",
+    "fetchedAt": "2026-09-20T14:15:10.809Z"
+  },
+  {
+    "slug": "lays-classic-nature-130g",
+    "barcode": "3168930002987",
+    "category": "snacks",
+    "name": "Cuites au four nature",
+    "brand": "Lay's",
+    "sizeLabel": "130 g",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/316/893/000/2987/front_en.134.400.jpg",
+    "ingredientsText": "potato flakes, starch, sunflower oil, sugar, emulsifier (sunflower lecithin),dextrose,salt,acidity regulator (citric acid),turmeric extract E2",
+    "allergens": [],
+    "additives": [
+      "E160B",
+      "E160BII",
+      "E322",
+      "E322I"
+    ],
+    "novaGroup": 4,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100g",
+      "energyKcal": 442,
+      "carbohydratesG": 73,
+      "sugarsG": 5.3,
+      "addedSugarsG": 4.97,
+      "fatG": 13,
+      "saturatedFatG": 1.4,
+      "saltG": 0.84,
+      "fibreG": 6.2,
+      "proteinG": 5.9
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/3168930002987",
+    "fetchedAt": "2026-09-20T14:15:16.002Z"
+  },
+  {
+    "slug": "mai-dubai-water-500ml",
+    "barcode": "6297000611020",
+    "category": "drink",
+    "name": "Mai Dubai Water Bottle",
+    "brand": "Mai dubai",
+    "sizeLabel": "500 ml",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/629/700/061/1020/front_en.14.400.jpg",
+    "ingredientsText": "Water, Traces of Minerals (Calcium[20mg/L], Magnesium[10mg/L], Sodium[3.5mg/L], Potassium[5mg/L], Chloride[50mg/L], Sulfate[20mg/L], Bicarbonate[18.5mg/L], Nitrate[0.2mg/L], Carbonate[&lt;1mg/L]",
+    "allergens": [],
+    "additives": [
+      "E502"
+    ],
+    "novaGroup": null,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100ml",
+      "energyKcal": null,
+      "carbohydratesG": null,
+      "sugarsG": null,
+      "addedSugarsG": null,
+      "fatG": null,
+      "saturatedFatG": null,
+      "saltG": 0.000875,
+      "fibreG": null,
+      "proteinG": null
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6297000611020",
+    "fetchedAt": "2026-09-20T14:15:18.167Z"
+  },
+  {
+    "slug": "masafi-water-500ml",
+    "barcode": "6291001000029",
+    "category": "drink",
+    "name": "Masafi",
+    "brand": "Masafi",
+    "sizeLabel": "500 ml",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/629/100/100/0029/front_en.17.400.jpg",
+    "ingredientsText": "35 Desaved Solids pH7.1 الهيدروجيني E Box 1035 P MASAFI CUSTOMER CARE .com 600525256 291001 000029",
+    "allergens": [],
+    "additives": [],
+    "novaGroup": null,
+    "subcategory": null,
+    "nutrition": {
+      "basis": "per_100ml",
+      "energyKcal": 0,
+      "carbohydratesG": 0,
+      "sugarsG": 0,
+      "addedSugarsG": null,
+      "fatG": 0,
+      "saturatedFatG": 0,
+      "saltG": 0,
+      "fibreG": 0,
+      "proteinG": 0
+    },
+    "evidenceSource": "Open Food Facts",
+    "evidenceSourceUrl": "https://world.openfoodfacts.org/product/6291001000029",
+    "fetchedAt": "2026-09-20T14:15:23.358Z"
   },
   {
     "slug": "nivea-sun-protect-bronze-spf20-200ml",
@@ -488,28 +1096,10 @@
     "allergens": [],
     "additives": [],
     "novaGroup": null,
+    "subcategory": null,
     "nutrition": null,
     "evidenceSource": "Open Beauty Facts",
     "evidenceSourceUrl": "https://world.openbeautyfacts.org/product/4005900462060",
-    "fetchedAt": "2026-09-19T17:05:46.140Z",
-    "subcategory": null
-  },
-  {
-    "slug": "garnier-honey-treasures-shampoo-300ml",
-    "barcode": "3600542462228",
-    "category": "cosmetic",
-    "name": "Honey Treasures Shampoo",
-    "brand": "Garnier",
-    "sizeLabel": "300 ml",
-    "imageUrl": "https://images.openbeautyfacts.org/images/products/360/054/246/2228/front_en.3.400.jpg",
-    "ingredientsText": null,
-    "allergens": [],
-    "additives": [],
-    "novaGroup": null,
-    "nutrition": null,
-    "evidenceSource": "Open Beauty Facts",
-    "evidenceSourceUrl": "https://world.openbeautyfacts.org/product/3600542462228",
-    "fetchedAt": "2026-09-19T17:05:47.097Z",
-    "subcategory": null
+    "fetchedAt": "2026-09-20T14:15:24.091Z"
   }
 ]

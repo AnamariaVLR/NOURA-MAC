@@ -365,14 +365,16 @@ S5 category 13, which places eggs with fresh meat, poultry and fish.
 | ID | Rule | Tag |
 |---|---|---|
 | **C4.4.1** | **Nutrition labelling is not required** for fresh eggs, so no nutrient check is applied unless a panel happens to be published | **SOURCED** — S9 §1.2.3 · tier 1 |
-| **C4.4.2** | Salt — **0.1 g/100 g** where a figure exists | **SOURCED** — S5 category 13 · tier 1 |
+| **C4.4.2** | Salt — S5 category 13's line of **0.1 g/100 g is DECLINED** and shown as a note | **SOURCED** — S5 #13 · tier 1. **POLICY** for the decline, under C0, and this is the case that proves the rule: a hen's egg carries about **0.3 g of salt equivalent per 100 g** and always has, because that sodium is part of the egg rather than something a manufacturer added. The line fails every egg ever laid, which is the same error as counting lactose as added sugar (U1.9) in a different nutrient |
 | **C4.4.3** | **U8 is not applied** — a fresh egg has no ingredient list to publish | **SOURCED** — S9 §1.2, via U8.2 · tier 1 |
 | **C4.4.4** | **"Better" within eggs is UNKNOWN.** No retrieved source distinguishes eggs on a health basis. Free range, organic and omega-3 enrichment are **certification questions** (§6), never nutrition ones | **POLICY** — stated so the product does not manufacture a ranking. §9 Q9 |
 
 **Disqualifier:** none.
 
-**Consequence to accept:** for plain eggs Noura's honest output is close to "nothing to check",
-and the product must say that rather than manufacture a verdict.
+**Consequence to accept:** with C4.4.2 declined, a plain egg has **one** applicable check —
+certification — and that is usually UNKNOWN, so the verdict is **COULD NOT VERIFY**. That is not a
+gap in the rule; it is the rule. Noura's honest output for a plain egg is "there is nothing here to
+check", and the product says so rather than manufacturing a verdict.
 
 ### 4.5 Bread
 
@@ -707,6 +709,10 @@ a cheese, a butter spread context, a hummus — currently fall to the generic `f
 **L10. Energy drinks are identified by ingredient, and the source says the category has no
 agreed definition** (C4.8.7). Noura will miss a caffeine-only formulation.
 
+**L11. Eggs now have exactly one applicable check** (C4.4.2 declined), so they will almost always
+return COULD NOT VERIFY. Q9 asks whether that is acceptable or whether the category should be
+removed from the pilot until there is something to check.
+
 ### Questions for the nutritionist
 
 | # | Question | Status |
@@ -719,7 +725,7 @@ agreed definition** (C4.8.7). Noura will miss a caffeine-only formulation.
 | **Q6** | Granola crosses the EMRO 10 g total-fat line on nut and seed fat (C4.6.8). Is a category exception warranted? | open — held as a note |
 | **Q7** | The 50% coverage floor, the three-check minimum and the 80/50 pass rates are unsourced policy (D4, D5, V3, V4). Are they defensible, and what would you set them to? | **answered** — retained, tagged POLICY |
 | **Q8** | Drinking yoghurt (laban, ayran): drink lines or food lines? (C4.3.7) | **answered** — a subcategory of yoghurt, assessed on the liquid lines |
-| **Q9** | Eggs: any health attribute worth checking, or should Noura say "nothing to check"? (C4.4.4) | open |
+| **Q9** | Eggs: any health attribute worth checking, or should Noura say "nothing to check"? (C4.4.4) | open — **and now urgent**: with C4.4.2 declined an egg has one applicable check and returns COULD NOT VERIFY every time (L11) |
 | **Q10** | Is demoting processing to a note correct given NOVA's tier-3 status, or is NOVA important enough to keep as a check? (U5.1) | open |
 | **Q11** | Drink salt at 0.3 g/100 ml on the EU reading (U3.3) doubles the shipped line and flips plain milk to a pass. Is the EU's "per 100 g **or** per 100 ml" reading the right one for a drink? | **open — explicitly held open by the approving decision** |
 | **Q12** | Should A6.3 fail a product? EFSA's phosphate finding is about *population exposure across the diet*, not about any one product. The approving decision says flag on an EFSA concern; this is the row where that reads most strangely | new, open |
@@ -755,6 +761,7 @@ agreed definition** (C4.8.7). Noura will miss a caffeine-only formulation.
 | 1.1 | 2026-09-20 | §3 U4.5 gains the "all three macronutrients" condition | Found while implementing: a partial sum undercounts the denominator of U4.3 and manufactures a protein pass | **POLICY** |
 | 1.1 | 2026-09-20 | §5 A3.2 gains a reason for not re-deriving NOVA's cosmetic-additive class | It needs an E-number-to-function taxonomy no retrieved instrument supplies, and the NOVA group already encodes the same rule | **POLICY** |
 | 1.1 | 2026-09-20 | §4.8 C4.8.7 gains an **identification rule** — caffeine plus a named stimulant — and its cost | The rule said energy drinks are disqualified and gave no way to recognise one, so nothing implemented it. Found by auditing rule identifiers against the code | S5 footnote f · 1 |
+| 1.1 | 2026-09-20 | §4.4 C4.4.2 **eggs' salt line declined** under C0 | Found by putting eggs in the catalogue for the first time: both returned NOT RECOMMENDED on their own intrinsic sodium. EMRO's 0.1 g line fails every egg | **POLICY**, S5 #13 declined |
 
 **Rule for future changes:** no threshold in this document may change without a row here
 recording the old value, the new value, the reason, and the source with its tier. A change with

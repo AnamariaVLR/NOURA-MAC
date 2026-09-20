@@ -24,7 +24,8 @@
     "db:local": "tsx scripts/prisma-provider.ts sqlite && prisma generate",
     "prebuild": "tsx scripts/prisma-provider.ts",
     "db:migrate": "tsx scripts/prisma-provider.ts && prisma migrate deploy",
-    "db:migrate:new": "tsx scripts/prisma-provider.ts && prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script"
+    "db:migrate:new": "tsx scripts/prisma-provider.ts && prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
+    "icons": "tsx scripts/make-icons.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

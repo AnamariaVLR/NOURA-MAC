@@ -24,17 +24,29 @@ export const eggs: CategoryRule = {
   subcategories: [{ key: "eggs", label: "Eggs", basis: "solid" }],
   defaultSubcategory: "eggs",
 
-  // C4.4.1 — SOURCED S9 §1.2.3. Nutrition labelling is not required, so no
-  // nutrient check is applied beyond salt, and only where a figure exists.
+  // C4.4.1 — SOURCED S9 §1.2.3. Nutrition labelling is not required for fresh
+  // eggs, so there is usually no panel at all.
+  // C4.4.2 — S5 category 13's salt line of 0.1 g/100 g is DECLINED. See below.
   // C4.4.3 — U8 is not applied: a fresh egg has no ingredient list to publish.
   // Failing it, as the shipped code did, is a category error (B9).
-  checks: ["salt", "certification"],
+  //
+  // What is left is certification, and for most eggs that is unknown, so the
+  // verdict is COULD NOT VERIFY. That is not a gap — it is C4.4.4 working. The
+  // honest output for a plain egg is "there is nothing here to check".
+  checks: ["certification"],
 
-  lines: () => ({
-    // C4.4.2 — SOURCED S5 category 13 · tier 1. The category's only threshold.
-    // No "low" line exists, so 0.1 is the pass line.
-    salt: { high: 0.1, tolerance: "salt", rule: "C4.4.2", source: "S5 #13 · tier 1" },
-  }),
+  // C4.4.2 — DECLINED under C0, and this is the case that proves the rule.
+  //
+  // S5 category 13 sets 0.1 g of salt per 100 g for fresh meat, poultry, fish
+  // and eggs, for marketing to children. A hen's egg contains about 0.3 g of
+  // salt equivalent per 100 g and always has: that sodium is intrinsic, not
+  // added by anyone. Applying the line condemns EVERY egg, and the two in this
+  // catalogue were returning NOT RECOMMENDED on nothing but their own chemistry.
+  //
+  // That is the same error as counting lactose as added sugar (U1.9), in a
+  // different nutrient, and C0 already says what to do with a line that fails
+  // its whole category: decline it, and show it. The note below shows it.
+  lines: () => ({}),
 
   // C4.4.4 — POLICY, and the point of it is the empty list. "Better" within eggs
   // is UNKNOWN, so nothing may break a tie and the ranker falls through to price
@@ -49,7 +61,17 @@ export const eggs: CategoryRule = {
         "fresh eggs, and no source Noura holds distinguishes one egg from another on health " +
         "grounds. Free range, organic and omega-3 enrichment are certification questions, and " +
         "Noura will not present them as nutrition ones.",
-      source: "S9 §1.2.3, S5 #13 · tier 1",
+      source: "S9 §1.2.3 · tier 1",
+    },
+    {
+      rule: "C4.4.2",
+      text:
+        "For marketing to children, the WHO Eastern Mediterranean model sets fresh meat, fish " +
+        "and eggs at no more than 0.1 g of salt per 100 g. Noura does not apply that line to " +
+        "eggs. An egg contains around 0.3 g of salt equivalent per 100 g and always has — that " +
+        "sodium is part of the egg, not something a manufacturer added — so the line would fail " +
+        "every egg ever laid. That is Noura's judgement, not a rule it found.",
+      source: "S5 #13 · tier 1, declined",
     },
   ],
 };

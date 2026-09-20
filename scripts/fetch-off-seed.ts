@@ -13,6 +13,25 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { CATALOGUE, type CatalogueEntry } from "../prisma/seed-data/catalogue";
 
+/**
+ * THE RULE FOR THE PILOT CATALOGUE: a product stays only if Open Food Facts
+ * returned ingredients OR nutrition for it.
+ *
+ * A record with neither is a barcode and a name. Noura would render it as a wall
+ * of "unknown" — technically correct, since unknown is never a pass, and
+ * useless: a shopper who scans three products and gets three shrugs stops
+ * scanning. Keeping such a row would also quietly inflate the catalogue with
+ * products the app cannot say anything about.
+ *
+ * Every barcode tried and every one dropped is written to catalogue-report.md,
+ * so the catalogue's size is a fact about Open Food Facts' coverage rather than
+ * a number someone picked.
+ */
+function hasEvidence(product: FetchedProduct): boolean {
+  const ingredients = (product.ingredientsText ?? "").trim();
+  return ingredients.length > 3 || product.nutrition !== null;
+}
+
 const UA = "Noura/0.1 (UAE healthy product MVP) seed-builder";
 
 const BASE = {
@@ -148,32 +167,150 @@ async function main() {
     : [];
 
   const results: FetchedProduct[] = [];
-  const failures: string[] = [];
+  type Row = {
+    slug: string;
+    barcode: string;
+    category: string;
+    outcome: "kept" | "kept-from-cache" | "dropped-no-evidence" | "dropped-not-found";
+    detail: string;
+  };
+  const report: Row[] = [];
 
   for (const entry of CATALOGUE) {
     process.stdout.write(`fetching ${entry.slug} (${entry.barcode}) ... `);
     const product = await fetchOne(entry);
+
     if (product) {
       if (product.nutrition && !nutritionIsUsable(product.nutrition as Record<string, number | null>)) {
+        // A panel of zeroes is not a panel. Recording it as null is the same
+        // rule as everywhere else: absent data is unknown, never a value.
         product.nutrition = null;
-        console.log("ok (nutrition panel empty at source -> recorded as unknown)");
-      } else {
-        console.log("ok");
       }
-      results.push(product);
+
+      if (!hasEvidence(product)) {
+        report.push({
+          slug: entry.slug,
+          barcode: entry.barcode,
+          category: entry.category,
+          outcome: "dropped-no-evidence",
+          detail: "record exists but carries neither an ingredient list nor a nutrition panel",
+        });
+        console.log("DROPPED (no ingredients, no nutrition)");
+      } else {
+        const has = [
+          (product.ingredientsText ?? "").trim().length > 3 ? "ingredients" : null,
+          product.nutrition ? "nutrition" : null,
+        ].filter(Boolean).join(" + ");
+        report.push({
+          slug: entry.slug,
+          barcode: entry.barcode,
+          category: entry.category,
+          outcome: "kept",
+          detail: has,
+        });
+        results.push(product);
+        console.log(`ok (${has})`);
+      }
     } else {
       // Keep whatever we already had rather than silently losing a product.
       const previous = existing.find((p) => p.slug === entry.slug);
-      if (previous) results.push(previous);
-      failures.push(entry.slug);
-      console.log(previous ? "FAILED (kept previous row)" : "FAILED");
+      if (previous) {
+        results.push(previous);
+        report.push({
+          slug: entry.slug,
+          barcode: entry.barcode,
+          category: entry.category,
+          outcome: "kept-from-cache",
+          detail: `fetch failed; kept the row from ${previous.fetchedAt.slice(0, 10)}`,
+        });
+        console.log("FAILED (kept previous row)");
+      } else {
+        report.push({
+          slug: entry.slug,
+          barcode: entry.barcode,
+          category: entry.category,
+          outcome: "dropped-not-found",
+          detail: "no record returned for this barcode after four attempts",
+        });
+        console.log("DROPPED (not found)");
+      }
     }
     await new Promise((r) => setTimeout(r, 600));
   }
 
   writeFileSync(outPath, JSON.stringify(results, null, 2) + "\n");
+  writeFileSync(resolve(__dirname, "../catalogue-report.md"), renderReport(report));
+
+  const kept = report.filter((r) => r.outcome.startsWith("kept")).length;
+  const dropped = report.length - kept;
   console.log(`\nwrote ${results.length} products to ${outPath}`);
-  if (failures.length) console.log(`could not fetch: ${failures.join(", ")}`);
+  console.log(`tried ${report.length} barcodes: ${kept} kept, ${dropped} dropped`);
+  console.log("catalogue-report.md updated");
+}
+
+function renderReport(rows: {
+  slug: string;
+  barcode: string;
+  category: string;
+  outcome: string;
+  detail: string;
+}[]): string {
+  const kept = rows.filter((r) => r.outcome.startsWith("kept"));
+  const dropped = rows.filter((r) => !r.outcome.startsWith("kept"));
+  const byCategory = new Map<string, number>();
+  for (const row of kept) byCategory.set(row.category, (byCategory.get(row.category) ?? 0) + 1);
+
+  const table = (list: typeof rows) =>
+    [
+      "| Barcode | Slug | Category | Outcome | Detail |",
+      "|---|---|---|---|---|",
+      ...list.map((r) => `| \`${r.barcode}\` | ${r.slug} | ${r.category} | ${r.outcome} | ${r.detail} |`),
+    ].join("\n");
+
+  return `# Catalogue report
+
+Generated by \`npm run seed:fetch\` on ${new Date().toISOString().slice(0, 10)}.
+
+Every barcode in \`prisma/seed-data/catalogue.ts\` is fetched from Open Food Facts
+by barcode. **A product is kept only if the record came back with an ingredient
+list or a nutrition panel.** A record with neither is a barcode and a name; Noura
+would render it as a wall of "unknown", which is technically correct and useless
+to a shopper.
+
+Nothing here is invented. Every barcode was found in Open Food Facts' own search
+before it was added, and is fetched again by barcode here.
+
+**${kept.length} kept, ${dropped.length} dropped, ${rows.length} tried.**
+
+## Kept, by category
+
+| Category | Products |
+|---|---|
+${[...byCategory.entries()].sort().map(([c, n]) => `| ${c} | ${n} |`).join("\n")}
+
+## Tried and kept
+
+${table(kept)}
+
+## Tried and dropped
+
+${dropped.length === 0 ? "_None. Every barcode tried returned usable evidence._" : table(dropped)}
+
+## Known limits of this catalogue
+
+- **Open Food Facts' UAE coverage is uneven.** Milk, yoghurt, water and bread have
+  real UAE-tagged records with Arabic names on them. Eggs, cereal and crisps do
+  not, so those entries are European records for the same product kind. The
+  checklist they produce is correct for that record; the barcode will not match
+  the pack on a Dubai shelf, and a scan of the UAE pack will fall back to a name
+  match or find nothing.
+- **A nutrition panel of zeroes is recorded as no panel.** Open Food Facts
+  contains many records where a contributor saved the form without filling it in.
+  Treating those zeroes as values would let a product pass checks on data that
+  does not exist.
+- **No prices.** Listings are created empty; a price exists only once a person
+  records a check. See README, "Recording price checks".
+`;
 }
 
 main().catch((error) => {

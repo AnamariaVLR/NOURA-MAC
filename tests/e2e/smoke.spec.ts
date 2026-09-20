@@ -155,7 +155,9 @@ test("the scan appears in history with its verdict, and the image is served back
   const scanId = page.url().split("/result/")[1];
   const image = await page.request.get(`/api/image/${scanId}`);
   expect(image.status()).toBe(200);
-  expect(image.headers()["content-type"]).toContain("image/png");
+  // The upload is re-encoded to JPEG at 1600px before it is stored, so what
+  // comes back is what was analysed rather than the original 4 MB photograph.
+  expect(image.headers()["content-type"]).toContain("image/jpeg");
 
   await page.goto("/history");
   await expect(page.getByRole("heading", { name: /Your scans/i })).toBeVisible();

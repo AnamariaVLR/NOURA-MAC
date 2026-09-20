@@ -219,14 +219,30 @@ describe("C4.3 — yogurt", () => {
 });
 
 describe("C4.4 — eggs", () => {
-  it("C4.4.1/C4.4.3 — only salt and certification are assessed", () => {
-    expect(ruleFor("eggs").checks).toEqual(["salt", "certification"]);
+  it("C4.4.1/C4.4.3 — only certification is assessed", () => {
+    expect(ruleFor("eggs").checks).toEqual(["certification"]);
   });
 
-  it("C4.4.2 — the salt line is S5 #13's 0.1 g, and it is the pass line", () => {
-    const line = ruleFor("eggs").lines("solid").salt!;
-    expect(line.high).toBe(0.1);
-    expect(line.low).toBeUndefined();
+  it("C4.4.2 — EMRO's 0.1 g salt line is declined, because it fails every egg", () => {
+    // A hen's egg carries ~0.3 g salt equivalent per 100 g and always has.
+    expect(ruleFor("eggs").lines("solid").salt).toBeUndefined();
+
+    const realEgg = input({
+      category: "eggs",
+      ingredientsText: "eggs",
+      nutrition: nutrition({ saltG: 0.3, proteinG: 12.7, energyKcal: 140 }),
+    });
+    const checks = evaluateChecks(realEgg);
+    expect(checks.some((c) => c.key === "salt")).toBe(false);
+    // And the verdict is a shrug, not a condemnation.
+    expect(evaluateProduct(realEgg).verdict.verdict).toBe("could_not_verify");
+  });
+
+  it("C4.4.2 — the declined line is shown, with why", () => {
+    const note = ruleFor("eggs").notes.find((n) => n.rule === "C4.4.2");
+    expect(note?.text).toContain("0.1 g");
+    expect(note?.text).toContain("part of the egg");
+    expect(note?.source).toContain("declined");
   });
 
   it("C4.4.4 — 'better' within eggs is empty, so no ranking is manufactured", () => {

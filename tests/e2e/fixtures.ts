@@ -150,3 +150,26 @@ export const BETTER_DRINK_RETAILERS = ["carrefour-uae", "noon"] as const;
  * never appear in the cola's alternatives.
  */
 export const OAT_DRINK = "oatly-organic-oat-drink-1l";
+
+/**
+ * The password the Playwright web server is started with. In the repo on purpose:
+ * the point of the admin tests is that the wrong password is refused and the
+ * right one is not, which needs a right one that both sides agree on.
+ */
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "playwright-admin-password";
+
+/**
+ * Signs a page into /admin.
+ *
+ * Every admin route now sits behind middleware, so a test that used to open
+ * /admin/listings directly lands on the login form instead. This does what the
+ * operator does — types the password once — rather than forging the cookie,
+ * because the cookie's format is an implementation detail and the sign-in is the
+ * thing worth exercising.
+ */
+export async function signInAsAdmin(page: import("@playwright/test").Page): Promise<void> {
+  await page.goto("/admin/login");
+  await page.getByTestId("admin-password").fill(ADMIN_PASSWORD);
+  await page.getByTestId("admin-login-submit").click();
+  await page.waitForURL(/\/admin\/(?!login)/, { timeout: 20_000 });
+}

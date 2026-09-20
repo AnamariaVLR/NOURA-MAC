@@ -23,8 +23,15 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
-    // ALLOW_ADMIN because /admin/listings is closed in production by default and
-    // the flows cover it; the rest keeps the run offline and model-free.
-    env: { ANTHROPIC_API_KEY: "", VERIFIED_OFFLINE: "1", ALLOW_ADMIN: "1" },
+    // ADMIN_PASSWORD because /admin is now closed without one and the flows cover
+    // it; the rest keeps the run offline and model-free.
+    env: {
+      ANTHROPIC_API_KEY: "",
+      VERIFIED_OFFLINE: "1",
+      // The admin tests sign in for real, so the suite needs a password to sign
+      // in WITH. It is a test value and it is in the repo on purpose: the point
+      // of the test is that a wrong password is refused and the right one is not.
+      ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ?? "playwright-admin-password",
+    },
   },
 });
