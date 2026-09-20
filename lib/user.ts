@@ -25,7 +25,7 @@ export async function currentUserKey(): Promise<string | null> {
  * terminate TLS — where a Secure cookie is set but then withheld, and the user
  * silently loses their history and their uploaded image.
  */
-async function requestIsSecure(): Promise<boolean> {
+export async function secureCookies(): Promise<boolean> {
   const store = await headers();
   const forwarded = store.get("x-forwarded-proto");
   if (forwarded) return forwarded.split(",")[0].trim() === "https";
@@ -45,7 +45,7 @@ export async function ensureUserKey(): Promise<string> {
     sameSite: "lax",
     path: "/",
     maxAge: ONE_YEAR,
-    secure: await requestIsSecure(),
+    secure: await secureCookies(),
   });
   return key;
 }

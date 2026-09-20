@@ -1,7 +1,8 @@
 /**
  * The six stages, in order, with the scan row as the audit trail.
  *
- *   1. capture      (the caller has already written the image to disk)
+ *   1. capture      (the caller has already stored the image; lib/storage.ts
+ *                    decides whether that meant a blob, a row or a file)
  *   2. identify     lib/pipeline/identify.ts
  *   3. evidence     lib/pipeline/evidence.ts
  *   4. analyse      lib/pipeline/analyze.ts
@@ -19,11 +20,19 @@ import { identifyProduct } from "./identify";
 
 export type RunResult = { scanId: string; status: "complete" | "failed" };
 
+export type StoredImageRef = {
+  imagePath?: string | null;
+  imageMime?: string | null;
+  imageBlobUrl?: string | null;
+  imageBytes?: Buffer | null;
+};
+
 export async function runPipeline(args: {
   userKey: string;
   imageBase64: string;
   mime: string;
-  imagePath: string;
+  /** Wherever lib/storage.ts put the photo. Any or all of the fields may be null. */
+  image: StoredImageRef;
 }): Promise<RunResult> {
   const { identification, mode, note } = await identifyProduct({
     base64: args.imageBase64,
@@ -36,8 +45,10 @@ export async function runPipeline(args: {
     const scan = await prisma.scan.create({
       data: {
         userKey: args.userKey,
-        imagePath: args.imagePath,
-        imageMime: args.mime,
+        imagePath: args.image.imagePath ?? null,
+        imageBlobUrl: args.image.imageBlobUrl ?? null,
+        imageBytes: args.image.imageBytes ? new Uint8Array(args.image.imageBytes) : null,
+        imageMime: args.image.imageMime ?? args.mime,
         status: "failed",
         mode,
         identificationJson: JSON.stringify({ ...identification, note, method: evidence.method }),
@@ -57,8 +68,10 @@ export async function runPipeline(args: {
   const scan = await prisma.scan.create({
     data: {
       userKey: args.userKey,
-      imagePath: args.imagePath,
-      imageMime: args.mime,
+      imagePath: args.image.imagePath ?? null,
+      imageBlobUrl: args.image.imageBlobUrl ?? null,
+      imageBytes: args.image.imageBytes ? new Uint8Array(args.image.imageBytes) : null,
+      imageMime: args.image.imageMime ?? args.mime,
       status: "complete",
       mode,
       identificationJson: JSON.stringify({

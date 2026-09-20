@@ -83,7 +83,7 @@ export async function listingQueue(now: Date = new Date()): Promise<ListingQueue
       priceFils: check?.priceFils ?? null,
       priceLabel: check ? formatAed(check.priceFils) : null,
       inStock: check?.inStock ?? null,
-      hasPhoto: Boolean(check?.photoPath),
+      hasPhoto: Boolean(check?.photoPath || check?.photoBlobUrl || check?.photoBytes),
       checkCount: listing._count.checks,
     };
   });
@@ -133,6 +133,8 @@ export async function recordCheck(input: {
   note: string | null;
   photoPath?: string | null;
   photoMime?: string | null;
+  photoBlobUrl?: string | null;
+  photoBytes?: Buffer | null;
 }): Promise<{ id: string }> {
   const check = await prisma.listingCheck.create({
     data: {
@@ -147,6 +149,8 @@ export async function recordCheck(input: {
       note: input.note,
       photoPath: input.photoPath ?? null,
       photoMime: input.photoMime ?? null,
+      photoBlobUrl: input.photoBlobUrl ?? null,
+      photoBytes: input.photoBytes ? new Uint8Array(input.photoBytes) : null,
       // Not a parameter. Anything recorded through this function is a human check;
       // nothing in the app can mint a HAND_VERIFIED row any other way.
       source: "HAND_VERIFIED",

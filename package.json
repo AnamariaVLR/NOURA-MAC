@@ -8,10 +8,10 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "db:push": "prisma db push --skip-generate",
+    "db:push": "tsx scripts/prisma-provider.ts && prisma db push --skip-generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "rm -f prisma/dev.db && npm run db:push && npm run db:seed",
-    "setup": "prisma generate && npm run db:push && npm run db:seed",
+    "setup": "tsx scripts/prisma-provider.ts && prisma generate && npm run db:push && npm run db:seed",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -19,15 +19,24 @@
     "seed:moiat": "tsx scripts/import-moiat.ts",
     "listings:export": "tsx scripts/listings-export.ts",
     "listings:import": "tsx scripts/listings-import.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "tsx scripts/prisma-provider.ts && prisma generate",
+    "prisma:provider": "tsx scripts/prisma-provider.ts",
+    "db:local": "tsx scripts/prisma-provider.ts sqlite && prisma generate",
+    "prebuild": "tsx scripts/prisma-provider.ts",
+    "db:migrate": "tsx scripts/prisma-provider.ts && prisma migrate deploy",
+    "db:migrate:new": "tsx scripts/prisma-provider.ts && prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script"
   },
-  "prisma": { "seed": "tsx prisma/seed.ts" },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "0.125.0",
     "@prisma/client": "6.19.3",
+    "@vercel/blob": "^2.0.0",
     "next": "15.5.25",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "sharp": "^0.34.5",
     "zod": "3.25.76"
   },
   "devDependencies": {

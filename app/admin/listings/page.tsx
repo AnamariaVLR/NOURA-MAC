@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ListingQueue, type QueueRow } from "@/components/listing-queue";
 import { Card, EmptyState, Pill, SectionTitle } from "@/components/ui";
-import { adminAllowed } from "@/lib/config";
 import { formatDate } from "@/lib/format";
 import { FRESHNESS_DAYS } from "@/lib/retail/freshness";
 import { listingQueue } from "@/lib/retail/listings-admin";
@@ -9,14 +8,6 @@ import { listingQueue } from "@/lib/retail/listings-admin";
 export const dynamic = "force-dynamic";
 
 export default async function AdminListingsPage() {
-  if (!adminAllowed()) {
-    return (
-      <EmptyState
-        title="Admin tools are disabled here"
-        body="Run in development, or set ALLOW_ADMIN=1. There is no authentication in this version, so put some in front of /admin before enabling it anywhere public."
-      />
-    );
-  }
 
   const { rows, counts, total } = await listingQueue();
 

@@ -1,14 +1,24 @@
 "use client";
 
 /**
- * Stage 1 — capture. Three ways in, because a person in an aisle and a person at a
- * desk reach for different things:
- *   - the phone camera (`capture="environment"` opens the rear camera directly)
- *   - a file from the device
- *   - a screenshot pasted from the clipboard
+ * Stage 1 — capture.
+ *
+ * ONE PRIMARY ACTION. The shopper this is for is standing in an aisle holding a
+ * jar in one hand, and the only thing they want is the camera. `capture=
+ * "environment"` opens the rear camera directly rather than a picker, so Scan is
+ * one tap from the home screen to a viewfinder.
+ *
+ * Everything else is secondary and looks it: choosing a screenshot, for the
+ * person at a desk, and pasting one, for the person who just took it. Both are
+ * real workflows and neither should compete with the button that matters.
+ *
+ * The photo is shrunk to 1600px before upload (lib/image-client.ts) because on
+ * supermarket 4G the difference between a 5 MB and a 400 KB upload is the
+ * difference between a scan that works and a scan that gets abandoned.
  */
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { shrinkImage } from "@/lib/image-client";
 
 type Status = "idle" | "ready" | "working" | "error";
 
@@ -78,8 +88,11 @@ export function CaptureForm() {
     setMessage(null);
 
     try {
+      // Shrink in the browser. Best-effort: shrinkImage returns the original
+      // file if anything about the decode or encode fails.
+      const upload = await shrinkImage(file);
       const body = new FormData();
-      body.append("image", file);
+      body.append("image", upload);
       const response = await fetch("/api/scan", { method: "POST", body });
       const payload = (await response.json()) as { id?: string; error?: string };
 
@@ -146,34 +159,58 @@ export function CaptureForm() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2.5">
+      {file ? (
+        // Something is loaded: the only thing left to do is run it.
         <button
           type="button"
-          onClick={() => cameraRef.current?.click()}
-          className="rounded-xl bg-brand px-4 py-3 text-[14px] font-semibold text-white active:opacity-90"
+          disabled={status === "working"}
+          onClick={submit}
+          data-testid="analyse-button"
+          className="w-full rounded-2xl bg-ink px-4 py-5 text-[17px] font-semibold text-paper disabled:opacity-35"
         >
-          Take a photo
+          {status === "working" ? `${STEPS[step]}…` : "Check this product"}
         </button>
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="rounded-xl border border-line bg-card px-4 py-3 text-[14px] font-semibold text-ink active:opacity-90"
-        >
-          Choose a file
-        </button>
-      </div>
+      ) : (
+        <>
+          {/* The primary action, and it is not close. */}
+          <button
+            type="button"
+            onClick={() => cameraRef.current?.click()}
+            data-testid="scan-button"
+            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-brand px-4 py-6 text-[19px] font-semibold text-white shadow-sm active:opacity-90"
+          >
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 8V6a2 2 0 0 1 2-2h2" />
+              <path d="M17 4h2a2 2 0 0 1 2 2v2" />
+              <path d="M21 16v2a2 2 0 0 1-2 2h-2" />
+              <path d="M7 20H5a2 2 0 0 1-2-2v-2" />
+              <circle cx="12" cy="12" r="3.2" />
+            </svg>
+            Scan a product
+          </button>
 
-      <p className="text-center text-[12px] text-ink-faint">or paste a screenshot (⌘V)</p>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            data-testid="choose-file"
+            className="w-full rounded-xl border border-line bg-card px-4 py-3 text-[14px] font-medium text-ink-soft active:opacity-90"
+          >
+            Choose a screenshot
+          </button>
 
-      <button
-        type="button"
-        disabled={!file || status === "working"}
-        onClick={submit}
-        data-testid="analyse-button"
-        className="w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-paper disabled:opacity-35"
-      >
-        {status === "working" ? `${STEPS[step]}…` : "Check this product"}
-      </button>
+          <p className="text-center text-[12px] text-ink-faint">or paste one (⌘V)</p>
+        </>
+      )}
 
       {message ? (
         <p

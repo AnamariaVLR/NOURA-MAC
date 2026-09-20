@@ -23,21 +23,21 @@ datasource db {
 /// A product we have evidence about. One row per identified product, deduplicated
 /// on barcode when we have one and on slug when we do not.
 model Product {
-  id        String  @id @default(cuid())
-  slug      String  @unique
-  name      String
-  brand     String?
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  brand       String?
   /// EAN-13 / UPC. Null when identification never saw a barcode.
-  barcode   String? @unique
+  barcode     String? @unique
   /// One of the eleven values of ProductCategory in lib/schemas.ts. The rules for
   /// each live in lib/health/categories/, one file per RUBRIC.md §4 section.
-  category  String
+  category    String
   /// RUBRIC.md §4 C4.0.1. Selects the per-100 basis and bounds the alternative
   /// ranking. Null resolves to the category's default rather than to a guess.
   subcategory String?
   /// Vendor-neutral pack size as written on the pack, e.g. "500 ml", "250 g".
-  sizeLabel String?
-  imageUrl  String?
+  sizeLabel   String?
+  imageUrl    String?
 
   // ---- Evidence. Any field may be null; the UI renders "unknown", never a guess.
   ingredientsText String?
@@ -53,7 +53,7 @@ model Product {
   /// Where the evidence above came from, e.g. "Open Food Facts".
   evidenceSource     String
   /// DataSource for that evidence — "OPEN_DATA" for the open databases.
-  evidenceSourceKind String  @default("OPEN_DATA")
+  evidenceSourceKind String   @default("OPEN_DATA")
   evidenceSourceUrl  String?
   /// Date the evidence was last confirmed against its source. Shown to the user.
   lastVerifiedAt     DateTime
@@ -74,12 +74,12 @@ model Product {
 /// A UAE retailer. `connector` names the code path that supplies its listings:
 /// "hand" for human checks, anything else for a live connector added later.
 model Retailer {
-  id         String  @id @default(cuid())
-  slug       String  @unique
+  id         String @id @default(cuid())
+  slug       String @unique
   name       String
-  country    String  @default("AE")
+  country    String @default("AE")
   websiteUrl String
-  connector  String  @default("hand")
+  connector  String @default("hand")
 
   listings ProductListing[]
 }
@@ -127,13 +127,17 @@ model ListingCheck {
   inStock   Boolean
 
   /// Optional photo of the shelf or the page. Served only by /api/listing-photo/[id].
-  photoPath String?
-  photoMime String?
+  /// Stored the same three ways as a scan image — see Scan above and lib/storage.ts.
+  /// A photo NEVER blocks a check: if storage fails, the check is saved without it.
+  photoPath    String?
+  photoMime    String?
+  photoBlobUrl String?
+  photoBytes   Bytes?
 
   /// Who made the check. A name or initials — enough to ask them about it later.
-  checkedBy String
+  checkedBy   String
   /// When they looked. Drives the 14-day freshness rule in lib/retail/freshness.ts.
-  checkedAt DateTime
+  checkedAt   DateTime
   /// The retailer page checked, when the check was done online. Null in store.
   retailerUrl String?
 
@@ -183,7 +187,7 @@ model ProductCertification {
   /// DataSource. Every shipped SAMPLE- certificate is "SYNTHETIC"; only a real
   /// import (npm run seed:moiat) produces "REGULATOR_IMPORT". A SYNTHETIC row is
   /// never rendered as verification and never passes the certification check.
-  source         String    @default("SYNTHETIC")
+  source         String   @default("SYNTHETIC")
   sourceName     String
   sourceUrl      String
   lastVerifiedAt DateTime
@@ -196,13 +200,20 @@ model ProductCertification {
 
 /// One run of the pipeline: an image in, a result screen out.
 model Scan {
-  id String @id @default(cuid())
+  id      String @id @default(cuid())
   /// Anonymous local user, from an httpOnly cookie. No auth in the MVP.
   userKey String
 
-  /// Path of the stored upload, relative to the uploads dir.
-  imagePath String?
-  imageMime String?
+  /// Where the uploaded photo went. Exactly one of the three is set.
+  ///   imageBlobUrl — Vercel Blob, when BLOB_READ_WRITE_TOKEN is configured.
+  ///   imageBytes   — a compressed JPEG in the row, when it is not.
+  ///   imagePath    — a file under UPLOAD_DIR, local development only.
+  /// A serverless filesystem is ephemeral, so imagePath cannot be the production
+  /// answer; lib/storage.ts picks. See DECISIONS.md §64.
+  imagePath    String?
+  imageMime    String?
+  imageBlobUrl String?
+  imageBytes   Bytes?
 
   /// "complete" | "failed"
   status String
@@ -212,9 +223,9 @@ model Scan {
   /// JSON: IdentificationSchema — what stage 2 thought the product was.
   identificationJson String
   /// Set when evidence retrieval matched a product. Null on a failed scan.
-  productId String?
+  productId          String?
   /// Populated when the pipeline could not finish.
-  error     String?
+  error              String?
 
   createdAt DateTime @default(now())
 
@@ -233,12 +244,12 @@ model HealthAnalysis {
 
   /// "good_choice" | "acceptable" | "not_recommended" | "could_not_verify"
   /// — Verdict in lib/schemas.ts. There is deliberately no numeric score.
-  verdict String
+  verdict      String
   /// JSON: VerdictResult — the verdict plus the counts it was derived from.
-  verdictJson String
+  verdictJson  String
   /// JSON: Check[] — every rubric dimension as pass / fail / unknown, with the
   /// measured value and source behind it.
-  checksJson String
+  checksJson   String
   /// JSON: string[] — what we could not determine, shown as "unknown".
   unknownsJson String
   /// JSON: NoteSchema[] — shown to the reader, never counted. RUBRIC.md §3 U5.1,
@@ -253,4 +264,24 @@ model HealthAnalysis {
 
   scan    Scan    @relation(fields: [scanId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+/// One row per (client, hour) for the endpoints that cost money or compute.
+///
+/// In the database rather than in memory because a serverless deployment runs
+/// many instances and a per-process counter would multiply the real limit by the
+/// number of lambdas. This is slower and correct.
+///
+/// `key` is a SHA-256 of the client IP with a per-deployment salt, so the table
+/// holds no addresses: a rate-limit table is not a reason to start logging who
+/// scanned what.
+model RateLimit {
+  /// "<hashed client>:<bucket name>:<hour>"
+  id          String   @id
+  count       Int      @default(0)
+  /// Start of the hour this bucket counts. Rows older than a day are prunable.
+  windowStart DateTime
+  updatedAt   DateTime @updatedAt
+
+  @@index([windowStart])
 }

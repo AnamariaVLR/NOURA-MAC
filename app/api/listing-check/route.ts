@@ -1,18 +1,21 @@
 /** Records one hand-verified listing check. The other half of /admin/listings. */
 import { NextResponse } from "next/server";
-import { MAX_UPLOAD_BYTES, adminAllowed } from "@/lib/config";
+import { isAdminRequest } from "@/lib/admin-session";
+import { MAX_UPLOAD_BYTES } from "@/lib/config";
 import { prisma } from "@/lib/db";
 import { aedToFils } from "@/lib/format";
 import { parsePriceAed, recordCheck } from "@/lib/retail/listings-admin";
 import { UploadSchema } from "@/lib/schemas";
-import { saveUpload } from "@/lib/uploads";
+import { store } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  if (!adminAllowed()) {
-    return NextResponse.json({ error: "Admin tools are disabled here." }, { status: 403 });
+  // The middleware already refused an unauthenticated request; this is the
+  // second lock, so a matcher change can never silently open the form.
+  if (!(await isAdminRequest())) {
+    return NextResponse.json({ error: "Sign in to /admin first." }, { status: 401 });
   }
 
   let form: FormData;
@@ -73,24 +76,23 @@ export async function POST(request: Request) {
   }
 
   // Optional photo of the shelf or the page.
-  let photoPath: string | null = null;
-  let photoMime: string | null = null;
+  //
+  // NOTHING IN THIS BLOCK CAN FAIL THE SUBMISSION. A photo is evidence about a
+  // check, not the check itself, and the operator is standing in an aisle. A
+  // file that is the wrong type, too big, undecodable, or that the blob store
+  // refuses is dropped silently and the check is saved without it. The response
+  // says whether the photo made it, so the form can mention it.
+  let stored: Awaited<ReturnType<typeof store>> = null;
   const photo = form.get("photo");
-  if (photo instanceof File && photo.size > 0) {
-    const check = UploadSchema.safeParse({ type: photo.type, size: photo.size });
-    if (!check.success) {
-      return NextResponse.json(
-        { error: check.error.issues[0]?.message ?? "That photo cannot be used." },
-        { status: 400 },
-      );
+  if (photo instanceof File && photo.size > 0 && photo.size <= MAX_UPLOAD_BYTES) {
+    if (UploadSchema.safeParse({ type: photo.type, size: photo.size }).success) {
+      try {
+        const bytes = Buffer.from(await photo.arrayBuffer());
+        stored = await store(`check-${crypto.randomUUID()}`, bytes, photo.type, "checks");
+      } catch (error) {
+        console.error("[api/listing-check] photo dropped:", error);
+      }
     }
-    const bytes = Buffer.from(await photo.arrayBuffer());
-    if (bytes.byteLength > MAX_UPLOAD_BYTES) {
-      return NextResponse.json({ error: "Photos must be 8 MB or smaller." }, { status: 413 });
-    }
-    const saved = await saveUpload(`check-${crypto.randomUUID()}`, bytes, photo.type);
-    photoPath = saved.path;
-    photoMime = photo.type;
   }
 
   try {
@@ -103,11 +105,18 @@ export async function POST(request: Request) {
       checkedAt,
       retailerUrl,
       note,
-      photoPath,
-      photoMime,
+      photoPath: stored?.path ?? null,
+      photoMime: stored?.mime ?? null,
+      photoBlobUrl: stored?.blobUrl ?? null,
+      photoBytes: stored?.bytes ?? null,
     });
     return NextResponse.json(
-      { id: created.id, product: listing.product.name, retailer: listing.retailer.name },
+      {
+        id: created.id,
+        product: listing.product.name,
+        retailer: listing.retailer.name,
+        photoSaved: stored !== null,
+      },
       { status: 201 },
     );
   } catch (error) {

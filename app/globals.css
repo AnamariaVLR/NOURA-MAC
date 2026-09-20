@@ -1,30 +1,179 @@
 @import "tailwindcss";
 
-/* Design tokens. One green for "verified", one neutral ramp, one band scale.
-   Everything on screen uses these — no ad-hoc hex values in components. */
-@theme {
-  --color-ink: #0d1613;
-  --color-ink-soft: #46554f;
-  --color-ink-faint: #7b8a84;
-  --color-paper: #f7f8f7;
-  --color-card: #ffffff;
-  --color-line: #e3e7e5;
+/* ===========================================================================
+ * NOURA — DESIGN TOKENS
+ *
+ * One source of truth for colour, type, space, radius, shadow and motion.
+ * Nothing in a component may carry a raw hex value, a raw duration, or a raw
+ * easing curve; if a value is missing here, it belongs here.
+ *
+ * Two rules the palette exists to enforce (Brand Book §12, §25):
+ *
+ *   1. Colour carries information before it carries decoration. The four
+ *      evidence states each own a hue, and no other element may borrow it.
+ *   2. "Verified" is an evidence state, not a compliment. It is deliberately
+ *      a quieter green than the brand accent, so a page cannot imply that
+ *      something checked is something good.
+ * ========================================================================= */
 
-  --color-brand: #0f6f4d;
-  --color-brand-soft: #e6f2ed;
-  --color-brand-deep: #0a4c35;
+@theme static {
+  /* ---- Canvas & ink ----------------------------------------------------
+   * Warm ivory, never white; deep charcoal, never black. Every ink level is
+   * at least 4.5:1 on the canvas, so any of them may carry real information.
+   * Only --color-ink-ghost falls below that, and it is decoration-only. */
+  --color-paper: #f7f5f0;
+  --color-card: #fffdf9;
+  --color-raised: #ffffff;
+  --color-ink: #20211f;
+  --color-ink-soft: #55564f;
+  --color-ink-faint: #686862;
+  --color-ink-ghost: #9a9a92;
+  --color-line: #e4dfd4;
+  --color-line-soft: #efeae0;
 
-  --color-band-excellent: #0f7a52;
-  --color-band-good: #4d8b2f;
-  --color-band-fair: #b4761a;
-  --color-band-poor: #b3321f;
+  /* ---- Brand accent ----------------------------------------------------
+   * Botanical mineral green. --color-brand is a fill; it is 3.9:1 on paper,
+   * so it may hold large or bold text and nothing smaller. Small text uses
+   * --color-brand-deep (6.8:1). */
+  --color-brand: #6f8067;
+  --color-brand-deep: #4a5a43;
+  --color-brand-soft: #e7ebe4;
+  --color-brand-line: #cfd7c9;
 
-  --color-warn-bg: #fdf4e6;
-  --color-warn-line: #ecd7ae;
+  /* ---- Supporting tones ------------------------------------------------ */
+  --color-sand: #e8e0d2;
+  --color-mineral: #dce2de;
+  --color-clay: #c9a994;
+
+  /* ---- Semantic evidence states ---------------------------------------
+   * Four states, four hues, each with a text-safe tone, a tint and a line.
+   * Never used for anything that is not a statement about evidence. */
+  --color-verified: #4e6a4e;
+  --color-verified-soft: #e6ebe3;
+  --color-verified-line: #c8d3c6;
+
+  --color-attention: #8a6a2e;
+  --color-attention-soft: #f5ecda;
+  --color-attention-line: #e4d2ae;
+
+  --color-unknown: #6b6b65;
+  --color-unknown-soft: #edeae3;
+  --color-unknown-line: #ddd8cd;
+
+  --color-conflict: #93463a;
+  --color-conflict-soft: #f4e4e0;
+  --color-conflict-line: #e2c4bc;
+
+  /* ---- Verdict bands ---------------------------------------------------
+   * The engine's four verdicts, mapped onto the state palette. They are
+   * aliases, not new colours: a verdict is a reading of the evidence. */
+  --color-band-excellent: var(--color-verified);
+  --color-band-good: #5f7450;
+  --color-band-fair: var(--color-attention);
+  --color-band-poor: var(--color-conflict);
+
+  /* Kept for components written against the older names. */
+  --color-warn-bg: var(--color-attention-soft);
+  --color-warn-line: var(--color-attention-line);
+
+  /* ---- Type ------------------------------------------------------------
+   * Serif carries humanity, ideas and the brand. Sans carries the product,
+   * the evidence and the data. The split is a rule, not a preference. */
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* ---- Radius ----------------------------------------------------------
+   * Subtle. Pills are reserved for things that genuinely are pills. */
+  --radius-xs: 4px;
+  --radius-sm: 7px;
+  --radius-md: 11px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+
+  /* ---- Elevation -------------------------------------------------------
+   * Separation comes from whitespace and tone. These exist for the two or
+   * three places where a surface genuinely floats. */
+  --shadow-hair: 0 1px 1px rgb(32 33 31 / 0.03);
+  --shadow-card: 0 1px 2px rgb(32 33 31 / 0.04), 0 8px 24px -16px rgb(32 33 31 / 0.10);
+  --shadow-lift: 0 2px 4px rgb(32 33 31 / 0.05), 0 16px 40px -24px rgb(32 33 31 / 0.16);
+
+  /* ---- Motion ----------------------------------------------------------
+   * Motion explains what is happening. One curve, three durations. */
+  --ease-noura: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-fast: 160ms;
+  --duration-base: 280ms;
+  --duration-slow: 520ms;
 }
+
+/* ===========================================================================
+ * Dark mode
+ *
+ * Not in the brand book, which describes a light, warm brand — but the app
+ * shipped with one and a person who has asked their device for dark type
+ * should not be handed a lightbox. The palette is re-pitched, not inverted:
+ * warm charcoal rather than green-black, the same four evidence hues lifted
+ * to stay legible, and the same rule that ink levels carry information.
+ * ========================================================================= */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #16160f;
+    --color-card: #1d1d17;
+    --color-raised: #23231c;
+    --color-ink: #f2efe7;
+    --color-ink-soft: #c3c0b6;
+    --color-ink-faint: #a5a299;
+    --color-ink-ghost: #74726b;
+    --color-line: #32312a;
+    --color-line-soft: #2a2923;
+
+    --color-brand: #9cb093;
+    --color-brand-deep: #b9c9b1;
+    --color-brand-soft: #232a21;
+    --color-brand-line: #3a4436;
+
+    --color-sand: #35301f;
+    --color-mineral: #262d28;
+    --color-clay: #a98872;
+
+    --color-verified: #8fb58f;
+    --color-verified-soft: #1e261e;
+    --color-verified-line: #37452f;
+
+    --color-attention: #d8ab63;
+    --color-attention-soft: #2a2213;
+    --color-attention-line: #4a3c21;
+
+    --color-unknown: #a09d93;
+    --color-unknown-soft: #242420;
+    --color-unknown-line: #383731;
+
+    --color-conflict: #d68d7e;
+    --color-conflict-soft: #2b1d19;
+    --color-conflict-line: #4b312a;
+
+    --color-band-good: #a6bb8a;
+  }
+}
+
+/* ===========================================================================
+ * Base
+ * ========================================================================= */
 
 :root {
   color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  /* The sticky header must not cover the heading of an anchored section. */
+  scroll-padding-top: 5rem;
 }
 
 html,
@@ -35,33 +184,139 @@ body {
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, "Noto Sans", sans-serif;
+  font-family: var(--font-sans);
   font-feature-settings: "cv05", "ss01";
+  text-rendering: optimizeLegibility;
 }
 
-/* Tabular figures wherever a number is meant to be compared with another number. */
+/* Tabular figures wherever a number is meant to be compared with another. */
 .tnum {
   font-variant-numeric: tabular-nums;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --color-ink: #eef3f0;
-    --color-ink-soft: #b3c1bb;
-    --color-ink-faint: #8a9992;
-    --color-paper: #0b100e;
-    --color-card: #141b18;
-    --color-line: #242e2a;
-    --color-brand: #4ec08c;
-    --color-brand-soft: #163024;
-    --color-brand-deep: #8fdcb6;
-    --color-band-excellent: #4ec08c;
-    --color-band-good: #8cc063;
-    --color-band-fair: #e0a44a;
-    --color-band-poor: #e57a67;
-    --color-warn-bg: #241c0e;
-    --color-warn-line: #4a3a1c;
+/* ---- Focus -----------------------------------------------------------
+ * One visible focus treatment, everywhere, on the canvas colour so it is
+ * legible on cards and on paper alike. */
+:focus-visible {
+  outline: 2px solid var(--color-brand-deep);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+::selection {
+  background: var(--color-brand-soft);
+  color: var(--color-ink);
+}
+
+/* ===========================================================================
+ * Typography utilities
+ *
+ * The display face is used at size and never for running text. Its optical
+ * weight is lighter than the sans, so it is given slightly tighter leading
+ * and a touch of negative tracking to sit properly beside it.
+ * ========================================================================= */
+
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  line-height: 1.06;
+}
+
+/* Fluid display sizes. Each clamps between a phone value and a desktop one,
+   so a headline never needs a breakpoint to stay on two or three lines. */
+.text-display-xl {
+  font-size: clamp(2.55rem, 1.35rem + 5.4vw, 5rem);
+}
+.text-display-lg {
+  font-size: clamp(2.05rem, 1.25rem + 3.6vw, 3.5rem);
+}
+.text-display-md {
+  font-size: clamp(1.65rem, 1.15rem + 2.2vw, 2.5rem);
+}
+.text-display-sm {
+  font-size: clamp(1.375rem, 1.1rem + 1.2vw, 1.875rem);
+}
+
+/* The small caps label that opens a section. Never more than three words. */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--color-brand-deep);
+}
+
+/* Lede paragraph under a display heading. */
+.lede {
+  font-size: clamp(1rem, 0.94rem + 0.3vw, 1.1875rem);
+  line-height: 1.55;
+  color: var(--color-ink-soft);
+}
+
+/* ===========================================================================
+ * Motion
+ *
+ * Two primitives, both used only to explain a change: something arriving,
+ * and something being revealed in sequence. `--delay` is set inline by the
+ * component that owns the sequence.
+ * ========================================================================= */
+
+@keyframes noura-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes noura-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-rise {
+  animation: noura-rise var(--duration-slow) var(--ease-noura) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.animate-fade {
+  animation: noura-fade var(--duration-base) var(--ease-noura) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+/* Reveal on scroll, without JavaScript, where the browser supports it. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: noura-rise var(--duration-slow) var(--ease-noura) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
+}
+
+/* A person who has asked for less motion gets none of it — including the
+   smooth scroll, which is motion they did not ask for either. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
   }
 }

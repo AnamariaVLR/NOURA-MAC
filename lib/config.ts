@@ -30,22 +30,53 @@ export const UPLOAD_DIR = process.env.UPLOAD_DIR?.trim() || ".data/uploads";
 /** Hard cap on uploads, enforced in the route handler before anything else. */
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
+/**
+ * Longest edge an image is reduced to before it is stored or sent to the model.
+ *
+ * Nothing reads a label better at 4000px than at 1600px, and the difference is
+ * seconds of upload on supermarket 4G. The client resizes before uploading and
+ * lib/storage.ts enforces it again, because a client-side limit is a suggestion.
+ */
+export const MAX_IMAGE_EDGE_PX = 1600;
+
+/**
+ * Ceiling for an image stored inside a database row, when no blob store is
+ * configured. 300 KB is small enough that a Postgres row stays comfortable and
+ * large enough that a shelf photo is still legible as an audit record.
+ */
+export const MAX_INLINE_IMAGE_BYTES = 300 * 1024;
+
+/** Vercel Blob token. Unset means images are stored in the database instead. */
+export function blobToken(): string | null {
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  return token ? token : null;
+}
+
+/**
+ * The password for /admin, and the rule that a missing one CLOSES the door rather
+ * than opening it.
+ *
+ * The previous rule — open in development, closed unless ALLOW_ADMIN=1 — is the
+ * wrong shape for a deployed pilot: it makes "did anyone set the flag?" the thing
+ * standing between the public and the price-entry tool. Now the question is "is
+ * there a password?", and no password means /admin is unreachable for everyone.
+ */
+export function adminPassword(): string | null {
+  const password = process.env.ADMIN_PASSWORD?.trim();
+  return password && password.length >= 8 ? password : null;
+}
+
+/** Salt for the rate-limit key hash, so the table never holds an IP address. */
+export function rateLimitSalt(): string {
+  return process.env.RATE_LIMIT_SALT?.trim() || process.env.ADMIN_PASSWORD?.trim() || "noura-dev";
+}
+
 export const ACCEPTED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/gif",
 ] as const;
-
-/**
- * /admin/listings is the data-entry tool for hand-verified prices. There are no
- * accounts in this MVP (out of scope), so it is open in development and closed in
- * production unless explicitly enabled. A real deployment needs authentication in
- * front of it before anyone but the operator can reach it.
- */
-export function adminAllowed(): boolean {
-  return process.env.NODE_ENV === "development" || process.env.ALLOW_ADMIN === "1";
-}
 
 /** /admin/seed is a dev tool. Refuse to run it anywhere it was not explicitly allowed. */
 export function seedEndpointAllowed(): boolean {
