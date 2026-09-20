@@ -27,3 +27,6 @@ blob-report/
 npm-debug.log*
 tsconfig.tsbuildinfo
 next-env.d.ts
+
+# Claude Code local state and worktrees
+.claude/
