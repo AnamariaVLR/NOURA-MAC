@@ -40,7 +40,10 @@ test("manifest: describes an installable, standalone, portrait app", async ({ re
   expect(manifest.short_name).toBe("Noura");
   expect(manifest.display).toBe("standalone");
   expect(manifest.orientation).toBe("portrait");
-  expect(manifest.start_url).toBe("/");
+  // Installed from a home screen, Noura opens the SCANNER. Someone who has
+  // installed it already knows what it is and is holding a jar; the marketing
+  // front door is for people arriving cold from a link.
+  expect(manifest.start_url).toBe("/scan");
 
   // The palette, not an approximation of it.
   expect(manifest.theme_color).toBe("#6f8067");
@@ -136,8 +139,8 @@ async function assertNoHorizontalOverflow(page: Page, label: string) {
   expect(overflow, `${label} overflows horizontally by ${overflow}px`).toBeLessThanOrEqual(1);
 }
 
-test("390px: the home screen leads with one big Scan button", async ({ page }) => {
-  await page.goto("/");
+test("390px: the scanner leads with one big Scan button", async ({ page }) => {
+  await page.goto("/scan");
   expect(page.viewportSize()?.width).toBe(390);
 
   const scan = page.getByTestId("scan-button");
@@ -169,10 +172,12 @@ test("390px: scan, result, and history all fit the screen", async ({ page }) => 
     { productSlug: "al-ain-water-500ml", retailerSlug: "carrefour-uae", priceAed: 1.75 },
   ]);
 
-  await page.goto("/");
+  await page.goto("/scan");
+  await expect(page.getByTestId("scan-button")).toBeVisible();
   await page.getByTestId("file-input").setInputFiles(FIXTURE);
   await page.getByTestId("analyse-button").click();
   await page.waitForURL(/\/result\/[a-z0-9]+/i, { timeout: 60_000 });
+  await expect(page.getByTestId("loading")).toHaveCount(0);
 
   await expect(page.getByTestId("product-name")).toBeVisible();
   await expect(page.getByTestId("checklist")).toBeVisible();
@@ -269,4 +274,57 @@ test("the confirm endpoint refuses a product it never offered", async ({ page })
   });
   expect(anonymous.status()).toBe(404);
   await stranger.close();
+});
+
+/* ===========================================================================
+ * Desktop, and the states that are not the happy path.
+ * ========================================================================= */
+test("desktop: the app is readable and centred at 1280px, not stretched", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+
+  for (const path of ["/", "/scan", "/offline"]) {
+    await page.goto(path);
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `${path} overflows horizontally`).toBeLessThanOrEqual(1);
+
+    // The column is capped and centred rather than filling a 1280px window:
+    // a 1280px-wide line of body text is unreadable, and this app is a phone
+    // app that desktop visitors also open.
+    const main = page.locator("main").first();
+    const box = await main.boundingBox();
+    expect(box!.width, `${path} main column is too wide to read`).toBeLessThanOrEqual(640);
+    const centreOffset = Math.abs(box!.x + box!.width / 2 - 1280 / 2);
+    expect(centreOffset, `${path} is not centred`).toBeLessThan(40);
+  }
+});
+
+test("not found: an unknown address explains itself and offers a way on", async ({ page }) => {
+  const res = await page.goto("/result/does-not-exist");
+  expect(res?.status()).toBe(404);
+  await expect(page.getByTestId("not-found-page")).toBeVisible();
+  // Scans belong to a browser, so "not yours" and "not there" look the same.
+  await expect(page.getByTestId("not-found-page")).toContainText(/different phone|different browser/i);
+  await page.getByRole("link", { name: /check a product/i }).click();
+  await page.waitForURL(/\/scan$/);
+});
+
+test("unknown is a visible state, not a silent gap", async ({ page }) => {
+  await page.goto("/scan");
+  await expect(page.getByTestId("scan-button")).toBeVisible();
+  await page.getByTestId("file-input").setInputFiles(FIXTURE);
+  await page.getByTestId("analyse-button").click();
+  await page.waitForURL(/\/result\/[a-z0-9]+/i, { timeout: 60_000 });
+  await expect(page.getByTestId("loading")).toHaveCount(0);
+
+  // The word itself has to be on screen. A greyed tick or a dash reads as a
+  // weak pass, which is the one thing unknown must never look like.
+  const unknown = page.locator('[data-testid="check"][data-check-status="unknown"]').first();
+  await expect(unknown).toBeVisible();
+  await expect(unknown).toContainText(/unknown|could not/i);
+
+  // And it is excluded from the tally rather than counted against the product.
+  await expect(page.getByTestId("check-tally")).toContainText(/could not be checked|unknown/i);
 });

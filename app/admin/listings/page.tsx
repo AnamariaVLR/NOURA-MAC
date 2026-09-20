@@ -79,7 +79,11 @@ npm run listings:import -- checks.csv`}
         </p>
       </Card>
 
-      <p className="text-center text-[12px] text-ink-faint">
+      <p className="flex items-center justify-center gap-3 text-center text-[12px] text-ink-faint">
+        <Link href="/admin/missing" className="underline underline-offset-2">
+          Missing products
+        </Link>
+        <span aria-hidden>·</span>
         <Link href="/admin/seed" className="underline underline-offset-2">
           Seed data
         </Link>

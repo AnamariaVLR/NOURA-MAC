@@ -117,7 +117,8 @@ rather than the installed app — go back to the home screen and use the icon.
 
 ## 2. Check a product — about 10 seconds
 
-1. Open Noura from the home screen.
+1. Open Noura from the home screen. Installed, it opens straight to the scanner;
+   from a link it opens the front page, which has one button.
 2. Tap the big green **Scan a product** button. The rear camera opens straight
    away.
 3. Photograph the **front of the pack**, and get the **barcode in the frame** if

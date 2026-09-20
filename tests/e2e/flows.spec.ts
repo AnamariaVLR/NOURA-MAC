@@ -23,11 +23,45 @@ import {
 
 const FIXTURE = resolve(__dirname, "../../fixtures/product.png");
 
+/**
+ * Opens the scanner and waits for it to be INTERACTIVE before touching it.
+ *
+ * The app has a root loading.tsx, so every dynamic page renders inside a
+ * Suspense boundary and streams. setInputFiles on a hidden input fires a change
+ * event that React only hears once the client component has hydrated — before
+ * that the event lands on dead DOM and the file is silently never accepted.
+ *
+ * Waiting for the primary button proves hydration has happened. A real user
+ * cannot beat it because they have to tap that button first.
+ */
+async function openScanner(page: Page): Promise<void> {
+  await page.goto("/scan");
+  await expect(page.getByTestId("scan-button")).toBeVisible();
+}
+
+
 async function scan(page: Page) {
-  await page.goto("/");
+  await openScanner(page);
   await page.getByTestId("file-input").setInputFiles(FIXTURE);
   await page.getByTestId("analyse-button").click();
   await page.waitForURL(/\/result\/[a-z0-9]+/i, { timeout: 60_000 });
+  await settled(page);
+}
+
+/**
+ * Waits for a result page to finish streaming.
+ *
+ * `waitForURL` resolves as soon as the document starts arriving, and since
+ * app/loading.tsx put every dynamic page behind a Suspense boundary that is now
+ * while the skeleton is still on screen. Assertions that AUTO-WAIT are fine;
+ * `locator.count()` is not, and returns 0 for a block that is about to exist.
+ *
+ * Waiting for the last of the five blocks is the honest signal that the page a
+ * shopper sees is the page under test.
+ */
+async function settled(page: Page): Promise<void> {
+  await expect(page.getByTestId("loading")).toHaveCount(0);
+  await expect(page.getByTestId("where-to-buy")).toBeVisible();
 }
 
 test.beforeEach(async () => {
@@ -52,9 +86,9 @@ test("better alternative: shows what to buy instead, with who checked it and whe
   await scan(page);
 
   const alternatives = page.getByTestId("alternatives").locator("> li");
-  const count = await alternatives.count();
-  expect(count).toBeGreaterThan(0);
-  expect(count).toBeLessThanOrEqual(3);
+  // not.toHaveCount(0) retries; a bare count() does not.
+  await expect(alternatives).not.toHaveCount(0);
+  expect(await alternatives.count()).toBeLessThanOrEqual(3);
 
   const first = alternatives.first();
   await expect(first.getByTestId("medal")).toHaveAttribute("aria-label", "Rank 1");
@@ -251,4 +285,88 @@ test("audit defect: an expensive out-of-category product is never the alternativ
   // The water does, and it is first.
   const first = alternatives.locator("> li").first();
   await expect(first).toContainText(/AED 1\.75/);
+});
+
+/* ===========================================================================
+ * 6. The whole journey, in one test.
+ *
+ * Every other spec covers one step. This one walks the path a real shopper
+ * takes, in order, and asserts the thing each step exists to guarantee — so a
+ * regression that only shows up in the SEAMS between steps has somewhere to
+ * fail.
+ * ========================================================================= */
+test("the full journey: front door → scan → evidence → assessment → alternatives → where to buy", async ({
+  page,
+}) => {
+  await addChecks([
+    { productSlug: SCANNED_PRODUCT, retailerSlug: "carrefour-uae", priceAed: 2.75 },
+    { productSlug: BETTER_DRINKS[0], retailerSlug: BETTER_DRINK_RETAILERS[0], priceAed: 1.75 },
+  ]);
+
+  // 1-2. Open Noura and understand what it does.
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: /know what you.re buying/i })).toBeVisible();
+  // The limits are on the front door, not buried.
+  await expect(page.getByText(/What it cannot do/i)).toBeVisible();
+
+  // 3. Scan.
+  await page.getByTestId("start-scan").click();
+  await page.waitForURL(/\/scan$/);
+  await expect(page.getByTestId("scan-button")).toBeVisible();
+  await page.getByTestId("file-input").setInputFiles(FIXTURE);
+  await page.getByTestId("analyse-button").click();
+  await page.waitForURL(/\/result\/[a-z0-9]+/i, { timeout: 60_000 });
+  await settled(page);
+
+  // 4. Identified, and it says HOW — provenance, not just a name.
+  await expect(page.getByTestId("product-name")).not.toBeEmpty();
+  await expect(page.getByTestId("match-provenance")).not.toBeEmpty();
+
+  // 6. Evidence and a category-specific assessment.
+  await expect(page.getByTestId("checklist")).toBeVisible();
+  const checkRows = page.getByTestId("check");
+  await expect(checkRows.nth(2)).toBeVisible();
+  // Every line carries the source it rests on. `:visible` because the first
+  // source note on the page sits inside the collapsed label disclosure, and a
+  // hidden one is not evidence that the reader can see attribution.
+  await expect(page.locator('[data-testid="source-note"]:visible').first()).toBeVisible();
+
+  // 7. What it could not verify is stated, not hidden. The fixture product has
+  // no verifiable certificate, so at least one check must read unknown.
+  const unknownRows = page.locator('[data-testid="check"][data-check-status="unknown"]');
+  await expect(unknownRows).not.toHaveCount(0);
+
+  // 8. Alternatives.
+  await expect(page.getByTestId("better-options")).toBeVisible();
+
+  // 9. Real purchase information: retailer, size, price, availability, last checked.
+  const listing = page.getByTestId("listing").first();
+  await expect(listing).toBeVisible();
+  await expect(listing).toContainText(/AED \d+\.\d{2}/);
+  await expect(listing.getByTestId("availability")).toBeVisible();
+  await expect(listing.getByTestId("freshness-label")).toContainText(/verified by hand/i);
+});
+
+/* ===========================================================================
+ * 7. No fabricated commerce, anywhere.
+ * ========================================================================= */
+test("with no checks recorded, no price is shown and the reason is given", async ({ page }) => {
+  // No addChecks: the database is empty of prices, which is how it ships.
+  await openScanner(page);
+  await page.getByTestId("file-input").setInputFiles(FIXTURE);
+  await page.getByTestId("analyse-button").click();
+  await page.waitForURL(/\/result\/[a-z0-9]+/i, { timeout: 60_000 });
+  await settled(page);
+
+  const empty = page.getByTestId("no-listings");
+  await expect(empty).toBeVisible();
+  await expect(empty).toContainText(/no price has been checked/i);
+  // It explains WHY rather than just reporting an absence.
+  await expect(empty).toContainText(/does not scrape/i);
+
+  // And nothing anywhere on the page looks like a price.
+  await expect(page.getByTestId("listings")).toHaveCount(0);
+  const body = await page.locator("body").innerText();
+  const prices = body.match(/AED\s*\d/g) ?? [];
+  expect(prices, `page showed a price with no check recorded: ${prices.join(", ")}`).toHaveLength(0);
 });

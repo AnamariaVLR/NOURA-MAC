@@ -116,6 +116,8 @@ CREATE TABLE "Scan" (
     "imageBlobUrl" TEXT,
     "imageBytes" BYTEA,
     "status" TEXT NOT NULL,
+    "matchSource" TEXT,
+    "candidatesJson" TEXT,
     "mode" TEXT NOT NULL,
     "identificationJson" TEXT NOT NULL,
     "productId" TEXT,
@@ -150,6 +152,24 @@ CREATE TABLE "RateLimit" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "RateLimit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "MissingProduct" (
+    "id" TEXT NOT NULL,
+    "fingerprint" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "brand" TEXT,
+    "sizeLabel" TEXT,
+    "category" TEXT NOT NULL,
+    "subcategory" TEXT,
+    "visibleText" TEXT,
+    "lastScanId" TEXT,
+    "timesSeen" INTEGER NOT NULL DEFAULT 1,
+    "firstSeen" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastSeen" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "MissingProduct_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -199,6 +219,12 @@ CREATE UNIQUE INDEX "HealthAnalysis_scanId_key" ON "HealthAnalysis"("scanId");
 
 -- CreateIndex
 CREATE INDEX "RateLimit_windowStart_idx" ON "RateLimit"("windowStart");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MissingProduct_fingerprint_key" ON "MissingProduct"("fingerprint");
+
+-- CreateIndex
+CREATE INDEX "MissingProduct_lastSeen_idx" ON "MissingProduct"("lastSeen");
 
 -- AddForeignKey
 ALTER TABLE "ProductListing" ADD CONSTRAINT "ProductListing_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;

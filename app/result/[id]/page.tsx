@@ -526,10 +526,20 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
         <SectionTitle>Where to buy</SectionTitle>
 
         {listings.length === 0 ? (
-          <p className="text-[13px] leading-relaxed text-ink-soft" data-testid="no-listings">
-            No price has been checked for this product yet. We only show prices somebody has
-            confirmed in person.
-          </p>
+          <div data-testid="no-listings">
+            <p className="text-[13px] leading-relaxed text-ink-soft">
+              No price has been checked for this product yet.
+            </p>
+            <p className="mt-2 text-[12px] leading-relaxed text-ink-faint">
+              No UAE grocer publishes a price feed and Noura does not scrape one, so a price exists
+              here only once a person has stood in front of the shelf and written it down. Rather
+              than show an estimate, it shows nothing.{" "}
+              <Link href="/admin/listings" className="underline underline-offset-2">
+                Record one
+              </Link>{" "}
+              if that person is you.
+            </p>
+          </div>
         ) : (
           <>
             {cheapest ? (
@@ -557,7 +567,16 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                     >
                       {listing.retailer.name}
                     </a>
-                    <p className="mt-0.5 text-[12px] text-ink-soft">{listing.sizeLabel}</p>
+                    <p className="mt-0.5 text-[12px] text-ink-soft">
+                      {listing.sizeLabel}
+                      {listing.unitPriceFils !== null ? (
+                        <span className="text-ink-faint">
+                          {" · "}
+                          {formatAed(listing.unitPriceFils)} per 100{" "}
+                          {listing.sizeLabel.match(/\b(ml|l|litre)\b/i) ? "ml" : "g"}
+                        </span>
+                      ) : null}
+                    </p>
                     <p
                       className={`mt-0.5 text-[11px] leading-relaxed ${
                         listing.isFresh ? "text-band-excellent" : "text-band-fair"
@@ -579,15 +598,25 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                     >
                       {formatAed(listing.priceFils)}
                     </p>
-                    {listing.isFresh ? (
-                      <p
-                        className={`mt-0.5 text-[11px] ${
-                          listing.inStock ? "text-band-excellent" : "text-ink-faint"
-                        }`}
-                      >
-                        {listing.inStock ? "in stock" : "out of stock"}
-                      </p>
-                    ) : null}
+                    {/* Availability is only a claim while the check is fresh. Past
+                        the window it is not hidden — hiding it implies nothing is
+                        known — it is labelled as no longer current. */}
+                    <p
+                      data-testid="availability"
+                      className={`mt-0.5 text-[11px] ${
+                        listing.isFresh
+                          ? listing.inStock
+                            ? "text-band-excellent"
+                            : "text-ink-faint"
+                          : "text-ink-faint"
+                      }`}
+                    >
+                      {listing.isFresh
+                        ? listing.inStock
+                          ? "in stock"
+                          : "out of stock"
+                        : "stock not confirmed recently"}
+                    </p>
                   </div>
                 </li>
               ))}

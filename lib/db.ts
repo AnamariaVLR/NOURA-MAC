@@ -13,6 +13,26 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 /**
+ * Make a blocked SQLite writer WAIT rather than fail.
+ *
+ * `busy_timeout` is PER CONNECTION, so setting it once with the CLI does
+ * nothing for the app — every process that opens the database has to ask for
+ * it. `journal_mode=WAL` is the opposite: a property of the file, set once by
+ * `npm run db:wal` and persistent.
+ *
+ * Without this, two processes writing the same file — which is exactly what the
+ * end-to-end suite does, the test writing fixtures while the server writes a
+ * scan — race on the same lock and one of them errors immediately. Five seconds
+ * is far longer than any query here and well short of any timeout.
+ *
+ * Fire-and-forget and silent on failure: on Postgres the pragma is meaningless
+ * and the query simply errors, which is not a reason to fail a request.
+ */
+if (!process.env.DATABASE_URL?.startsWith("postgres")) {
+  void prisma.$queryRawUnsafe("PRAGMA busy_timeout=5000;").catch(() => {});
+}
+
+/**
  * Which SQLite file is actually open — not which one you think is.
  *
  * A relative SQLite URL like `file:./dev.db` is resolved by the GENERATED CLIENT

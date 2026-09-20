@@ -273,3 +273,51 @@ describe("secrets", () => {
     expect(example).toMatch(/^ADMIN_PASSWORD=""$/m);
   });
 });
+
+describe("the Postgres migration keeps up with the schema", () => {
+  /**
+   * A migration that silently falls behind the schema is a deploy that fails
+   * after the environment variables are already pushed. This is a crude check —
+   * it does not validate the SQL, only that every model and column the schema
+   * declares is named somewhere in the migration — but it catches the failure
+   * that actually happens: a column added weeks after the migration was written.
+   *
+   * It has already caught one: matchSource, candidatesJson and MissingProduct
+   * were added after the init migration was generated, and the migration was
+   * three changes stale.
+   */
+  const schema = readFileSync(new URL("../../prisma/schema.prisma", import.meta.url), "utf8");
+  const migration = readFileSync(
+    new URL("../../prisma/migrations/20260920000000_init/migration.sql", import.meta.url),
+    "utf8",
+  );
+
+  it("creates a table for every model", () => {
+    const models = [...schema.matchAll(/^model\s+(\w+)\s*\{/gm)].map((m) => m[1]);
+    expect(models.length).toBeGreaterThan(5);
+    for (const model of models) {
+      expect(migration, `no CREATE TABLE for ${model}`).toContain(`"${model}"`);
+    }
+  });
+
+  it("names every field of every model", () => {
+    // Field lines look like `  fieldName  Type  @attrs`. Relation fields and
+    // block attributes are skipped: they produce no column.
+    const body = schema.replace(/\/\/\/.*$/gm, "");
+    const fields = [...body.matchAll(/^\s{2}(\w+)\s+(\w+)(\[\])?(\?)?\s*(.*)$/gm)]
+      .filter(([, , type]) => /^(String|Int|Boolean|DateTime|Float|Bytes|Decimal|Json)$/.test(type))
+      .map(([, name]) => name);
+
+    expect(fields.length).toBeGreaterThan(30);
+    const missing = [...new Set(fields)].filter((f) => !migration.includes(`"${f}"`));
+    expect(missing, `columns missing from the migration: ${missing.join(", ")}`).toEqual([]);
+  });
+
+  it("is written for Postgres, whatever the schema currently says", () => {
+    // scripts/prisma-provider.ts flips the schema's provider for local SQLite;
+    // the committed migration must always be the Postgres one.
+    expect(migration).toMatch(/CREATE TABLE/);
+    expect(migration).toMatch(/TIMESTAMP\(3\)|TEXT|BYTEA/);
+    expect(migration).not.toMatch(/AUTOINCREMENT/); // SQLite-only
+  });
+});

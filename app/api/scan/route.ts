@@ -87,8 +87,11 @@ export async function POST(request: Request) {
       },
     });
 
-    // Opportunistic housekeeping; failures here are ignored inside prune().
-    void prune();
+    // Opportunistic housekeeping, and deliberately not on every request: this
+    // is a DELETE on the hot path of a scan, and on SQLite every write competes
+    // for the same lock. One run in twenty keeps the table small without making
+    // each shopper pay for it.
+    if (Math.random() < 0.05) void prune();
 
     return NextResponse.json({ id: result.scanId, status: result.status }, { status: 201 });
   } catch (error) {

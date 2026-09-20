@@ -54,7 +54,10 @@ export default async function HistoryPage() {
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {scan.mode === "mock" ? <Pill tone="warn">example</Pill> : null}
-                        {scan.status === "failed" ? <Pill tone="warn">no evidence found</Pill> : null}
+                        {scan.status === "failed" ? <Pill tone="warn">not in the catalogue</Pill> : null}
+                        {scan.status === "needs_confirmation" ? (
+                          <Pill tone="warn">waiting for you to confirm</Pill>
+                        ) : null}
                       </div>
                     </div>
                     {scan.analysis && verdict.success ? (

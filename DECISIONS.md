@@ -1200,3 +1200,176 @@ non-zero when it is not this checkout's, and `npm run db:reset` now runs
 The general lesson: **when a number does not match what the code should have
 produced, check which database answered before checking the code.** A silent
 redirection looks exactly like a logic bug and is much cheaper to rule out.
+
+## 76. The front door and the scanner are different screens
+
+The scanner was the homepage, because there was no homepage. That is the wrong
+shape for a real user: someone arriving from a link is asked to photograph
+something before being told what the thing photographing it is.
+
+`/` now answers the three questions a cold arrival has — what is this, can I
+trust it, what do I do — and the third is one button. The three claims on it are
+written as LIMITS rather than features, because the limits are the product:
+every line cites its source, "we don't know" is an answer, and healthy is
+category-specific. A second card says plainly what it cannot do.
+
+`/scan` is exactly one thing.
+
+This also settles the shape of the merge with `brand/website`, which had already
+made the same split independently: marketing at `/`, scanner at `/scan`. Both
+files on this branch carry a comment saying to take the branding branch's
+version. See MERGE.md.
+
+**The PWA's `start_url` is `/scan`, not `/`.** Someone who installed it knows
+what it is and is holding a jar; the front door is for people arriving cold.
+
+## 77. Availability is labelled when it lapses, not hidden
+
+A listing check past the 14-day window used to show its price greyed out and
+show no stock line at all. Hiding it implies nothing is known, when what is
+actually true is that something was known and is now too old to assert.
+
+It now reads **"stock not confirmed recently"**. Same information, honestly
+shaped: the difference between "we never knew" and "we knew, a while ago" is
+exactly the kind of thing this app exists to keep straight.
+
+The empty state gained the reason as well as the fact. "No price has been
+checked" is true but unhelpful; it now explains that no UAE grocer publishes a
+price feed, that Noura does not scrape one, and that a price therefore exists
+only once a person wrote it down — with a link to do that.
+
+## 78. The migration can go stale silently, so a test watches it
+
+`matchSource`, `candidatesJson` and the `MissingProduct` model were added three
+separate times after `prisma/migrations/…_init` was generated. Nothing noticed,
+because nothing runs the migration locally — local development uses `db push`.
+
+The failure that would have followed is the worst-timed one available: a deploy
+that pushes environment variables, then fails applying a migration that does not
+describe the schema the code expects.
+
+`tests/unit/production.test.ts` now checks that every model and every scalar
+column in `schema.prisma` is named somewhere in the migration SQL. It does not
+validate the SQL — that would need a database — but it catches the failure that
+actually happens, which is a column added weeks after the migration was written.
+
+## 79. The loading skeleton was removed, because it cost more than it bought
+
+A root `app/loading.tsx` was added to satisfy "loading states", and then taken
+out again. Recorded because the reasoning is the useful part.
+
+A root loading file puts every dynamic page inside a Suspense boundary, which
+makes Next stream the shell before the page has rendered. Three things followed:
+
+1. **`notFound()` stopped returning 404.** Once the shell is flushed the status
+   is already on the wire, so `/result/<nonsense>` answered **200** with the
+   not-found page inside it. Correct to a reader, wrong to anything else.
+2. **Assertions that do not auto-wait started failing.** `locator.count()`
+   returns immediately, so a block that was about to stream in counted zero.
+3. **A hydration race in the tests.** `setInputFiles` on a hidden input fires a
+   change event React only hears after hydration; behind Suspense that event
+   sometimes landed on dead DOM and the file was silently never accepted.
+
+What it bought was a skeleton for pages that render in milliseconds — they read
+a local database and rank a handful of candidates. **The loading state that
+actually matters is the scan itself**, which takes several seconds of model call
+and network, and that one has always been handled explicitly in
+`components/capture-form.tsx`: the button text walks through "Identifying the
+product", "Gathering published evidence", "Working through the checks". A real
+wait with real progress copy beats a skeleton for a wait nobody notices.
+
+One change survives the removal: the tests still wait for the scanner's primary
+button before touching the file input. Hydration was always a latent race — a
+real user cannot lose it, because the only way to choose a file is to tap
+something, and tapping requires hydration — and making it explicit costs
+nothing.
+
+## 80. A flag that .env cannot override, because .env wins
+
+The end-to-end suite was running against the live Anthropic API. It had been
+since the moment a real key went into `.env`, and it was wrong in three ways at
+once: slow, billed, and incorrect — the fixture is a synthetic image with no
+legible text, which a real model correctly reads as unidentifiable, so every
+scan in the suite became a *failed* scan and every assertion about alternatives,
+evidence and commerce failed with it.
+
+`playwright.config.ts` passed `ANTHROPIC_API_KEY: ""` in `webServer.env` and had
+done for months. It does not work: `npm run start` boots Next, Next loads `.env`
+itself, and its values beat anything the harness put in the environment. This is
+the same trap that broke the admin tests when `.env` gained a password, and it
+will keep happening, because the harness and the framework disagree about who
+owns the environment and the framework is downstream.
+
+**The only thing `.env` cannot override is a flag the app reads first.**
+`NOURA_FORCE_MOCK=1` makes `runMode()` return "mock" before it ever looks at the
+key. The suite sets it; `.env` cannot undo it.
+
+It is not only a test seam. A demo deployment that should show the whole product
+without spending anything on identification wants exactly this, which is why it
+is documented in `.env.example` rather than hidden.
+
+**The wider lesson, and the reason this is its own entry:** twice now a change to
+`.env` has silently altered what the test suite was testing, and both times the
+symptom looked like an application bug — a missing button, a missing
+alternatives list. When a test starts failing right after an environment change,
+check what the server actually loaded before reading the code.
+
+## 81. SQLite needed WAL, and the rate limiter is why
+
+A POST to `/api/scan` started timing out after sixty seconds in the end-to-end
+suite. It looked like an application hang. It was a lock.
+
+SQLite's default rollback journal takes an exclusive lock for every write, so
+two processes writing the same file serialise hard — and the suite is exactly
+that shape: the test process writes `ListingCheck` fixtures while the server
+writes a `Scan`, a `RateLimit` row and sometimes a `MissingProduct` for the same
+request.
+
+The contention was always latent. **Adding the rate limiter put a write on the
+hot path of every single scan** (DECISIONS §67 chose the database over a Map
+deliberately, and this is the bill for that choice), which is what made it
+visible.
+
+Three changes, in order of how much they matter:
+
+1. **WAL mode**, set once by `npm run db:wal` and run automatically by
+   `db:push`. Readers proceed during a write instead of blocking. It is a
+   property of the file and persists.
+2. **`busy_timeout=5000` on every connection**, in `lib/db.ts`. Unlike
+   `journal_mode` this is per-connection, so setting it with the CLI does
+   nothing for the app — a blocked writer now waits five seconds instead of
+   failing at once.
+3. **The rate-limit prune runs on one scan in twenty**, not on all of them. It
+   is a DELETE on a shopper's critical path and it does not need to be.
+
+None of this applies to the production database: Postgres has no such lock, and
+the pragmas are skipped when `DATABASE_URL` is a Postgres URL. It is a
+local-development and test-suite fix, and worth the entry because the symptom —
+a page that never renders — points nowhere near the cause.
+
+**Related operational note:** do not run scripts against `prisma/dev.db` while
+the suite is running. Even with WAL, a long write from another terminal can
+stall a page render, and a stalled render looks exactly like a test waiting for
+an element that never appears.
+
+## 82. The front door and the scanner, one more time: what a real user needed
+
+The brief for this pass was to finish the product so a real person could walk the
+whole path. Working through it produced four changes that are not features so
+much as the absence of gaps:
+
+- **A front door.** §76. Someone arriving from a link was asked to photograph
+  something before being told what the thing photographing it was.
+- **Error and not-found pages.** A shopper in an aisle needs a next step, not an
+  apology. The error page shows the digest, because it is the only thing
+  connecting what they saw to what the server logged, and it identifies nothing
+  about them.
+- **Availability that says when it lapsed**, §77, rather than hiding.
+- **`/admin/missing` linked from `/admin/listings`**, because a queue nobody can
+  reach is a log file.
+
+And one thing deliberately NOT added: a universal score, a completeness
+percentage, or any other single number. The brief asked for it not to be, and it
+would have been easy to reach for while making the page feel finished. The
+checklist is the product; a number on top of it would be the thing that averages
+away which claim is true.

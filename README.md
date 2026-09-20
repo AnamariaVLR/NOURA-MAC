@@ -53,12 +53,13 @@ ANTHROPIC_MODEL="claude-sonnet-5"
 | `npm run dev` | Dev server |
 | `npm run build` | Production build (runs `prisma generate` first) |
 | `npm start` | Serve the production build |
-| `npm test` | Vitest unit tests (460) |
-| `npm run test:e2e` | Playwright tests (22) against a production build |
+| `npm test` | Vitest unit tests (485) |
+| `npm run test:e2e` | Playwright tests (29) against a production build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run setup` | Generate client, push schema, seed |
 | `npm run db:reset` | Delete the SQLite file and rebuild it from seed |
 | `npm run db:where` | Which database is actually open, and what is in it |
+| `npm run db:wal` | Put the local SQLite file in WAL mode (run by `db:push`) |
 | `npm run seed:fetch` | Re-fetch product evidence from Open Food Facts |
 | `npm run seed:moiat -- file.csv` | Import the real MOIAT conformity register |
 | `npm run listings:export -- checks.csv` | Write the price-check queue as CSV |
@@ -73,7 +74,8 @@ ANTHROPIC_MODEL="claude-sonnet-5"
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Capture: camera, file, or paste a screenshot |
+| `/` | The front door: what Noura is, what it cannot do, and one button |
+| `/scan` | Capture: camera, file, or paste a screenshot. The PWA's `start_url` |
 | `/result/[id]` | Product, verification, why, better options, where to buy |
 | `/history` | This browser's past scans (no auth in the MVP) |
 | `/admin/login` | The one way into `/admin`. One password, 30-day cookie |
@@ -117,7 +119,8 @@ of each variable and its length.
 
 [`PILOT.md`](PILOT.md) is the hand-over document: how to install it on a phone,
 how to record a price check in an aisle, what happens with no signal, and the
-five things most likely to go wrong.
+five things most likely to go wrong. [`MERGE.md`](MERGE.md) is the file-by-file
+plan for merging the `brand/website` branch.
 
 ---
 

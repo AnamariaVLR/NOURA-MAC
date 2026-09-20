@@ -24,13 +24,23 @@
  *   everything else      → straight to the network, no caching, no interception.
  */
 
-const VERSION = "noura-v1";
+const VERSION = "noura-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const OFFLINE_URL = "/offline";
 
 /** The minimum set that makes the app open at all with no connection. */
-const SHELL = ["/", OFFLINE_URL, "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const SHELL = [
+  "/",
+  "/scan",
+  OFFLINE_URL,
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
+
+/** The pages worth keeping a copy of: they carry no date and no secret. */
+const CACHEABLE_PAGES = new Set(["/", "/scan", OFFLINE_URL]);
 
 /** Never cached, never served from cache, under any circumstances. */
 function isNeverCached(url) {
@@ -76,17 +86,21 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Only the home page is worth keeping; every other navigable page
+          // Only the shell pages are worth keeping; every other navigable page
           // either carries a date or is behind a password.
-          if (url.pathname === "/" && response.ok) {
+          if (CACHEABLE_PAGES.has(url.pathname) && response.ok) {
             const copy = response.clone();
-            caches.open(SHELL_CACHE).then((cache) => cache.put("/", copy));
+            caches.open(SHELL_CACHE).then((cache) => cache.put(url.pathname, copy));
           }
           return response;
         })
         .catch(async () => {
-          const cached = await caches.match(url.pathname === "/" ? "/" : OFFLINE_URL);
-          return cached ?? caches.match(OFFLINE_URL) ?? Response.error();
+          // A shell page we hold is better than the offline notice; anything
+          // else gets the notice, because a stale result is worse than none.
+          const cached = CACHEABLE_PAGES.has(url.pathname)
+            ? await caches.match(url.pathname)
+            : null;
+          return cached ?? (await caches.match(OFFLINE_URL)) ?? Response.error();
         }),
     );
     return;

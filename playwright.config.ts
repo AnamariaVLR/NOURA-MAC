@@ -52,7 +52,12 @@ export default defineConfig({
     // ADMIN_PASSWORD because /admin is now closed without one and the flows cover
     // it; the rest keeps the run offline and model-free.
     env: {
-      ANTHROPIC_API_KEY: "",
+      // NOT `ANTHROPIC_API_KEY: ""`. Next loads .env itself and its value wins
+      // over anything passed here, so a developer with a real key in .env was
+      // running the whole suite against the live model — slowly, at a cost, and
+      // wrongly: the fixture is a synthetic image that a real model correctly
+      // reads as unidentifiable, so every scan became a failed scan.
+      NOURA_FORCE_MOCK: "1",
       VERIFIED_OFFLINE: "1",
       // The admin tests sign in for real, so the suite needs a password to sign
       // in WITH. It is a test value and it is in the repo on purpose: the point

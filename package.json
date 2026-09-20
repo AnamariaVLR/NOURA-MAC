@@ -8,7 +8,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "db:push": "tsx scripts/prisma-provider.ts && prisma db push --skip-generate",
+    "db:push": "tsx scripts/prisma-provider.ts && prisma db push --skip-generate && tsx scripts/sqlite-wal.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "rm -f prisma/dev.db && npx prisma generate && npm run db:push && npm run db:seed && npm run db:where",
     "setup": "tsx scripts/prisma-provider.ts && prisma generate && npm run db:push && npm run db:seed",
@@ -28,7 +28,8 @@
     "icons": "tsx scripts/make-icons.ts",
     "qr": "tsx scripts/make-qr.ts",
     "pilot:url": "tsx scripts/pilot-url.ts",
-    "db:where": "tsx scripts/db-where.ts"
+    "db:where": "tsx scripts/db-where.ts",
+    "db:wal": "tsx scripts/sqlite-wal.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

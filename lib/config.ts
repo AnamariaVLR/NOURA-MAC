@@ -10,7 +10,26 @@ export function apiKey(): string | null {
 
 export type RunMode = "live" | "mock";
 
+/**
+ * Force example mode even when a key is present.
+ *
+ * Two real uses. A demo deployment can run the whole product without spending
+ * anything on identification. And the end-to-end suite MUST be deterministic and
+ * free: it drives a synthetic fixture image that a real model correctly reads as
+ * unidentifiable, so a live run turns every scan into a failed scan.
+ *
+ * It exists as a separate flag rather than "unset the key in the test
+ * environment" because that does not work. `next start` boots Next, Next loads
+ * .env itself, and its values beat anything the harness passed in — the same
+ * trap that broke the admin tests when .env gained a password (DECISIONS §79's
+ * sibling). A flag the app reads first is the only thing .env cannot override.
+ */
+export function forceMock(): boolean {
+  return process.env.NOURA_FORCE_MOCK === "1";
+}
+
 export function runMode(): RunMode {
+  if (forceMock()) return "mock";
   return apiKey() ? "live" : "mock";
 }
 

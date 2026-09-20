@@ -109,12 +109,15 @@ export default async function AdminMissingPage() {
         </p>
       </Card>
 
-      <Link
-        href="/admin/listings"
-        className="block text-center text-[13px] underline underline-offset-2"
-      >
-        Price checks
-      </Link>
+      <p className="flex items-center justify-center gap-3 text-center text-[12px] text-ink-faint">
+        <Link href="/admin/listings" className="underline underline-offset-2">
+          Price checks
+        </Link>
+        <span aria-hidden>·</span>
+        <Link href="/admin/seed" className="underline underline-offset-2">
+          Seed data
+        </Link>
+      </p>
     </div>
   );
 }

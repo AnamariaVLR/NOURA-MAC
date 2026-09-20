@@ -31,7 +31,8 @@ test.afterAll(async () => {
 });
 
 async function scanFixture(page: Page) {
-  await page.goto("/");
+  await page.goto("/scan");
+  await expect(page.getByTestId("scan-button")).toBeVisible();
   await page.getByTestId("file-input").setInputFiles(FIXTURE);
   await expect(page.getByTestId("analyse-button")).toBeEnabled();
   await page.getByTestId("analyse-button").click();
@@ -39,8 +40,12 @@ async function scanFixture(page: Page) {
 }
 
 test("upload a fixture image and reach a full result page", async ({ page }) => {
+  // The front door explains, then hands over to the scanner.
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Verified healthy products/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /know what you.re buying/i })).toBeVisible();
+  await page.getByTestId("start-scan").click();
+  await page.waitForURL(/\/scan$/);
+  await expect(page.getByTestId("scan-button")).toBeVisible();
   await expect(page.getByText(/Running in example mode/i)).toBeVisible();
 
   await scanFixture(page);

@@ -22,7 +22,11 @@ export default function manifest(): MetadataRoute.Manifest {
     description:
       "Photograph a product in a UAE supermarket. Noura checks the published evidence against " +
       "sourced thresholds and says plainly what it can and cannot verify.",
-    start_url: "/",
+    // Installed from a home screen, Noura opens the SCANNER, not the marketing
+    // page. Someone who has installed it already knows what it is; they are
+    // holding a jar. The front door is still there at "/" for anyone arriving
+    // cold from a link.
+    start_url: "/scan",
     // Anything under the app is in scope; nothing outside it is.
     scope: "/",
     display: "standalone",
@@ -46,7 +50,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "Scan a product",
         short_name: "Scan",
-        url: "/?scan=1",
+        url: "/scan",
         icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
       },
     ],
