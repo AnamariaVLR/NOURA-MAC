@@ -10,9 +10,15 @@ dist/
 .env.*.local
 
 # Local database and uploads
+# The local SQLite database and everything SQLite writes beside it. The -wal and
+# -shm suffixes are NOT matched by *.db, which is how a 3 MB write-ahead log got
+# committed once; the explicit globs are the fix.
 prisma/dev.db
 prisma/dev.db-journal
 prisma/*.db
+prisma/*.db-*
+prisma/*.sqlite
+prisma/*.sqlite-*
 .data/
 
 # Test artefacts
