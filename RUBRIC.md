@@ -514,7 +514,7 @@ be the additive version of counting unknown as a pass.
 | ID | Class | Effect | Tag |
 |---|---|---|---|
 | **A3.1** | **Non-sugar sweetener** — an additive on the EU authorised sweetener list | **Note.** Reported prominently for beverages | **SOURCED** — the list is S20, S21, S22; the class definition is S16 Annex I · tier 1. Effect is C4.8.5 |
-| **A3.2** | **Cosmetic additive** — colour, flavour, emulsifier, thickener | **Note.** Feeds the processing note (U5) | **SOURCED** — S8's practical identification rule · **tier 3**, so a note only |
+| **A3.2** | **Cosmetic additive** — colour, flavour, emulsifier, thickener | **Note**, carried by the NOVA group in U5 rather than derived separately | **SOURCED** — S8's practical identification rule · **tier 3**, so a note only. **POLICY** that Noura does not re-derive the class: doing so needs an E-number-to-function taxonomy, and no retrieved instrument supplies one. The published NOVA group already encodes S8's rule, so deriving it a second time from unsourced number ranges would add no information and one more unsourced table |
 | **A3.3** | **Flagged** — §5.4 | **Fail** | **POLICY** — the approving decision. Sources per row |
 | **A3.4** | **All other authorised additives** | **Note.** Counted and listed | **SOURCED** — S15 · tier 1 |
 | **A3.5** | **Unauthorised substance** | Would be a failure, but **Noura cannot detect it**: the authorised-additive list itself was not retrieved | **SOURCED** — the gap is at SOURCES §3 · — |
