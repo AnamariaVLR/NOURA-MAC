@@ -43,6 +43,13 @@ export const cereal: CategoryRule = {
     // C4.6.2 — SOURCED S1 red via U1.4. Both lines at their own strength.
     totalSugars: {
       high: 15,
+      singleLine: {
+        noun: "the total-sugar line for breakfast cereal",
+        because:
+          "It is the level above which the WHO regional model does not permit a cereal to be " +
+          "marketed to children. It is not a low-sugar mark: 15 g per 100 g is a great deal of " +
+          "sugar, and the line exists to catch the worst rather than to praise the rest.",
+      },
       disqualifyAbove: SUGAR_BANDS.solid.high,
       tolerance: "sugars",
       rule: "C4.6.1/C4.6.2",

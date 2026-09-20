@@ -10,7 +10,8 @@ import { describe, expect, it } from "vitest";
 import { evaluateChecks } from "../../lib/health/checks";
 import { FIBRE, PROTEIN, SALT_BANDS, SALT_PER_SODIUM, SATURATED_FAT_BANDS, SUGAR_BANDS } from "../../lib/health/rubric";
 import { CheckSchema } from "../../lib/schemas";
-import { checkFor, input, nutrition, statusOf } from "./helpers";
+import { ruleFor } from "../../lib/health/categories";
+import { ALL_CATEGORIES, checkFor, input, nutrition, statusOf } from "./helpers";
 
 describe("U1 — added sugar", () => {
   it("U1.3/U1.4 — the solid bands are S12's 5 g and S1's 22.5 g", () => {
@@ -287,6 +288,76 @@ describe("U9 — the per-100 basis", () => {
   it("every check satisfies the schema, so no rewrite can produce an unrenderable row", () => {
     for (const check of evaluateChecks(input())) {
       expect(CheckSchema.safeParse(check).success).toBe(true);
+    }
+  });
+});
+
+describe("U10 — a line that is not a low mark is never called low", () => {
+  /**
+   * From the first real scan of a real product: a 1 L bottle of Borges extra
+   * virgin olive oil came back as "Low saturated fat: 16 g per 100 g… within the
+   * low range, which is 20 g or less". 16 g is not low by any ordinary meaning.
+   * It is below the line drawn FOR OILS, which is a different claim, and the
+   * wording turned a category threshold into a health claim.
+   */
+  const olive = (saturatedFatG: number) =>
+    input({
+      category: "fats_oils",
+      subcategory: "olive_oil",
+      ingredientsText: "extra virgin olive oil",
+      nutrition: nutrition({ saturatedFatG }),
+    });
+
+  it("U10.1 — olive oil at 16 g does not say 'low'", () => {
+    const check = checkFor(evaluateChecks(olive(16)), "saturatedFat")!;
+    expect(check.status).toBe("pass");
+    // The claim must not assert lowness, and the detail must not use the
+    // "Low is X or less" formula. The word itself may appear — it does, in the
+    // sentence that explicitly DENIES the claim, which is the point.
+    expect(check.claim.toLowerCase()).not.toMatch(/\blow\b/);
+    expect(check.detail).not.toMatch(/low is .* or less/i);
+    expect(check.claim).toContain("below the line for fats and oils");
+  });
+
+  it("U10.2 — and says why oils have their own line", () => {
+    const check = checkFor(evaluateChecks(olive(16)), "saturatedFat")!;
+    expect(check.detail).toContain("almost entirely fat");
+    // The disclaimer that stops the pass over-claiming.
+    expect(check.detail).toMatch(/not a claim that the product is low/i);
+  });
+
+  it("U10.3 — the explanation is on the passing side only", () => {
+    const failed = checkFor(evaluateChecks(olive(55)), "saturatedFat")!;
+    expect(failed.status).toBe("fail");
+    expect(failed.detail).not.toMatch(/not a claim that the product is low/i);
+    expect(failed.claim).toContain("above the line for fats and oils");
+  });
+
+  it("U10.1 — a cereal below 15 g of sugar is not described as low either", () => {
+    const check = checkFor(
+      evaluateChecks(input({ category: "cereal", nutrition: nutrition({ sugarsG: 14 }) })),
+      "totalSugars",
+    )!;
+    expect(check.status).toBe("pass");
+    expect(check.claim.toLowerCase()).not.toMatch(/\blow\b/);
+    expect(check.detail).not.toMatch(/low is .* or less/i);
+    // And it says outright that 15 g is a lot of sugar.
+    expect(check.detail).toMatch(/great deal of sugar/i);
+  });
+
+  it("every single-threshold line in the model carries the wording it needs", () => {
+    // A new category with one sourced line must not silently fall back to "low".
+    for (const category of ALL_CATEGORIES) {
+      const rule = ruleFor(category);
+      for (const sub of rule.subcategories) {
+        for (const [key, line] of Object.entries(rule.lines(sub.basis))) {
+          if (line.low !== undefined) continue;
+          expect(line.singleLine, `${category}/${sub.key}.${key} has no low mark and no wording`)
+            .toBeDefined();
+          expect(line.singleLine!.noun.length).toBeGreaterThan(5);
+          expect(line.singleLine!.because.length).toBeGreaterThan(20);
+        }
+      }
     }
   });
 });

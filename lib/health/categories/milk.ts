@@ -61,6 +61,12 @@ export const milk: CategoryRule = {
     // sugar was ADDED is C4.2.1's job.
     totalSugars: {
       high: SUGAR_BANDS[basis].high,
+      singleLine: {
+        noun: "the UAE high-sugar line for drinks",
+        because:
+          "Above it, a product is a flavoured milk drink rather than milk. Plain milk's own " +
+          "lactose sits below it and is not sugar anyone added.",
+      },
       tolerance: "sugars",
       rule: "C4.2.2",
       source: "S10 · tier 1, binding UAE",

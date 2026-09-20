@@ -46,6 +46,13 @@ export const fatsOils: CategoryRule = {
     // be. Olive oil at ~14 g passes; salted butter at 55 g disqualifies.
     saturatedFat: {
       high: 20,
+      singleLine: {
+        noun: "the line for fats and oils",
+        because:
+          "An oil is almost entirely fat, so it is not judged against the 5 g line used for " +
+          "composite foods — that line would fail every oil on the shelf. This is not a claim " +
+          "that the product is low in saturated fat.",
+      },
       tolerance: "saturatedFat",
       rule: "C4.1.1",
       source: "S5 #10 · tier 1",

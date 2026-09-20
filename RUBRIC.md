@@ -763,6 +763,8 @@ removed from the pilot until there is something to check.
 | 1.1 | 2026-09-20 | §4.8 C4.8.7 gains an **identification rule** — caffeine plus a named stimulant — and its cost | The rule said energy drinks are disqualified and gave no way to recognise one, so nothing implemented it. Found by auditing rule identifiers against the code | S5 footnote f · 1 |
 | 1.1 | 2026-09-20 | §4.4 C4.4.2 **eggs' salt line declined** under C0 | Found by putting eggs in the catalogue for the first time: both returned NOT RECOMMENDED on their own intrinsic sodium. EMRO's 0.1 g line fails every egg | **POLICY**, S5 #13 declined |
 
+| 1.1 | 2026-09-20 | §3 **U10 added**: a category with a single sourced threshold never describes the passing side as "low" | Found by the first real scan of a real product. Extra virgin olive oil at 16 g of saturated fat was reported as "Low saturated fat… within the low range". No threshold changed; the wording did | **POLICY** |
+
 **Rule for future changes:** no threshold in this document may change without a row here
 recording the old value, the new value, the reason, and the source with its tier. A change with
 no source is not a change; it is an opinion, and belongs in §9 instead.

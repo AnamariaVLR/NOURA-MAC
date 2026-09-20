@@ -1406,3 +1406,45 @@ cross-cutting policy produced a symptom that pointed at the feature under test.
 Barcode salvage, `.env` overriding the harness, and now the limiter. When a test
 starts failing in a way that makes no sense for the code it exercises, look at
 what changed around it before looking harder at it.
+
+## 84. "Low saturated fat: 16 g per 100 g"
+
+The first scan of a real product by someone who is not me produced a result page
+that was right in every respect but one. A 1 L bottle of Borges extra virgin
+olive oil, confirmed by the shopper, VERIFIED — GOOD CHOICE, four of four checks
+passed, certification honestly unknown and excluded, no price invented.
+
+And this line:
+
+> **Low saturated fat: 16 g per 100 g.** This is within the low range, which is
+> 20 g or less per 100 g.
+
+16 g of saturated fat is not low by any ordinary meaning of the word. It is
+*below the line drawn for fats and oils*, which is a different claim, and the
+sentence turned a category-specific threshold into a health claim Noura had not
+earned. It is the sentence a nutritionist would stop reading at.
+
+**The cause was wording, not a threshold.** `quantityCheck` assumed every line
+has a "low" mark and a "high" mark. Where a category has only ONE sourced
+threshold it fell back to describing that single line as "low" — and five lines
+in the model are like that: fats and oils at 20 g saturated fat, cereal at 15 g
+total sugar, yogurt and bread at 10 g, milk at the UAE excise band. A breakfast
+cereal at 14 g of sugar would have read "Low total sugar. Low is 15 g or less."
+
+RUBRIC §3 U10 now requires the passing side of a single-threshold line to say
+what the line IS, why that category has its own, and — where the line is not a
+health mark — to say so outright. The cereal copy now ends: *"It is not a
+low-sugar mark: 15 g per 100 g is a great deal of sugar, and the line exists to
+catch the worst rather than to praise the rest."*
+
+The explanation appears on the passing side only. It exists to stop a pass
+over-claiming; on a failure the same text would only soften the news.
+
+A test asserts that any line in the model without a low mark carries the wording
+it needs, so a category added later cannot silently inherit "low".
+
+**Why this one matters more than the bugs above it.** Every other defect this
+session was structural — a wrong product, a stale database, a hung suite. This
+one was a *true* page that made a claim the evidence did not support, and it
+would have survived indefinitely: the arithmetic was right, the sourcing was
+right, the test suite was green. It took a person reading a sentence.

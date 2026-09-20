@@ -133,23 +133,46 @@ function quantityCheck(
   // permits between a label and a laboratory.
   const severe = isSevere(value, line.tolerance, line.disqualifyAbove ?? line.high);
 
+  // U10 — a threshold that is not a "low" mark must never be described as one.
+  //
+  // Some categories have a single sourced line and no low mark at all: fats and
+  // oils are judged against 20 g of saturated fat, cereal against 15 g of total
+  // sugar. Saying "low saturated fat — 16 g per 100 g" of an olive oil is a
+  // health claim Noura has not earned, and it is the sentence a nutritionist
+  // would stop reading at. The passing side of a single line says what the line
+  // IS, and why this category has its own.
+  const single = line.singleLine;
   const lowText = line.low === undefined ? null : `${line.low} g`;
+
+  const claim = passed
+    ? single
+      ? `${label} is below ${single.noun}`
+      : `Low ${label.toLowerCase()}`
+    : high
+      ? single
+        ? `${label} is above ${single.noun}`
+        : `High ${label.toLowerCase()}`
+      : `Some ${label.toLowerCase()}`;
+
+  const detail = passed
+    ? single
+      ? `${measured}. ${single.noun.charAt(0).toUpperCase()}${single.noun.slice(1)} is ${line.high} g. ${single.because}`
+      : `${measured}. Low is ${lowText} or less.`
+    : high
+      ? single
+        // No `because` on a failure: that text exists to stop the PASSING side
+        // reading as a health claim, and on a failure it only softens the news.
+        ? `${measured}. That is above ${single.noun}, which is ${line.high} g.`
+        : `${measured}. That counts as high, which starts above ${line.high} g.`
+      : `${measured}. More than the ${lowText} that counts as low, but not yet high, which starts above ${line.high} g.`;
 
   return {
     key,
     label,
     ...(severe ? { disqualifying: true as const } : {}),
     status: passed ? "pass" : "fail",
-    claim: passed
-      ? `Low ${label.toLowerCase()}`
-      : high
-        ? `High ${label.toLowerCase()}`
-        : `Some ${label.toLowerCase()}`,
-    detail: passed
-      ? `${measured}. Low is ${lowText ?? `${line.high} g`} or less.`
-      : high
-        ? `${measured}. That counts as high, which starts above ${line.high} g.`
-        : `${measured}. More than the ${lowText} that counts as low, but not yet high, which starts above ${line.high} g.`,
+    claim,
+    detail,
     evidence: { label, value: measured },
     source,
   };

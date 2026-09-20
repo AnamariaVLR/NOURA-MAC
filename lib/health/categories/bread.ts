@@ -37,6 +37,12 @@ export const bread: CategoryRule = {
     // C4.5.2 — C0. S5 #11 total sugars 10 fails; U1.4's 22.5 disqualifies.
     totalSugars: {
       high: 10,
+      singleLine: {
+        noun: "the total-sugar line for bread",
+        because:
+          "It is the level above which the WHO regional model does not permit bread to be " +
+          "marketed to children.",
+      },
       disqualifyAbove: SUGAR_BANDS.solid.high,
       tolerance: "sugars",
       rule: "C4.5.2",

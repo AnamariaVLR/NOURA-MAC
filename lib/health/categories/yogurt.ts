@@ -53,6 +53,12 @@ export const yogurt: CategoryRule = {
     // at 13 g fails and is not condemned; a dessert at 30 g is.
     totalSugars: {
       high: 10,
+      singleLine: {
+        noun: "the total-sugar line for yogurt",
+        because:
+          "It is the level above which the WHO regional model does not permit yogurt to be " +
+          "marketed to children. Plain yogurt's sugars are lactose, which nobody added.",
+      },
       disqualifyAbove: SUGAR_BANDS.solid.high,
       tolerance: "sugars",
       rule: "C4.3.2",

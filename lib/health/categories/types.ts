@@ -37,6 +37,17 @@ export type NutrientLine = {
    * marketing line fails, and the general-population line disqualifies.
    */
   disqualifyAbove?: number;
+  /**
+   * Required when `low` is absent — RUBRIC.md §3 U10.
+   *
+   * A category with a single sourced threshold has no "low" mark, and the
+   * passing side of it MUST NOT be described as low. Extra virgin olive oil at
+   * 16 g of saturated fat per 100 g sits below the line for fats and oils; it is
+   * not "low saturated fat", and calling it that is a health claim Noura has not
+   * earned. `noun` names what the line is; `because` explains why this category
+   * has its own.
+   */
+  singleLine?: { noun: string; because: string };
   /** Which GSO Table 6 row governs the tolerance (§2.2 D1). */
   tolerance: ToleranceNutrient;
   /** RUBRIC.md rule identifier, e.g. "C4.6.1". */
