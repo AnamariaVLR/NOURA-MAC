@@ -26,7 +26,8 @@
     "db:migrate": "tsx scripts/prisma-provider.ts && prisma migrate deploy",
     "db:migrate:new": "tsx scripts/prisma-provider.ts && prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
     "icons": "tsx scripts/make-icons.ts",
-    "qr": "tsx scripts/make-qr.ts"
+    "qr": "tsx scripts/make-qr.ts",
+    "pilot:url": "tsx scripts/pilot-url.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

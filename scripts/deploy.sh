@@ -66,7 +66,22 @@ push_env ADMIN_PASSWORD
 push_env RATE_LIMIT_SALT
 push_env BLOB_READ_WRITE_TOKEN
 
+# Never pushed: ALLOW_SEED_ENDPOINT stays unset in production, so a signed-in
+# operator cannot reload the catalogue by tapping the wrong thing, and
+# VERIFIED_OFFLINE stays unset so the app can reach Open Food Facts.
+
 echo "==> 2/5  Migration"
+# Preflight: reach the database before changing anything. `migrate status` exits
+# non-zero when there are pending migrations, which is the normal state on a
+# first run, so only a CONNECTION failure is treated as fatal.
+if ! npx prisma migrate status 2>&1 | tee /tmp/noura-migrate-status.txt >/dev/null; then
+  if grep -qiE "can't reach|connection refused|authentication failed|does not exist" /tmp/noura-migrate-status.txt; then
+    echo
+    echo "Cannot reach the database. The URL in .env is wrong, or Neon is asleep." >&2
+    grep -iE "can't reach|connection refused|authentication failed|does not exist" /tmp/noura-migrate-status.txt >&2 || true
+    exit 1
+  fi
+fi
 npm run db:migrate
 
 echo "==> 3/5  Seed"
@@ -75,7 +90,18 @@ npm run db:seed
 echo "==> 4/5  Deploy"
 vercel --prod --yes
 
-echo "==> 5/5  Done"
-vercel inspect --wait 2>/dev/null | grep -i "^  *url" || true
-echo
-echo "Next: npm run qr -- <the URL above>"
+echo "==> 5/5  Hand-over"
+# `vercel --prod` prints the deployment URL as its last line of stdout; asking
+# the CLI again is more reliable than scraping it.
+URL="$(vercel inspect --wait 2>&1 | grep -oE 'https://[a-z0-9.-]+\.vercel\.app' | head -1 || true)"
+
+if [ -n "$URL" ]; then
+  npm run pilot:url -- "$URL"
+  echo
+  echo "Live:  $URL"
+  echo "Admin: $URL/admin/listings"
+  echo "qr.png and PILOT.md are updated. Commit them."
+else
+  echo "Deployed. Could not read the URL back from the CLI — take it from the"
+  echo "output above and run:  npm run pilot:url -- <url>"
+fi

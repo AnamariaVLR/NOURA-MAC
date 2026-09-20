@@ -1,6 +1,32 @@
 import { defineConfig, devices } from "@playwright/test";
 
+/**
+ * Load .env into this process before anything reads it.
+ *
+ * This matters more than it looks. `npm run start` boots Next, and Next loads
+ * .env ITSELF — and its values win over whatever Playwright passes in
+ * `webServer.env`. So once .env gained an ADMIN_PASSWORD, the server was using
+ * that one while the tests were typing the fallback below, and every admin test
+ * timed out on a login form that was quietly refusing them.
+ *
+ * Loading .env here makes the config, the test workers (which inherit this
+ * process's env) and the server all read the same value.
+ */
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // No .env — the fallback below applies, which is the CI case.
+}
+
 const PORT = Number(process.env.PORT ?? 3100);
+
+/**
+ * The password the suite signs in with. Whatever .env says, or a fixed fallback
+ * so a fresh clone can run the tests with no setup. Written back to process.env
+ * so the workers see the same value the server was started with.
+ */
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD?.trim() || "playwright-admin-password";
+process.env.ADMIN_PASSWORD = ADMIN_PASSWORD;
 const baseURL = `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
@@ -31,7 +57,7 @@ export default defineConfig({
       // The admin tests sign in for real, so the suite needs a password to sign
       // in WITH. It is a test value and it is in the repo on purpose: the point
       // of the test is that a wrong password is refused and the right one is not.
-      ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ?? "playwright-admin-password",
+      ADMIN_PASSWORD,
     },
   },
 });

@@ -63,7 +63,7 @@ ANTHROPIC_MODEL="claude-sonnet-5"
 | `npm run listings:export -- checks.csv` | Write the price-check queue as CSV |
 | `npm run listings:import -- checks.csv` | Load completed checks back in |
 | `npm run icons` | Regenerate every app icon from `public/brand/mark.svg` |
-| `npm run qr -- <url>` | Write `qr.png` pointing at the live pilot |
+| `npm run pilot:url -- <url>` | Fill the live URL into `PILOT.md` and write `qr.png` |
 | `npm run db:migrate` | Apply `prisma/migrations` — Postgres only |
 | `npm run db:local` | Force the schema back to SQLite after a Postgres build |
 | `./scripts/deploy.sh` | Env vars, migration, seed, deploy — in that order |
@@ -104,8 +104,8 @@ evidence alone.
 ### Deploying
 
 ```bash
-./scripts/deploy.sh      # env vars, then migration, then seed, then deploy
-npm run qr -- https://…  # the QR code for the hand-over
+./scripts/deploy.sh            # env vars, migration, seed, deploy, then PILOT.md + qr.png
+npm run pilot:url -- https://… # or do that last step by hand
 ```
 
 The order is the point: environment variables first, because a build with no

@@ -10,6 +10,77 @@ developer.
 > The password is also in `.env` as `ADMIN_PASSWORD`. Change it whenever you
 > like — set the new value in Vercel and redeploy, and every phone that was
 > signed in is signed out immediately.
+>
+> **The URLs above are placeholders until you deploy.** `./scripts/deploy.sh`
+> fills them in and writes `qr.png` — see §0.
+
+---
+
+## 0. Deploy it — once, about five minutes
+
+The repo is ready; it has not been deployed, because deploying needs three
+things only you have.
+
+### What you need
+
+1. **A Vercel login.** In this terminal: `vercel login`.
+2. **Your Neon connection string** — the `postgresql://…` URL from the Neon
+   dashboard. Use the **pooled** one if Neon offers a choice.
+3. **An Anthropic API key**, optional. Without it every scan returns the same
+   fixture product and the page says *example scan*; everything else works. You
+   can add it later in Vercel and redeploy.
+
+### Put them in `.env`
+
+```bash
+DATABASE_URL="postgresql://…"    # replaces the file:./dev.db line
+ANTHROPIC_API_KEY="sk-ant-…"     # optional
+```
+
+`ADMIN_PASSWORD` is already generated and in there. `.env` is gitignored and has
+never been committed.
+
+### Run it
+
+```bash
+./scripts/deploy.sh
+```
+
+It does five things in the only order that works: pushes the environment
+variables to Vercel, checks it can reach the database, applies the migration,
+seeds the 35 products, deploys, and then fills the live URL into this file and
+writes `qr.png`.
+
+It never prints a secret — only each variable's name and length.
+
+### Then
+
+```bash
+git add PILOT.md qr.png && git commit -m "Pilot live" && git push
+```
+
+Open the URL on your phone and go to §1.
+
+### If it fails
+
+- **"Cannot reach the database"** — the Neon URL is wrong, or the branch is
+  suspended. Open the Neon dashboard once to wake it and run the script again.
+- **"Missing DATABASE_URL"** or **"must be a postgresql:// URL"** — `.env` still
+  has the local SQLite line.
+- **Vercel asks which scope or project** — answer once; it writes `.vercel/` and
+  will not ask again.
+- Nothing is half-applied if it stops: the migration runs before the deploy, so
+  a failure leaves the old site up.
+
+### Running it locally instead
+
+```bash
+npm run db:local && npm run setup && npm run dev
+```
+
+That puts the schema back to SQLite and serves on `localhost:3000`. Useful, but
+you cannot install a local URL on a phone's home screen — that needs the
+deployed one.
 
 ---
 
