@@ -12,6 +12,7 @@
  * and C4.8.2 counts them.
  */
 
+import { energyDrinkSignal } from "../energy-drinks";
 import { SALT_BANDS, SATURATED_FAT_BANDS, SUGAR_BANDS } from "../rubric";
 import type { Basis, CategoryRule } from "./types";
 
@@ -53,6 +54,27 @@ export const drink: CategoryRule = {
     saturatedFat: { ...SATURATED_FAT_BANDS[basis], rule: "C4.8.3", source: "S12, S1 · tier 1" },
     salt: { ...SALT_BANDS[basis], rule: "C4.8.4", source: "S12, S1 · tier 1" },
   }),
+
+  // C4.8.7 — SOURCED, S5 #3d (marketing not permitted at any level) and S10
+  // (taxed at 100% of retail price, where even a high-sugar drink is taxed per
+  // litre). An energy drink is a CLASS, not a composition, so it cannot be a
+  // nutrient line; it is the one class disqualifier in the model. The
+  // identification rule and its cost are in lib/health/energy-drinks.ts.
+  classDisqualifier: ({ ingredientsText }) => {
+    const signal = energyDrinkSignal(ingredientsText);
+    if (signal === null) return null;
+    if (signal.caffeine.length === 0 || signal.stimulants.length === 0) return null;
+    return {
+      rule: "C4.8.7",
+      claim: "This is an energy drink",
+      detail:
+        `The ingredients name caffeine alongside ${signal.stimulants.join(" and ")}. ` +
+        "The WHO Eastern Mediterranean model does not permit energy drinks to be marketed to " +
+        "children at any level, and the UAE taxes them at 100% of the retail price rather than " +
+        "by sugar content.",
+      source: "S5 #3d, S10 · tier 1",
+    };
+  },
 
   // C4.8.8 — POLICY. "Water ranks above every sweetened drink" is not a separate
   // rule in the ranker; it FOLLOWS from this ordering, because water has no added

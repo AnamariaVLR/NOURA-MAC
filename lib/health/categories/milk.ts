@@ -68,6 +68,8 @@ export const milk: CategoryRule = {
     // C4.2.3, C4.2.4 — the universal liquid lines, unmodified.
     saturatedFat: { ...SATURATED_FAT_BANDS[basis], rule: "C4.2.3", source: "S12, S1 · tier 1" },
     salt: { ...SALT_BANDS[basis], rule: "C4.2.4", source: "S12, S1 · tier 1" },
+    // C4.2.5 — fibre and protein are U4, unmodified. The check has no line of its
+    // own because U4 is expressed as claims rather than as a per-100 threshold.
   }),
 
   // POLICY. Fat content is not a ranking axis beyond U2, because WHO's

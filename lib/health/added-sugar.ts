@@ -3,6 +3,12 @@
  *
  * ── Why these are two different things ──────────────────────────────────────
  *
+ * U1.1 (S9 §3.5.1) defines ADDED sugar: sugars added in processing, plus sugars
+ * from syrups, honey and concentrated juice beyond what the same volume of 100%
+ * juice would carry. U1.2 (S2) defines the wider FREE sugars, which additionally
+ * counts the sugars naturally present in honey, syrups and fruit juice — that is
+ * the definition the drink categories apply to a total-sugars figure.
+ *
  * Total sugars is a measurement of everything sweet in the product, whatever its
  * origin. Added sugar is a statement about what the manufacturer put in. Plain milk
  * carries ~3-5 g of lactose per 100 ml, plain yoghurt carries lactose, and fruit
@@ -283,7 +289,7 @@ export function resolveAddedSugar(
 
   // 2. A full list naming no sweetener is positive evidence of absence.
   if (ingredients.kind === "absent") {
-    // Unless a trustworthy figure says otherwise, in which case we have two
+    // D11 — unless a trustworthy figure says otherwise, in which case we have two
     // credible sources disagreeing and no basis to pick a winner.
     if (figure !== null && figure > 0) {
       return { state: "unknown", grams: figure, basis: "conflicting-evidence", terms: [] };

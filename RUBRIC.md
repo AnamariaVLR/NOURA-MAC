@@ -446,10 +446,20 @@ S5 category 3, beverages other than milk drinks. Liquid basis.
 | **C4.8.4** | Salt — U3 liquid lines | **SOURCED** — S12, S1 · tier 1 |
 | **C4.8.5** | **Non-sugar sweeteners: presence is a NOTE, not a failure** | **SOURCED** that the dimension exists — S5 #3c/#3e set 0 for beverages; S7 counts sweeteners as a negative component · tier 1. **POLICY** that it does not fail: EMRO's 0 is a child-marketing line, and no retrieved source sets a general-population limit. §9 Q4 is still open |
 | **C4.8.6** | **100% fruit juice: its sugars are free sugars and are counted as such** by C4.8.2 | **SOURCED** — S2's definition names fruit juice; S5 footnote d says the same · tier 1. The S10 excise exclusion for 100% juice is fiscal and does not govern the health rule (H5), and is disclosed as context |
-| **C4.8.7** | **Energy drinks are flagged and disqualified** | **SOURCED** — S5 #3d, marketing not permitted at any level; S10 taxes them at 100% of retail price · tier 1 |
+| **C4.8.7** | **Energy drinks are flagged and disqualified.** Identified from the ingredient list as **added caffeine together with at least one of guarana, taurine or glucuronolactone** — the substances S5's footnote f names. Vitamins, also named there, are excluded: a fortified juice is not an energy drink | **SOURCED** — S5 #3d, marketing not permitted at any level; S5 footnote f for the substances; S10 taxes them at 100% of retail price · tier 1. **POLICY** for the conjunction, with its cost stated below |
 | **C4.8.8** | **Water ranks above every sweetened drink**, by construction | **POLICY** — it follows from C4.8.2 rather than from a source, and is stated so the ranking is predictable |
 
 **Disqualifier:** C4.8.2 and C4.8.7.
+
+*The cost of C4.8.7's conjunction, declared.* S5's footnote f opens by saying *"There is no
+agreement on a definition of energy drinks"*, so the source declines to define the category and
+Noura uses the only part of it checkable against an ingredient list. Caffeine **alone** would
+catch every iced tea, cola and bottled coffee, none of which is what category 3d is about. The
+conjunction is therefore **permissive**: an energy drink formulated with caffeine and nothing
+else on the list is not caught. That is the deliberate direction of the error, because this flag
+*disqualifies* and a wrong disqualification is the worse mistake. The thing footnote f actually
+rests on — *"marketed for their actual or perceived effects as stimulants"* — is a marketing
+claim, which §2.1 D0.5 says is not evidence, so it cannot be used. §9 Q14.
 
 **"Better" within drinks:** no added sugar > lower total sugar > no sweeteners > price per unit.
 **POLICY.**
@@ -612,8 +622,8 @@ Applied in order; the first matching rule decides.
 | **V0** | Category not supported (D12), or no applicable checks, or none resolvable | **COULD NOT VERIFY** | **POLICY** |
 | **V1** | Coverage < 50% of the category's applicable checks | **COULD NOT VERIFY** | **POLICY** — D4 |
 | **V2** | Any **disqualifying** check failed | **NOT RECOMMENDED** | **POLICY** — §7.1 |
-| **V3** | Pass rate ≥ **80%** and ≥ **3** checks resolved | **VERIFIED — GOOD CHOICE** | **POLICY** — D5 |
-| **V4** | Pass rate ≥ **50%** | **VERIFIED — ACCEPTABLE** | **POLICY** |
+| **V3** | Pass rate ≥ **80%** (`0.8`) and ≥ **3** checks resolved | **VERIFIED — GOOD CHOICE** | **POLICY** — D5 |
+| **V4** | Pass rate ≥ **50%** (`0.5`) | **VERIFIED — ACCEPTABLE** | **POLICY** |
 | **V5** | Otherwise | **NOT RECOMMENDED** | **POLICY** |
 
 `coverage = resolved ÷ applicable`; `pass rate = passed ÷ resolved`.
@@ -694,6 +704,9 @@ a cheese, a butter spread context, a hummus — currently fall to the generic `f
 
 **L9. The flagged-additive list is a floor** (A2, A6.7).
 
+**L10. Energy drinks are identified by ingredient, and the source says the category has no
+agreed definition** (C4.8.7). Noura will miss a caffeine-only formulation.
+
 ### Questions for the nutritionist
 
 | # | Question | Status |
@@ -711,6 +724,7 @@ a cheese, a butter spread context, a hummus — currently fall to the generic `f
 | **Q11** | Drink salt at 0.3 g/100 ml on the EU reading (U3.3) doubles the shipped line and flips plain milk to a pass. Is the EU's "per 100 g **or** per 100 ml" reading the right one for a drink? | **open — explicitly held open by the approving decision** |
 | **Q12** | Should A6.3 fail a product? EFSA's phosphate finding is about *population exposure across the diet*, not about any one product. The approving decision says flag on an EFSA concern; this is the row where that reads most strangely | new, open |
 | **Q13** | Cheese has sourced thresholds (S5 #9) and no rule (L8). Worth writing, and what is "better" within cheese? | new, open |
+| **Q14** | C4.8.7 identifies an energy drink as caffeine **plus** a named stimulant, which misses one formulated with caffeine alone. Is that the right direction to err in, given the flag disqualifies? | new, open |
 
 ---
 
@@ -740,6 +754,7 @@ a cheese, a butter spread context, a hummus — currently fall to the generic `f
 | 1.1 | 2026-09-20 | §9 Q11, Q12, Q13 added; Q2, Q5, Q7, Q8 marked answered | The approving decisions closed four questions and opened three | — |
 | 1.1 | 2026-09-20 | §3 U4.5 gains the "all three macronutrients" condition | Found while implementing: a partial sum undercounts the denominator of U4.3 and manufactures a protein pass | **POLICY** |
 | 1.1 | 2026-09-20 | §5 A3.2 gains a reason for not re-deriving NOVA's cosmetic-additive class | It needs an E-number-to-function taxonomy no retrieved instrument supplies, and the NOVA group already encodes the same rule | **POLICY** |
+| 1.1 | 2026-09-20 | §4.8 C4.8.7 gains an **identification rule** — caffeine plus a named stimulant — and its cost | The rule said energy drinks are disqualified and gave no way to recognise one, so nothing implemented it. Found by auditing rule identifiers against the code | S5 footnote f · 1 |
 
 **Rule for future changes:** no threshold in this document may change without a row here
 recording the old value, the new value, the reason, and the source with its tier. A change with

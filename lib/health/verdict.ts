@@ -3,33 +3,33 @@
  *
  * ── The rules, in the order they are applied ────────────────────────────────
  *
- *  0. Category not supported, or no applicable or
- *     resolvable checks at all                     → COULD NOT VERIFY
- *  1. Coverage below MIN_COVERAGE (50%)           → COULD NOT VERIFY
- *  2. Any disqualifying check failed              → NOT RECOMMENDED
- *  3. Pass rate ≥ 80% AND at least 3 known checks → VERIFIED — GOOD CHOICE
- *  4. Pass rate ≥ ACCEPTABLE_PASS_RATE (50%)      → VERIFIED — ACCEPTABLE
- *  5. Otherwise                                   → NOT RECOMMENDED
+ *  V0. Category not supported (D12), or no applicable
+ *      or resolvable checks at all                  → COULD NOT VERIFY
+ *  V1. Coverage below MIN_COVERAGE (50%)           → COULD NOT VERIFY
+ *  V2. Any disqualifying check failed              → NOT RECOMMENDED
+ *  V3. Pass rate ≥ 80% AND at least 3 known checks → VERIFIED — GOOD CHOICE
+ *  V4. Pass rate ≥ ACCEPTABLE_PASS_RATE (50%)      → VERIFIED — ACCEPTABLE
+ *  V5. Otherwise                                   → NOT RECOMMENDED
  *
  * Two definitions do the real work:
  *
  *   coverage  = known checks / applicable checks
  *   pass rate = passed checks / KNOWN checks
  *
- * Unknown checks are excluded from the pass-rate denominator, so a product can
+ * D7: unknown checks are excluded from the pass-rate denominator, so a product can
  * neither gain nor lose from evidence that does not exist. But they do count
- * against coverage, so a product cannot reach a verdict at all by publishing
+ * against coverage (D8), so a product cannot reach a verdict at all by publishing
  * almost nothing and happening to pass the one check we could make. Rule 1 exists
  * precisely to stop "we know two things, both fine" from reading as "good choice".
  *
- * Rule 2 covers the two overrides, both marked `disqualifying` on the check
+ * Rule V2 covers the two overrides, both marked `disqualifying` on the check
  * itself. A suspended certificate is a live regulator warning about the assurance
  * the product rests on. A nutrient clearly above the rubric's high mark is the
  * other: counting checks equally would otherwise let salted butter offset 55 g of
  * saturated fat with ticks for "no additives" and "publishes ingredients". Neither
  * is a bad score to be averaged against good ones.
  *
- * Rule 3 carries a second condition — at least three checks actually made — so that
+ * Rule V3 carries a second condition (D5) — at least three checks actually made — so that
  * our strongest statement always rests on a minimum of evidence, not just a high
  * ratio over one or two dimensions.
  *

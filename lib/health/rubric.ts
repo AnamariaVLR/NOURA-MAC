@@ -82,6 +82,11 @@ export const SUGAR_BANDS: Record<Basis, NutrientLine> = {
 /* -------------------------------------------------------------------------
  * U2 — saturated fat (RUBRIC.md §3 U2.1-U2.4)
  *
+ * U9.2, POLICY: the per-PORTION criteria S1 also defines are not applied at all,
+ * because Noura holds no reliable serving-size data. A real gap — the per-portion
+ * arm exists to catch products whose per-100 g figures look fine but whose
+ * realistic serving is large. §9 Q1.
+ *
  * U2.5, POLICY: assessed on saturates ALONE, not saturates + trans as S12
  * defines the claim, because trans figures are effectively never published in
  * the data Noura reads. A declared deviation from the source — §9 Q3.
@@ -134,7 +139,11 @@ export const SALT_PER_SODIUM = 2.5;
  * U4 — fibre and protein (RUBRIC.md §3 U4.1-U4.6)
  * ----------------------------------------------------------------------- */
 
-/** U4.1 HIGH FIBRE, U4.2 SOURCE OF FIBRE — SOURCED S12 · tier 1. */
+/**
+ * U4.1 HIGH FIBRE is the pass line. U4.2 SOURCE OF FIBRE is reported as a note
+ * and does not pass: the pass line is the higher claim.
+ * SOURCED S12 · tier 1.
+ */
 export const FIBRE = {
   /** The pass line: HIGH FIBRE. */
   highPer100g: 6,
@@ -146,7 +155,10 @@ export const FIBRE = {
   source: "S12 · tier 1; corroborated for cereals and bread by S5 footnote g",
 } as const;
 
-/** U4.3 SOURCE OF PROTEIN, U4.4 HIGH PROTEIN — SOURCED S12 · tier 1. Shares of energy. */
+/**
+ * U4.3 SOURCE OF PROTEIN is the pass line; U4.4 HIGH PROTEIN is a note.
+ * Both are shares of a food's energy, not absolute masses. SOURCED S12 · tier 1.
+ */
 export const PROTEIN = {
   /** The pass line: ≥12% of the energy value from protein. */
   sourceOfEnergyShare: 0.12,

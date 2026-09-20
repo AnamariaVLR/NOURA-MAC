@@ -356,6 +356,16 @@ reach a request again.
 
 ---
 
+## Added after this run: energy drinks
+
+C4.8.7 was in the specification and implemented nowhere — it named a consequence
+and gave no way to recognise an energy drink. It is implemented now
+(`lib/health/energy-drinks.ts`), and **it changes nothing in this table**: no
+product in the catalogue names caffeine alongside guarana, taurine or
+glucuronolactone. It is a rule waiting for a product, which is the right state
+for it to be in, and `rubric-rules.test.ts` covers both the case it catches and
+the case it deliberately misses.
+
 ## What did not change
 
 - Every certification check. All shipped certificates are `SYNTHETIC` and are not

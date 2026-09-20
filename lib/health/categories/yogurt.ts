@@ -75,6 +75,7 @@ export const yogurt: CategoryRule = {
     // C4.7.1 declines it for snacks: it would fail plain unsweetened yoghurt,
     // which is the product this category exists to reward. It is shown as a note.
     salt: { ...SALT_BANDS[basis], rule: "C4.3.4", source: "S12, S1 · tier 1" },
+    // C4.3.5 — protein is U4, and ≥12% of energy is a genuine positive here.
   }),
 
   better: ["noAddedSugar", "higherProtein", "lowerTotalSugars", "lowerSaturatedFat"],

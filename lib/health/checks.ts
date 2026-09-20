@@ -105,7 +105,8 @@ function quantityCheck(
 ): Check {
   const label = LABELS[key];
 
-  // D6 — unknown first. There is no path from a null value to a pass.
+  // D6 — unknown first. There is no path from a null value to a pass. D7 and D8
+  // then decide what an unknown does to the arithmetic, in verdict.ts.
   if (value === null) {
     return unknown(
       key,
@@ -206,7 +207,9 @@ function addedSugarCheck(
   const resolved = resolveAddedSugar(nutrition, ingredientsText);
   const detail = addedSugarDetail(resolved, nutrition, unit);
 
-  // U1.8 clauses 4 and 5 — a conflict and an absence both produce UNKNOWN.
+  // U1.8 clauses 4 and 5 — a conflict and an absence both produce UNKNOWN. The
+  // conflict branch is D11: two credible sources disagreeing is not a tie to be
+  // broken, it is a question Noura declines to answer.
   if (resolved.state === "unknown") {
     return unknown(key, "Whether sugar was added could not be established", detail, source);
   }
@@ -535,7 +538,9 @@ const NOVA_NAMES: Record<number, string> = {
 };
 
 /**
- * U5.1 — POLICY. The processing classification is a NOTE, not a check.
+ * U5.1 — POLICY. The processing classification is a NOTE, not a check, and U5.2
+ * requires the note to say plainly that it comes from the research literature
+ * rather than from a regulator.
  *
  * S8 is tier 3 and under H2 a tier-3 source may not set a threshold; no retrieved
  * tier-1 or tier-2 source uses NOVA. Demoting it also removes the processing
@@ -646,7 +651,27 @@ export function evaluateChecks(input: EvidenceInput): Check[] {
     transparency: () => transparencyCheck(input.ingredientsText, input.category, src),
   };
 
-  return rule.checks.map((key) => build[key]());
+  const checks = rule.checks.map((key) => build[key]());
+
+  // A class disqualifier (today: C4.8.7 energy drinks) is not a nutrient crossing
+  // a line, so it has no threshold and no "low" mark. It is appended as its own
+  // failed check so that it appears on the page as a reason, rather than moving
+  // the verdict from somewhere the reader cannot see.
+  const classFailure = rule.classDisqualifier?.({ ingredientsText: input.ingredientsText });
+  if (classFailure) {
+    checks.push({
+      key: "classification",
+      label: "Product type",
+      status: "fail",
+      disqualifying: true,
+      claim: classFailure.claim,
+      detail: classFailure.detail,
+      evidence: { label: "Product type", value: "energy drink" },
+      source: src,
+    });
+  }
+
+  return checks;
 }
 
 /** Everything shown to the reader that is not a check. */

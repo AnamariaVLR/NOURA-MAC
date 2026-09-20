@@ -42,6 +42,7 @@ export const snacks: CategoryRule = {
     saturatedFat: { ...SATURATED_FAT_BANDS[basis], rule: "C4.7.2", source: "S1, S12 · tier 1" },
     // C4.7.1 — the general lines. S5 #2's 0.1 is declined; see the note.
     salt: { ...SALT_BANDS[basis], rule: "C4.7.1", source: "S1, S12 · tier 1" },
+    // C4.7.4 — fibre and protein are U4, unmodified.
   }),
 
   better: ["lowerSalt", "lowerSaturatedFat", "noAddedSugar", "fewerAdditives"],

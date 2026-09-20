@@ -883,3 +883,48 @@ no published ingredient list to check it against.
 Noura shows what the source says and does not silently correct it. The candidate
 fix is a coherence rule for sugars against carbohydrate in a dairy product, and
 it would need a source. Recorded, not hacked around.
+
+## 63. Two rules were in the specification and not in the code, and a test now says so
+
+Auditing rule identifiers against the source tree found **C4.8.7 — "energy drinks
+are flagged and disqualified" — implemented nowhere.** It had been in RUBRIC.md
+v1.1 from the start. The reason it was missed is instructive: the rule named a
+*consequence* and gave no way to recognise an energy drink, so there was nothing
+to write, and nothing was.
+
+S5's footnote f is why. It opens *"There is no agreement on a definition of energy
+drinks"* and then lists what such drinks usually contain: caffeine as the main
+ingredient, commonly alongside guarana, taurine, glucuronolactone and vitamins.
+Noura now identifies one as **added caffeine together with at least one of
+guarana, taurine or glucuronolactone**. Vitamins are excluded — a fortified juice
+is not an energy drink.
+
+The conjunction is deliberate and it is permissive. Caffeine alone would catch
+every iced tea, cola and bottled coffee, and a rule that fires on tea is worse
+than no rule; but an energy drink formulated with caffeine and nothing else on
+the list is missed. That is the direction Noura chooses to err in, because this
+flag **disqualifies** and a wrong disqualification is the worse error. Recorded
+as RUBRIC §9 L10 and Q14.
+
+`tests/unit/rubric-coverage.test.ts` now enforces both constraints the approval
+set, by reading RUBRIC.md and comparing it against the tree:
+
+- **no rule may lack an implementation** — every runtime rule identifier must
+  appear in `lib/`;
+- **no rule may lack a test** — every runtime rule identifier must appear in a
+  test file;
+- **no threshold may exist in code that is not in RUBRIC.md** — every
+  threshold-shaped numeric literal in `rubric.ts`, `tolerance.ts` and the
+  category rules must appear in the specification text.
+
+Rules that are not runtime behaviour are exempt through a list that carries a
+**reason per entry** and is itself checked: an exemption for a rule that no
+longer exists fails the suite, so the list cannot rot. The exempt set is the
+evidence hierarchy (applied when choosing a threshold, not when scanning), the
+admissibility rules of §2.1, the two classes that are explicitly not
+implementable, and the §9 questions.
+
+It found a second, smaller thing on its first run: `GOOD_CHOICE_PASS_RATE = 0.8`
+was in the code as a decimal and in RUBRIC.md only as "80%". The specification now
+gives both forms, so the document and the constant agree literally rather than by
+a reader's arithmetic.

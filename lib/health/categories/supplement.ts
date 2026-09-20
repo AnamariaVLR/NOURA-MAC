@@ -4,11 +4,13 @@
  * The same shape as cosmetics and for a sharper reason: Noura has NO sourced
  * basis at all for evaluating a supplement's composition.
  *
- * S9 §1.2.11 puts foods for special dietary uses outside the nutrition-labelling
+ * C4.10.1: S9 §1.2.11 puts foods for special dietary uses outside the nutrition-labelling
  * standard's scope, so the per-100 g lines of §3 do not apply. The thing that
  * would replace them — EFSA's tolerable upper intake levels — was not retrieved
- * (C4.10.2). Shipping a supplement verdict on this evidence base would be the
- * least defensible thing in this specification, so C4.10.4 does not.
+ * (C4.10.2). C4.10.3 leaves only the four authorised health claims read in S13,
+ * which say nothing about a dose. Shipping a supplement verdict on this evidence
+ * base would be the least defensible thing in this specification, so C4.10.4
+ * does not.
  */
 
 import type { CategoryRule } from "./types";

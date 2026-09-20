@@ -113,6 +113,17 @@ export type CategoryRule = {
   lines: (basis: Basis) => NutrientLines;
   /** §8, applied within a subcategory. Price and name are appended by the ranker. */
   better: readonly BetterAttribute[];
+  /**
+   * A disqualifier that is not a nutrient crossing a line — RUBRIC.md §7.1.
+   * Today there is exactly one: C4.8.7, energy drinks, which are a class rather
+   * than a composition. Returns the claim to show, or null.
+   */
+  classDisqualifier?: (input: { ingredientsText: string | null }) => {
+    rule: string;
+    claim: string;
+    detail: string;
+    source: string;
+  } | null;
   notes: readonly CategoryNote[];
 };
 
