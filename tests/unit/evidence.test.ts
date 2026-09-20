@@ -6,7 +6,7 @@ import {
   tokenise,
 } from "@/lib/pipeline/evidence";
 import { nutritionIsUsable, toEvidence } from "@/lib/evidence/openfoodfacts";
-import { mockIdentification } from "@/lib/pipeline/identify";
+import { mockIdentification, salvage } from "@/lib/pipeline/identify";
 import { IdentificationSchema, NutritionFactsSchema } from "@/lib/schemas";
 import { CATALOGUE } from "@/prisma/seed-data/catalogue";
 
@@ -145,5 +145,75 @@ describe("mock identification", () => {
       expect(id.barcode).toBe(entry.barcode);
       expect(IdentificationSchema.safeParse(id).success).toBe(true);
     }
+  });
+});
+
+/* ===========================================================================
+ * Stage 2 — salvaging a good answer with one bad field.
+ *
+ * From a real failure on the first live scans of the pilot: the model read a box
+ * of Weetabix correctly and transcribed the barcode with a space in it, the way
+ * it is printed under an EAN. The whole identification was rejected and the
+ * caller substituted the fixture product, so the shopper would have been shown a
+ * confident NOT RECOMMENDED page for Coca-Cola.
+ * ========================================================================= */
+describe("salvage — one unusable field must not destroy a good identification", () => {
+  const good = {
+    name: "Weetabix",
+    brand: "Weetabix",
+    barcode: null as string | null,
+    category: "cereal",
+    subcategory: null as string | null,
+    sizeLabel: "430 g",
+    confidence: 0.9,
+    visibleText: "Weetabix 430g",
+  };
+
+  it("nulls a barcode that is not 8-14 clean digits, and keeps everything else", () => {
+    for (const bad of ["5010029 000023", "12345", "EAN5010029000023", "501002900002x", ""]) {
+      const out = IdentificationSchema.safeParse(salvage({ ...good, barcode: bad }));
+      expect(out.success, `barcode ${JSON.stringify(bad)}`).toBe(true);
+      if (out.success) {
+        expect(out.data.barcode).toBeNull();
+        // The parts that were right are still there.
+        expect(out.data.name).toBe("Weetabix");
+        expect(out.data.category).toBe("cereal");
+      }
+    }
+  });
+
+  it("never repairs a barcode by cleaning it up", () => {
+    // Stripping the space and hoping would attach another product's nutrition
+    // panel to this photo on a single misread digit. Null, and match by name.
+    const out = IdentificationSchema.safeParse(salvage({ ...good, barcode: "5010029 000023" }));
+    expect(out.success && out.data.barcode).toBeNull();
+  });
+
+  it("keeps a barcode that is already valid", () => {
+    const out = IdentificationSchema.safeParse(salvage({ ...good, barcode: "5010029000023" }));
+    expect(out.success && out.data.barcode).toBe("5010029000023");
+  });
+
+  it("nulls a subcategory outside the model's vocabulary, and keeps a real one", () => {
+    const invented = IdentificationSchema.safeParse(salvage({ ...good, subcategory: "wholegrain" }));
+    expect(invented.success && invented.data.subcategory).toBeNull();
+
+    const real = IdentificationSchema.safeParse(
+      salvage({ ...good, category: "milk", subcategory: "plant_milk" }),
+    );
+    expect(real.success && real.data.subcategory).toBe("plant_milk");
+  });
+
+  it("still rejects an answer that is wrong about the thing that matters", () => {
+    // A category outside the enum is not salvageable: it decides which rubric
+    // runs, and guessing one would apply the wrong lines.
+    expect(IdentificationSchema.safeParse(salvage({ ...good, category: "biscuits" })).success).toBe(
+      false,
+    );
+  });
+
+  it("passes through anything that is not an object rather than throwing", () => {
+    expect(salvage(null)).toBeNull();
+    expect(salvage("nonsense")).toBe("nonsense");
   });
 });

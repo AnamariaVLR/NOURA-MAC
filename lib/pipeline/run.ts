@@ -39,6 +39,27 @@ export async function runPipeline(args: {
     mime: args.mime,
   });
 
+  // A live identification that could not be made is a FAILED scan, not a scan of
+  // whatever the fixture happens to be. See lib/pipeline/identify.ts.
+  if (!identification) {
+    const scan = await prisma.scan.create({
+      data: {
+        userKey: args.userKey,
+        imagePath: args.image.imagePath ?? null,
+        imageBlobUrl: args.image.imageBlobUrl ?? null,
+        imageBytes: args.image.imageBytes ? new Uint8Array(args.image.imageBytes) : null,
+        imageMime: args.image.imageMime ?? args.mime,
+        status: "failed",
+        mode,
+        identificationJson: JSON.stringify({ note, method: "none" }),
+        error:
+          note ??
+          "We could not read a product from that photo. Try again with the front of the pack in frame.",
+      },
+    });
+    return { scanId: scan.id, status: "failed" };
+  }
+
   const evidence = await gatherEvidence(identification);
 
   if (!evidence.product) {

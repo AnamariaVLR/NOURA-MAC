@@ -8,15 +8,59 @@ import { CATALOGUE } from "../../prisma/seed-data/catalogue";
 import { callTool } from "../anthropic";
 import { MOCK_PRODUCT_SLUG, MODEL, runMode } from "../config";
 import { IDENTIFY_SYSTEM, IDENTIFY_TOOL, IDENTIFY_USER } from "../prompts/health";
+import { ALL_SUBCATEGORY_KEYS } from "../health/categories";
 import { IdentificationSchema, type Identification } from "../schemas";
 
 export type IdentifyResult = {
-  identification: Identification;
+  /**
+   * Null when a LIVE identification could not be made. The pipeline turns that
+   * into a failed scan rather than a page about some other product — see the
+   * note on `salvage` below for why that distinction is the important one.
+   */
+  identification: Identification | null;
   mode: "live" | "mock";
   model: string;
   /** Set when a live call was attempted and could not be used. */
   note: string | null;
 };
+
+/**
+ * Repair the two fields a good answer most often gets slightly wrong, BEFORE
+ * validating the whole thing.
+ *
+ * This exists because of a real failure, caught on the first live scans of the
+ * pilot. The model looked at a box of Weetabix, read the name, the brand, the
+ * size and the category correctly — and transcribed the barcode with a space in
+ * it, the way it is printed under an EAN. `IdentificationSchema` rejected the
+ * whole object on that one field, and the caller fell back to the fixture
+ * product. The shopper would have been shown a confident NOT RECOMMENDED page
+ * for Coca-Cola.
+ *
+ * A barcode we cannot parse is a barcode we cannot use, and "cannot use" already
+ * has a representation: null, exactly as when none was legible. Throwing away a
+ * correct name and brand alongside it buys nothing.
+ *
+ * The barcode is still never *cleaned up* — no stripping spaces and hoping. A
+ * digit read wrong silently attaches another product's nutrition panel to this
+ * photo, so anything that is not already 8-14 clean digits becomes null and the
+ * pipeline falls through to matching on the name.
+ */
+export function salvage(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null) return raw;
+  const out: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+
+  if (typeof out.barcode === "string" && !/^\d{8,14}$/.test(out.barcode.trim())) {
+    out.barcode = null;
+  }
+
+  // A subcategory outside the model's own vocabulary is noise, and the category
+  // rule already falls back to its default for an unknown one.
+  if (typeof out.subcategory === "string" && !ALL_SUBCATEGORY_KEYS.includes(out.subcategory)) {
+    out.subcategory = null;
+  }
+
+  return out;
+}
 
 /**
  * The product mock mode pretends to see, taken from the seeded catalogue so the
@@ -84,23 +128,32 @@ export async function identifyProduct(image: {
   });
 
   if (raw === null) {
+    // Same rule: a live scan that could not reach the model fails honestly rather
+    // than silently becoming a page about Coca-Cola.
     return {
-      identification: mockIdentification(),
-      mode: "mock",
-      model: "fixture",
-      note: "The identification request did not complete, so a fixture product is shown instead.",
+      identification: null,
+      mode: "live",
+      model: MODEL,
+      note: "The identification request did not complete. Nothing was read from your photo.",
     };
   }
 
-  const parsed = IdentificationSchema.safeParse(raw);
+  const parsed = IdentificationSchema.safeParse(salvage(raw));
   if (!parsed.success) {
     // A malformed identification is worse than no identification: it would attach
     // some other product's nutrition data to this photo.
+    //
+    // And in LIVE mode it must not become the fixture either. mockIdentification()
+    // returns a real catalogue product with real evidence, so falling back to it
+    // here shows a shopper a confident verdict about something they did not
+    // photograph. The honest output is a failed scan.
+    const issue = parsed.error.issues[0];
+    console.error("[identify] model answer rejected:", JSON.stringify(parsed.error.issues));
     return {
-      identification: mockIdentification(),
-      mode: "mock",
-      model: "fixture",
-      note: `The model's answer did not match the expected shape (${parsed.error.issues[0]?.message ?? "invalid"}), so a fixture product is shown instead.`,
+      identification: null,
+      mode: "live",
+      model: MODEL,
+      note: `We could not read this product from the photo (${issue?.path.join(".") || "answer"}: ${issue?.message ?? "invalid"}).`,
     };
   }
 
