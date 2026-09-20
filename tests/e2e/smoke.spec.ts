@@ -113,14 +113,20 @@ test("upload a fixture image and reach a full result page", async ({ page }) => 
   const altCount = await alternatives.count();
 
   if (altCount === 0) {
-    await expect(page.getByTestId("no-alternatives")).toContainText(/No better verified option found/i);
+    // The empty case names how many were compared and why each was dropped.
+    await expect(page.getByTestId("no-alternatives")).toContainText(
+      /comparable product|nothing else of this kind/i,
+    );
   } else {
     expect(altCount).toBeLessThanOrEqual(3);
     for (let i = 0; i < altCount; i++) {
       const alt = alternatives.nth(i);
       await expect(alt.getByTestId("medal")).toHaveAttribute("aria-label", `Rank ${i + 1}`);
-      await expect(alt).toContainText(/AED \d+\.\d{2}/);
       await expect(alt.getByTestId("why")).not.toBeEmpty();
+      // Certification is stated on every card, in all five of its states.
+      await expect(alt.getByTestId("alt-certification")).toContainText(/UAE certification:/);
+      // The price question is answered either way, and never left blank.
+      expect(await alt.innerText()).toMatch(/AED \d+\.\d{2}|have not verified a price/i);
     }
   }
 
@@ -150,8 +156,16 @@ test("the fixture product is judged, and its alternatives are in stock", async (
   await expect(addedSugars).toContainText(/Total sugars are/);
 
   expect(await page.getByTestId("alternatives").locator("> li").count()).toBeGreaterThan(0);
+  // Nothing a checker found missing from a shelf is ever offered.
   await expect(page.getByTestId("alternatives")).not.toContainText(/out of stock/i);
-  await expect(page.getByTestId("alternatives")).toContainText(/Verified by hand/i);
+  // And any price shown carries the person and date behind it. A card with no
+  // price is still offered — the gap is printed, not used to hide the product.
+  const cards = page.getByTestId("alternatives").locator("> li");
+  for (const card of await cards.all()) {
+    const text = await card.innerText();
+    if (/AED \d/.test(text)) expect(text).toMatch(/Verified by hand/i);
+    else expect(text).toMatch(/have not verified a price/i);
+  }
 });
 
 test("the scan appears in history with its verdict, and the image is served back", async ({ page }) => {

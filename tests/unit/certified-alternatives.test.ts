@@ -83,11 +83,11 @@ const LOOKUP_FAILED = lookup({ succeeded: false });
 
 function check(over: Partial<Check> & { key: string }): Check {
   return {
-    key: over.key,
-    label: over.label ?? over.key,
-    status: over.status ?? "pass",
-    claim: over.claim ?? "fine",
-    detail: over.detail ?? "detail",
+    label: over.key,
+    status: "pass",
+    claim: "fine",
+    detail: "detail",
+    evidence: { label: over.key, value: "value" },
     source: {
       name: "WHO EMRO",
       url: "https://applications.emro.who.int/docs/EMROPUB_2019_en_23266.pdf",
@@ -120,7 +120,6 @@ function candidate(over: Partial<AlternativeCandidate> & { name: string }): Alte
   return {
     productId: over.name,
     slug: over.name.toLowerCase().replace(/\s+/g, "-"),
-    name: over.name,
     brand: null,
     sizeLabel: "1 L",
     imageUrl: null,
@@ -212,7 +211,7 @@ describe("'not found' is never rendered as 'not certified'", () => {
       // Strip the sentences that explicitly DENY the claim before looking for
       // it — "does not mean it is uncertified" is the copy doing its job, and a
       // naive substring search would flag the fix as the bug.
-      const text = `${result.claim} ${result.detail} ${result.notes ?? ""}`
+      const text = `${result.claim} ${result.detail} ${result.evidence.value}`
         .toLowerCase()
         .replace(/(not the same as|does not mean(?: it is)?|is not)\s+(un)?certified/g, "")
         .replace(/not evidence of absence[^.]*/g, "");
@@ -243,7 +242,7 @@ describe("'not found' is never rendered as 'not certified'", () => {
       certifications: [],
       certificationLookup: LOOKUP_EMPTY,
     } as never, REGISTER);
-    expect(`${result.detail} ${result.notes ?? ""}`).toMatch(/register/i);
+    expect(`${result.detail} ${result.evidence.value}`).toMatch(/register/i);
     expect(result.source.url).toMatch(/moiat/i);
   });
 });
@@ -254,8 +253,8 @@ describe("alternatives are the same kind of product", () => {
     const scanned = candidate({ name: "Borges Extra Virgin Olive Oil" });
     const milk = candidate({
       name: "Al Rawabi Full Cream Milk",
-      subcategory: "milk",
-      category: "dairy",
+      subcategory: "dairy_milk",
+      category: "milk",
       certification: "VERIFIED",
     });
     const result = select(scanned, [milk]);
@@ -314,16 +313,32 @@ describe("no alternative is ever fabricated", () => {
 });
 
 /* ── 9 ─────────────────────────────────────────────────────────────────── */
-describe("a stale price is not an offer", () => {
-  it("drops a candidate whose price has not been checked recently", () => {
+describe("commerce data is disclosed, never used to hide an alternative", () => {
+  it("still shows a better product whose price we have not verified, and says so", () => {
     const scanned = candidate({
       name: "Scanned",
       checks: [check({ key: "salt", status: "fail" })],
     });
-    const stale = candidate({ name: "Stale Oil", bestListing: null });
-    const result = select(scanned, [stale]);
-    expect(result.alternatives).toHaveLength(0);
-    expect(result.considered[0].reason).toBe("no-fresh-price");
+    const unpriced = candidate({ name: "Unpriced Oil", bestListing: null });
+    const result = select(scanned, [unpriced]);
+
+    // A gap in our price data is not a judgement about the product.
+    expect(result.alternatives).toHaveLength(1);
+    expect(result.alternatives[0].commerce).toBe("PRICE_UNVERIFIED");
+    expect(result.alternatives[0].candidate.bestListing).toBeNull();
+  });
+
+  it("ranks a priced alternative above an otherwise equal unpriced one", () => {
+    const scanned = candidate({
+      name: "Scanned",
+      checks: [check({ key: "salt", status: "fail" })],
+    });
+    const result = select(scanned, [
+      candidate({ name: "Unpriced Oil", bestListing: null }),
+      candidate({ name: "Priced Oil" }),
+    ]);
+    expect(result.alternatives.map((a) => a.candidate.name)).toEqual(["Priced Oil", "Unpriced Oil"]);
+    expect(result.alternatives[0].commerce).toBe("PRICED");
   });
 
   it("drops a candidate the last check found out of stock", () => {
@@ -363,7 +378,7 @@ describe("every certification claim carries its provenance", () => {
       certifications: [certInput(certRow())],
       certificationLookup: LOOKUP_OK,
     } as never, REGISTER);
-    const text = `${result.claim} ${result.detail} ${result.notes ?? ""}`;
+    const text = `${result.claim} ${result.detail} ${result.evidence.value}`;
     expect(text).toContain("UAE.C-1234");
     expect(result.source.name).toMatch(/MOIAT/i);
   });

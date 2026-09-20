@@ -103,6 +103,20 @@ export function scanLimitPerHour(): number {
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 30;
 }
 
+/**
+ * Failed-and-successful sign-in attempts allowed per hour per address.
+ *
+ * Configurable for the same reason the scan limit is: a suite that signs in on
+ * every run exhausts ten attempts in a few minutes, and the next run fails on a
+ * login form that is quietly refusing it. That looked like a broken form twice
+ * before it was recognised as the limiter doing its job. Ten is right for a
+ * real deployment; the test runner raises it.
+ */
+export function loginAttemptsPerHour(): number {
+  const raw = Number(process.env.LOGIN_RATE_LIMIT_PER_HOUR);
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 10;
+}
+
 /** Salt for the rate-limit key hash, so the table never holds an IP address. */
 export function rateLimitSalt(): string {
   return process.env.RATE_LIMIT_SALT?.trim() || process.env.ADMIN_PASSWORD?.trim() || "noura-dev";

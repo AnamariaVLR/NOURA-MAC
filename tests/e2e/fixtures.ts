@@ -94,6 +94,42 @@ export async function addChecks(specs: CheckSpec[]): Promise<void> {
  * and restoring a single retailer leaves the next flow looking for a listing that
  * no longer exists.
  */
+/**
+ * Runs `body` with the product's certification evidence removed, then restores it.
+ *
+ * Needed because the real MOIAT import gave the fixture product a verified
+ * certificate, so every line of its checklist now resolves — which is a good
+ * thing, and leaves the "unknown is visible" tests with no unknown to look at.
+ * Removing the evidence is closer to the truth being tested than scanning a
+ * different product would be: the question is what the page does when Noura
+ * could not establish something.
+ */
+export async function withoutCertification(
+  productSlug: string,
+  body: () => Promise<void>,
+): Promise<void> {
+  const certs = await prisma().productCertification.findMany({
+    where: { product: { slug: productSlug } },
+  });
+  const lookup = await prisma().certificationLookup.findFirst({
+    where: { product: { slug: productSlug } },
+  });
+
+  await prisma().productCertification.deleteMany({ where: { product: { slug: productSlug } } });
+  await prisma().certificationLookup.deleteMany({ where: { product: { slug: productSlug } } });
+  try {
+    await body();
+  } finally {
+    for (const { id: _id, ...cert } of certs) {
+      await prisma().productCertification.create({ data: cert });
+    }
+    if (lookup) {
+      const { id: _id, ...rest } = lookup;
+      await prisma().certificationLookup.create({ data: rest });
+    }
+  }
+}
+
 export async function withoutListings(productSlug: string, body: () => Promise<void>): Promise<void> {
   const saved = await prisma().productListing.findMany({ where: { product: { slug: productSlug } } });
 

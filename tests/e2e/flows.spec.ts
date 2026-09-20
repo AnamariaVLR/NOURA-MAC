@@ -92,11 +92,30 @@ test("better alternative: shows what to buy instead, with who checked it and whe
 
   const first = alternatives.first();
   await expect(first.getByTestId("medal")).toHaveAttribute("aria-label", "Rank 1");
-  await expect(first).toContainText(/AED \d+\.\d{2}/);
   // The swap has to be explained, not asserted.
   await expect(first.getByTestId("why")).not.toBeEmpty();
-  // And the price has to name a person and a date.
-  await expect(first).toContainText(/Verified by hand on .+ by E2E Checker/);
+
+  // Every card answers the price question one way or the other — a number with
+  // a person and a date behind it, or an explicit statement that we have none.
+  // A blank is the one thing it may never be. Ranking is on evidence, so the
+  // card that carries a price is not necessarily the first one.
+  for (const card of await alternatives.all()) {
+    const text = await card.innerText();
+    if (/AED \d+\.\d{2}/.test(text)) {
+      expect(text).toMatch(/Verified by hand on .+ by E2E Checker/);
+    } else {
+      await expect(card.getByTestId("alt-no-price")).toContainText(/have not verified a price/i);
+    }
+  }
+
+  // If one of the hand-priced products ranked into the list, its price is shown
+  // with the person and date behind it. It need not rank — three UAE waters now
+  // compete for these three slots, and ranking is on evidence, not on whether
+  // we happen to hold a price.
+  const priced = alternatives.filter({ hasText: /AED \d/ });
+  for (const card of await priced.all()) {
+    await expect(card).toContainText(/Verified by hand on .+ by E2E Checker/);
+  }
 
   // The five blocks, in order. Headings render uppercase via CSS, and innerText
   // returns what is rendered, so compare case-insensitively.
@@ -109,9 +128,9 @@ test("better alternative: shows what to buy instead, with who checked it and whe
 /* ===========================================================================
  * 2. Nothing better is buyable
  * ========================================================================= */
-test("no better option: says so plainly rather than padding the list", async ({ page }) => {
-  // The scanned product has a price; the better drinks were checked a month ago,
-  // so none of them can be recommended.
+test("a lapsed price is disclosed, never used to hide a better product", async ({ page }) => {
+  // The scanned product has a fresh price; the better drinks were checked a
+  // month ago, so we cannot quote a price for them.
   await addChecks([
     { productSlug: SCANNED_PRODUCT, retailerSlug: "carrefour-uae", priceAed: 2.75 },
     { productSlug: BETTER_DRINKS[0], retailerSlug: BETTER_DRINK_RETAILERS[0], priceAed: 1.75, daysAgo: 30 },
@@ -120,8 +139,17 @@ test("no better option: says so plainly rather than padding the list", async ({ 
 
   await scan(page);
 
-  await expect(page.getByTestId("no-alternatives")).toContainText("No better verified option found.");
-  await expect(page.getByTestId("alternatives")).toHaveCount(0);
+  // The alternative is STILL SHOWN. A gap in our price data is a fact about our
+  // data, not a judgement about the product, and burying the product behind it
+  // would let the one masquerade as the other.
+  const alternatives = page.getByTestId("alternatives").locator("> li");
+  await expect(alternatives).not.toHaveCount(0);
+
+  // And the gap is stated in words, with no number attached.
+  await expect(alternatives.first().getByTestId("alt-no-price")).toContainText(
+    /have not verified a price/i,
+  );
+  expect(await alternatives.first().innerText()).not.toMatch(/AED \d/);
 
   // The scanned product's own price is still shown: this is about alternatives.
   await expect(page.getByTestId("listings")).toContainText(/AED 2\.75/);
@@ -136,10 +164,16 @@ test("no better option: an out-of-stock alternative is not an option", async ({ 
   ]);
 
   await scan(page);
-  await expect(page.getByTestId("no-alternatives")).toContainText("No better verified option found.");
+
+  // A product a checker found missing from the shelf is never offered, whatever
+  // its evidence says: sending someone to buy what is not there is not advice.
+  const section = page.getByTestId("better-options");
+  const text = await section.innerText();
+  expect(text).not.toMatch(/Al ain water/i);
+  expect(text).not.toMatch(/Lipton/i);
 });
 
-test("no better option: a synthetic price can never make an alternative buyable", async ({ page }) => {
+test("a synthetic price can never appear as a price", async ({ page }) => {
   await addChecks([
     { productSlug: SCANNED_PRODUCT, retailerSlug: "carrefour-uae", priceAed: 2.75 },
     // Recorded today, in stock, cheap — and scaffolding, so it counts for nothing.
@@ -147,7 +181,11 @@ test("no better option: a synthetic price can never make an alternative buyable"
   ]);
 
   await scan(page);
-  await expect(page.getByTestId("no-alternatives")).toContainText("No better verified option found.");
+
+  // The product may well be a better choice, and may still be offered. What can
+  // never happen is the fake 1.75 reaching the screen as a price.
+  const section = page.getByTestId("better-options");
+  expect(await section.innerText()).not.toMatch(/AED 1\.75/);
 });
 
 /* ===========================================================================
@@ -284,7 +322,10 @@ test("audit defect: an expensive out-of-category product is never the alternativ
   await expect(alternatives).not.toContainText(/AED 24\.00/);
   // The water does, and it is first.
   const first = alternatives.locator("> li").first();
-  await expect(first).toContainText(/AED 1\.75/);
+  // Ranking is on evidence, so the top card is not necessarily the one we
+  // priced by hand; what must hold is that it answers the price question.
+  const firstText = await first.innerText();
+  expect(firstText).toMatch(/AED \d+\.\d{2}|have not verified a price/i);
 });
 
 /* ===========================================================================
@@ -331,10 +372,14 @@ test("the full journey: front door → scan → evidence → assessment → alte
   // hidden one is not evidence that the reader can see attribution.
   await expect(page.locator('[data-testid="source-note"]:visible').first()).toBeVisible();
 
-  // 7. What it could not verify is stated, not hidden. The fixture product has
-  // no verifiable certificate, so at least one check must read unknown.
-  const unknownRows = page.locator('[data-testid="check"][data-check-status="unknown"]');
-  await expect(unknownRows).not.toHaveCount(0);
+  // 7. What it could not verify is stated, not hidden. Every line of this
+  // product's checklist now resolves — the MOIAT import found a certificate for
+  // it — so the thing to assert here is that the page still states its limits
+  // rather than presenting a complete checklist as a complete picture. The
+  // unknown state itself has its own test in installable.spec.ts, on a product
+  // with its certification evidence removed.
+  await expect(page.getByTestId("check-tally")).toBeVisible();
+  await expect(page.getByText(/not medical advice/i).first()).toBeVisible();
 
   // 8. Alternatives.
   await expect(page.getByTestId("better-options")).toBeVisible();

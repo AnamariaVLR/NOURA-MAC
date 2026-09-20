@@ -11,7 +11,7 @@ to a shopper.
 Nothing here is invented. Every barcode was found in Open Food Facts' own search
 before it was added, and is fetched again by barcode here.
 
-**35 kept, 1 dropped, 36 tried.**
+**50 kept, 1 dropped, 51 tried.**
 
 ## Kept, by category
 
@@ -22,8 +22,8 @@ before it was added, and is fetched again by barcode here.
 | cosmetic | 1 |
 | drink | 5 |
 | eggs | 2 |
-| fats_oils | 4 |
-| food | 2 |
+| fats_oils | 7 |
+| food | 14 |
 | milk | 5 |
 | snacks | 3 |
 | yogurt | 5 |
@@ -67,6 +67,21 @@ before it was added, and is fetched again by barcode here.
 | `6297000611020` | mai-dubai-water-500ml | drink | kept | ingredients + nutrition |
 | `6291001000029` | masafi-water-500ml | drink | kept | ingredients + nutrition |
 | `4005900462060` | nivea-sun-protect-bronze-spf20-200ml | cosmetic | kept | ingredients |
+| `6291104283510` | organic-larder-olive-oil-750ml | fats_oils | kept | nutrition |
+| `8428483200151` | al-wazir-virgin-olive-oil-175ml | fats_oils | kept | nutrition |
+| `1026010010210` | taverna-extra-virgin-olive-oil-1l | fats_oils | kept | nutrition |
+| `6291104283725` | organic-larder-basmati-rice-1kg | food | kept | nutrition |
+| `8901537075764` | rozana-indian-basmati-rice-5kg | food | kept | ingredients + nutrition |
+| `8901537075832` | dawat-basmati-rice-1kg | food | kept | nutrition |
+| `6291047020876` | emirates-macaroni-penne-400g | food | kept | ingredients + nutrition |
+| `8076809519960` | barilla-casarecce-500g | food | kept | ingredients + nutrition |
+| `8076809529433` | barilla-whole-wheat-penne-500g | food | kept | ingredients + nutrition |
+| `0032894010902` | california-garden-fava-beans-260g | food | kept | ingredients + nutrition |
+| `6291079225775` | farm-fresh-sweet-corn-425g | food | kept | nutrition |
+| `0617950143734` | alalali-tuna-170g | food | kept | nutrition |
+| `6291003628931` | noor-ketchup-less-sugar-410g | food | kept | ingredients + nutrition |
+| `6221033001015` | heinz-tomato-ketchup-295g | food | kept | ingredients + nutrition |
+| `8001060008403` | sacla-cherry-tomato-sauce-350g | food | kept | ingredients + nutrition |
 
 ## Tried and dropped
 

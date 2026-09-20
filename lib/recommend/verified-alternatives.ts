@@ -43,16 +43,30 @@ import type { Listing } from "../schemas";
 export type RejectionReason =
   | "different-subcategory"
   | "not-verified"
-  | "no-fresh-price"
   | "out-of-stock"
   | "not-better";
 
 export const REJECTION_COPY: Record<RejectionReason, string> = {
   "different-subcategory": "a different kind of product",
   "not-verified": "we could not verify enough about it ourselves",
-  "no-fresh-price": "nobody has checked its price in the last two weeks",
-  "out-of-stock": "the last person to check found it out of stock",
+  "out-of-stock": "the last person to check the shelf found it out of stock",
   "not-better": "its evidence is no stronger than the product you scanned",
+};
+
+/**
+ * What we can tell a shopper about buying this, which is a separate question
+ * from whether it is a better product.
+ *
+ * A missing price is DISCLOSED, never used to hide an alternative. A better
+ * product we cannot price is still a better product, and "we have not verified
+ * a price for this yet" is an honest thing to print; quietly dropping it would
+ * let a data gap masquerade as a judgement about the product.
+ */
+export type CommerceStatus = "PRICED" | "PRICE_UNVERIFIED";
+
+export const COMMERCE_COPY: Record<CommerceStatus, string> = {
+  PRICED: "Price verified by hand",
+  PRICE_UNVERIFIED: "We have not verified a price for this yet",
 };
 
 export type EvidenceDimensions = {
@@ -82,6 +96,8 @@ export type VerifiedAlternative = {
   /** The dimensions on which it beats the scanned product. Never empty. */
   betterOn: string[];
   why: string;
+  /** Whether we can quote a price, stated either way. Never a silent omission. */
+  commerce: CommerceStatus;
 };
 
 export type VerifiedAlternativesResult = {
@@ -93,6 +109,12 @@ export type VerifiedAlternativesResult = {
   /** Set when there are no alternatives: precisely why not. */
   emptyReason: string | null;
 };
+
+/** "a", "a and b", "a, b and c" — a list a person would actually say. */
+function sentenceList(parts: string[]): string {
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
 
 export function dimensionsOf(candidate: AlternativeCandidate): EvidenceDimensions {
   return {
@@ -141,7 +163,7 @@ export function compareEvidence(
   }
 
   if (candidate.resolvedChecks > scanned.resolvedChecks) {
-    betterOn.push("more of its evidence could be checked at all");
+    betterOn.push("has more of its evidence available to check");
   } else if (candidate.resolvedChecks < scanned.resolvedChecks) {
     worseOnSomething = true;
   }
@@ -163,6 +185,11 @@ export function compareAlternatives(a: AlternativeCandidate, b: AlternativeCandi
 
   const resolved = resolvedCount(b.checks) - resolvedCount(a.checks);
   if (resolved !== 0) return resolved;
+
+  // A verified price is itself evidence; an alternative we can price beats an
+  // otherwise identical one we cannot.
+  const priced = Number(b.bestListing !== null) - Number(a.bestListing !== null);
+  if (priced !== 0) return priced;
 
   const priceA = a.bestListing?.unitPriceFils ?? a.bestListing?.priceFils ?? Number.POSITIVE_INFINITY;
   const priceB = b.bestListing?.unitPriceFils ?? b.bestListing?.priceFils ?? Number.POSITIVE_INFINITY;
@@ -196,8 +223,7 @@ export function explainEmpty(
     .map(([reason, n]) => `${n} because ${REJECTION_COPY[reason]}`);
 
   const noCertAnywhere =
-    scannedCertification === "NOT_FOUND" &&
-    considered.every((c) => c.reason === "not-better" || c.reason === "no-fresh-price");
+    scannedCertification === "NOT_FOUND" && considered.every((c) => c.reason === "not-better");
 
   const tail = noCertAnywhere
     ? " Nothing in this category carries a UAE certificate we can verify — the register covers " +
@@ -242,13 +268,10 @@ export function selectVerifiedAlternatives(
       continue;
     }
 
-    // 3. COMMERCE. A better product you cannot buy today is not a recommendation,
-    //    and a lapsed price is not an offer.
-    if (candidate.bestListing === null) {
-      note("no-fresh-price");
-      continue;
-    }
-    if (!candidate.bestListing.inStock) {
+    // 3. COMMERCE. A verified out-of-stock is a reason not to send someone to a
+    //    shelf. A MISSING price is not: it is a gap in our data, and the honest
+    //    response is to print the gap, not to bury the alternative behind it.
+    if (candidate.bestListing !== null && !candidate.bestListing.inStock) {
       note("out-of-stock");
       continue;
     }
@@ -271,7 +294,8 @@ export function selectVerifiedAlternatives(
       candidate,
       rank: index + 1,
       betterOn,
-      why: `Suggested because it ${betterOn.join(", and ")}.`,
+      why: `Suggested because it ${sentenceList(betterOn)}.`,
+      commerce: candidate.bestListing !== null ? "PRICED" : "PRICE_UNVERIFIED",
     };
   });
 

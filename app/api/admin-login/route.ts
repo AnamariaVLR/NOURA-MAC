@@ -15,18 +15,18 @@
 import { NextResponse } from "next/server";
 import { ADMIN_COOKIE, ADMIN_SESSION_MS, adminEnabled, issueToken, passwordMatches } from "@/lib/admin-auth";
 import { consume } from "@/lib/rate-limit";
+import { loginAttemptsPerHour } from "@/lib/config";
 import { secureCookies } from "@/lib/user";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Ten attempts an hour from one address. A person who knows it needs one. */
-const LOGIN_ATTEMPTS_PER_HOUR = 10;
 
 export async function POST(request: Request) {
   if (!adminEnabled()) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const limit = await consume(request.headers, "admin-login", LOGIN_ATTEMPTS_PER_HOUR);
+  const limit = await consume(request.headers, "admin-login", loginAttemptsPerHour());
   if (!limit.allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }

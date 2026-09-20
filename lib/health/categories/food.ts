@@ -26,7 +26,21 @@ export const food: CategoryRule = {
   section: "RUBRIC.md §4.11",
   supported: true,
 
-  subcategories: [{ key: "food", label: "Food", basis: "solid" }],
+  /**
+   * C4.0.1 — subcategories here do NOT change the thresholds. Every one of them
+   * is judged by the same universal solid lines, because that is all §4.11
+   * claims to offer. They exist for one reason: they bound the alternative
+   * comparison. Without them "the same kind of product" would put a jar of
+   * pasta sauce and a bag of rice in the same pool, and Noura would offer rice
+   * to someone holding a jar of sauce.
+   */
+  subcategories: [
+    { key: "food", label: "Food", basis: "solid" },
+    { key: "rice", label: "Rice", basis: "solid" },
+    { key: "pasta", label: "Pasta", basis: "solid" },
+    { key: "canned_food", label: "Canned food", basis: "solid" },
+    { key: "sauce", label: "Sauce", basis: "solid" },
+  ],
   defaultSubcategory: "food",
 
   checks: [

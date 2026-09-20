@@ -27,7 +27,9 @@ import {
 import { DISCLAIMER } from "@/lib/config";
 import { prisma } from "@/lib/db";
 import { formatAed, formatDate } from "@/lib/format";
-import { findAlternatives } from "@/lib/recommend/alternatives";
+import { findVerifiedAlternatives } from "@/lib/recommend/alternatives";
+import { CERTIFICATION_LABEL } from "@/lib/health/certification";
+import { COMMERCE_COPY } from "@/lib/recommend/verified-alternatives";
 import { freshnessLabel } from "@/lib/retail/freshness";
 import { bestPrice, searchUaeListings } from "@/lib/retail/search";
 import { ConfirmProduct, NotThisProduct } from "@/components/confirm-product";
@@ -189,9 +191,8 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
       brand: product.brand,
       limit: 10,
     }),
-    findAlternatives({
-      category,
-      scannedProductId: product.id,
+    findVerifiedAlternatives({
+      productId: product.id,
       scannedChecks: checks,
       limit: 3,
     }),
@@ -457,66 +458,98 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
       {/* ================= 4. BETTER OPTIONS ================= */}
       <Card testId="better-options">
-        <SectionTitle hint="The same kind of product — crossing fewer of the lines we check, and confirmed in stock by a person in the last two weeks.">
+        <SectionTitle hint="The same kind of product, compared on the evidence we hold: how many of the lines it crosses, how much of its evidence we could check, and what the UAE conformity register says about it.">
           Better options
         </SectionTitle>
 
         {recommendation.alternatives.length === 0 ? (
+          // Not "No better verified option found." That sentence tells a shopper
+          // nothing and could mean anything from "we have no data" to "we
+          // checked thoroughly". This says which, and how many, and why.
           <p className="text-[13px] leading-relaxed text-ink-soft" data-testid="no-alternatives">
-            No better verified option found.
+            {recommendation.emptyReason}
           </p>
         ) : (
           <ul className="space-y-3.5" data-testid="alternatives">
-            {recommendation.alternatives.map((alt) => (
-              <li key={alt.productId} className="border-b border-line pb-3.5 last:border-0 last:pb-0">
-                <div className="flex items-start gap-2.5">
-                  <MedalRank rank={alt.rank} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[14px] font-medium leading-snug">{alt.name}</p>
-                        <p className="mt-0.5 text-[12px] text-ink-soft">
-                          {alt.brand ?? "Brand unknown"}
-                          {alt.sizeLabel ? ` · ${alt.sizeLabel}` : ""}
-                        </p>
+            {recommendation.alternatives.map((alt) => {
+              const c = alt.candidate;
+              const listing = c.bestListing;
+              return (
+                <li
+                  key={c.productId}
+                  className="border-b border-line pb-3.5 last:border-0 last:pb-0"
+                  data-testid="alternative"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <MedalRank rank={alt.rank} />
+                    <div className="min-w-0 flex-1">
+                      {/* WHAT — the exact product, its brand and its size. */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[14px] font-medium leading-snug">{c.name}</p>
+                          <p className="mt-0.5 text-[12px] text-ink-soft">
+                            {c.brand ?? "Brand unknown"}
+                            {c.sizeLabel ? ` \u00b7 ${c.sizeLabel}` : ""}
+                          </p>
+                        </div>
+                        {/* PRICE — or an explicit absence, never a blank. */}
+                        {listing ? (
+                          <p className="tnum shrink-0 text-[14px] font-semibold">
+                            {formatAed(listing.priceFils)}
+                          </p>
+                        ) : (
+                          <p className="shrink-0 text-[11px] text-ink-soft">No verified price</p>
+                        )}
                       </div>
-                      {alt.bestListing ? (
-                        <p className="tnum shrink-0 text-[14px] font-semibold">
-                          {formatAed(alt.bestListing.priceFils)}
+
+                      {/* WHY — the dimensions it actually beat the scan on. */}
+                      <p
+                        className="mt-1.5 text-[12.5px] leading-relaxed text-ink-soft"
+                        data-testid="why"
+                      >
+                        {alt.why}
+                      </p>
+
+                      {/* CERTIFICATION — the five-state reading, always shown,
+                          because "we found nothing" is information too. */}
+                      <p className="mt-1 text-[11.5px] text-ink-soft" data-testid="alt-certification">
+                        UAE certification: {CERTIFICATION_LABEL[c.certification]}
+                      </p>
+
+                      {/* WHERE / AVAILABLE / WHEN — or the honest gap. */}
+                      {listing ? (
+                        <>
+                          <p className="mt-1.5 text-[12.5px]">
+                            {listing.inStock ? "In stock at" : "Listed at"}{" "}
+                            <a
+                              href={listing.url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="underline decoration-line underline-offset-2"
+                            >
+                              {listing.retailer.name}
+                            </a>
+                            {listing.sizeLabel ? ` \u00b7 ${listing.sizeLabel}` : ""}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-band-excellent">
+                            {freshnessLabel(
+                              "fresh",
+                              formatDate(listing.checkedAt),
+                              listing.checkedBy,
+                            )}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-1.5 text-[11.5px] text-ink-soft" data-testid="alt-no-price">
+                          {COMMERCE_COPY[alt.commerce]}. We are showing it because its evidence is
+                          stronger, not because we know where it is cheapest.
                         </p>
-                      ) : null}
+                      )}
                     </div>
-
-                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-soft" data-testid="why">
-                      {alt.why}
-                    </p>
-
-                    {alt.bestListing ? (
-                      <>
-                        <p className="mt-1.5 text-[12.5px]">
-                          at{" "}
-                          <a
-                            href={alt.bestListing.url}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="underline decoration-line underline-offset-2"
-                          >
-                            {alt.bestListing.retailer.name}
-                          </a>
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-band-excellent">
-                          {freshnessLabel(
-                            "fresh",
-                            formatDate(alt.bestListing.checkedAt),
-                            alt.bestListing.checkedBy,
-                          )}
-                        </p>
-                      </>
-                    ) : null}
                   </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>

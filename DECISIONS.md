@@ -1448,3 +1448,75 @@ session was structural — a wrong product, a stale database, a hung suite. This
 one was a *true* page that made a claim the evidence did not support, and it
 would have survived indefinitely: the arithmetic was right, the sourcing was
 right, the test suite was green. It took a person reading a sentence.
+
+## 85. Certification has five states, and "not found" is not "not certified"
+
+A single boolean — certified or not — would have been simpler and would have been
+a lie. The UAE conformity register covers technical regulations; most packaged
+food is outside its scope entirely. Rendering "we searched and found nothing" as
+"not certified" would turn the register's scope into a finding against a product.
+
+So `lib/health/certification.ts` returns one of VERIFIED, BRAND_LEVEL_ONLY,
+EXPIRED, NOT_FOUND or UNKNOWN. NOT_FOUND and UNKNOWN are deliberately distinct:
+the first means we asked and the register held nothing, the second means we could
+not ask. `CertificationLookup` records which, per product, with the date.
+
+This distinction was nearly lost to a bug worth recording. A zero-result query
+returns HTTP 200 with an empty body; `JSON.parse("")` threw, the catch returned
+null, and null reads as "the query failed" — collapsing NOT_FOUND into UNKNOWN
+for 26 of 35 products. An empty body is an ANSWER, and the client now says so.
+
+## 86. A brand certificate never becomes a product certificate
+
+The register's `ModelNumber` column carries barcodes, so exact-product matching
+is possible. Its `Brand` column is concatenated multi-brand text, so brand
+matching is company-level at best. `matchBasis` records which a row was, and only
+BARCODE can reach VERIFIED. A certified kettle says nothing about a bottle of
+water from the same company.
+
+## 87. Invented certificates are deleted rather than labelled
+
+`prisma/seed-data/regulator.ts` held SAMPLE- prefixed certificates, seeded as
+SYNTHETIC, filtered by source enum, never shown as evidence — and still invented.
+A certificate number is a factual claim about a real company. The file is gone;
+certificates come from the register or they do not exist.
+
+## 88. "Better" is a comparison across named dimensions, not a score
+
+`selectVerifiedAlternatives` compares three things Noura can actually evidence:
+failed checks, resolved checks, and certification state. A candidate qualifies
+only if it is strictly better on at least one and worse on none. The dimensions
+it won on ARE the `why` shown on the card — a reason assembled after the fact is
+a reason that can drift from the decision.
+
+The deterministic layer decides; nothing in the path calls a model.
+
+## 89. A missing price is disclosed, never used to hide an alternative
+
+A verified out-of-stock removes a candidate: sending someone to a shelf where the
+product is not there is not advice. A MISSING price does not. It is a gap in our
+data, and burying a better product behind it would let a data gap masquerade as a
+judgement about the product. The card says "We have not verified a price for this
+yet" and is still offered.
+
+## 90. The empty case explains itself
+
+"No better verified option found." told a shopper nothing. It now reports how
+many comparable products were compared and why each was dropped — and, where the
+category has no verifiable certificates at all, says that the register does not
+cover this kind of food. The Borges scan is the acceptance case: five comparable
+olive oils, none stronger, and no olive oil in the register to be stronger with.
+
+## 91. Subcategories under `food` bound the comparison, not the thresholds
+
+rice, pasta, canned_food and sauce are judged by the same universal solid lines —
+that is all §4.11 claims to offer. They exist so "the same kind of product" does
+not put a jar of sauce and a bag of rice in one pool.
+
+## 92. The login rate limit is configurable, for the reason the scan limit is
+
+A suite that signs in on every run exhausts ten attempts in minutes, and the next
+run fails on a login form quietly refusing it. That presented as a broken form.
+It is the second time my own limiter has been misread as an application fault;
+`LOGIN_RATE_LIMIT_PER_HOUR` exists so it is the last.
+

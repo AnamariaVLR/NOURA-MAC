@@ -14,6 +14,8 @@ import {
   disconnect,
   productIdByName,
   seedPendingScan,
+  withoutCertification,
+  SCANNED_PRODUCT,
 } from "./fixtures";
 
 const FIXTURE = resolve(__dirname, "../../fixtures/product.png");
@@ -312,6 +314,7 @@ test("not found: an unknown address explains itself and offers a way on", async 
 });
 
 test("unknown is a visible state, not a silent gap", async ({ page }) => {
+  await withoutCertification(SCANNED_PRODUCT, async () => {
   await page.goto("/scan");
   await expect(page.getByTestId("scan-button")).toBeVisible();
   await page.getByTestId("file-input").setInputFiles(FIXTURE);
@@ -327,4 +330,5 @@ test("unknown is a visible state, not a silent gap", async ({ page }) => {
 
   // And it is excluded from the tally rather than counted against the product.
   await expect(page.getByTestId("check-tally")).toContainText(/could not be checked|unknown/i);
+  });
 });
