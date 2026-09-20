@@ -11,6 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { resolve } from "node:path";
 import {
   BETTER_DRINKS,
+  BETTER_DRINK_RETAILERS,
   OAT_DRINK,
   SCANNED_PRODUCT,
   addChecks,
@@ -43,8 +44,8 @@ test.afterAll(async () => {
 test("better alternative: shows what to buy instead, with who checked it and when", async ({ page }) => {
   await addChecks([
     { productSlug: SCANNED_PRODUCT, retailerSlug: "carrefour-uae", priceAed: 2.75 },
-    { productSlug: BETTER_DRINKS[0], retailerSlug: "carrefour-uae", priceAed: 1.75 },
-    { productSlug: BETTER_DRINKS[1], retailerSlug: "spinneys", priceAed: 24.0 },
+    { productSlug: BETTER_DRINKS[0], retailerSlug: BETTER_DRINK_RETAILERS[0], priceAed: 1.75 },
+    { productSlug: BETTER_DRINKS[1], retailerSlug: BETTER_DRINK_RETAILERS[1], priceAed: 4.5 },
   ]);
 
   await scan(page);
@@ -78,8 +79,8 @@ test("no better option: says so plainly rather than padding the list", async ({ 
   // so none of them can be recommended.
   await addChecks([
     { productSlug: SCANNED_PRODUCT, retailerSlug: "carrefour-uae", priceAed: 2.75 },
-    { productSlug: BETTER_DRINKS[0], retailerSlug: "carrefour-uae", priceAed: 1.75, daysAgo: 30 },
-    { productSlug: BETTER_DRINKS[1], retailerSlug: "spinneys", priceAed: 24.0, daysAgo: 45 },
+    { productSlug: BETTER_DRINKS[0], retailerSlug: BETTER_DRINK_RETAILERS[0], priceAed: 1.75, daysAgo: 30 },
+    { productSlug: BETTER_DRINKS[1], retailerSlug: BETTER_DRINK_RETAILERS[1], priceAed: 4.5, daysAgo: 45 },
   ]);
 
   await scan(page);
@@ -95,8 +96,8 @@ test("no better option: an out-of-stock alternative is not an option", async ({ 
   await addChecks([
     { productSlug: SCANNED_PRODUCT, retailerSlug: "carrefour-uae", priceAed: 2.75 },
     // Fresh checks, but the checker found empty shelves.
-    { productSlug: BETTER_DRINKS[0], retailerSlug: "carrefour-uae", priceAed: 1.75, inStock: false },
-    { productSlug: BETTER_DRINKS[1], retailerSlug: "spinneys", priceAed: 24.0, inStock: false },
+    { productSlug: BETTER_DRINKS[0], retailerSlug: BETTER_DRINK_RETAILERS[0], priceAed: 1.75, inStock: false },
+    { productSlug: BETTER_DRINKS[1], retailerSlug: BETTER_DRINK_RETAILERS[1], priceAed: 4.5, inStock: false },
   ]);
 
   await scan(page);
@@ -107,7 +108,7 @@ test("no better option: a synthetic price can never make an alternative buyable"
   await addChecks([
     { productSlug: SCANNED_PRODUCT, retailerSlug: "carrefour-uae", priceAed: 2.75 },
     // Recorded today, in stock, cheap — and scaffolding, so it counts for nothing.
-    { productSlug: BETTER_DRINKS[0], retailerSlug: "carrefour-uae", priceAed: 1.75, source: "SYNTHETIC" },
+    { productSlug: BETTER_DRINKS[0], retailerSlug: BETTER_DRINK_RETAILERS[0], priceAed: 1.75, source: "SYNTHETIC" },
   ]);
 
   await scan(page);
@@ -119,7 +120,7 @@ test("no better option: a synthetic price can never make an alternative buyable"
  * ========================================================================= */
 test("missing evidence: no price is invented when nobody has checked one", async ({ page }) => {
   // Only the alternatives have prices; the scanned product has none.
-  await addChecks([{ productSlug: BETTER_DRINKS[0], retailerSlug: "carrefour-uae", priceAed: 1.75 }]);
+  await addChecks([{ productSlug: BETTER_DRINKS[0], retailerSlug: BETTER_DRINK_RETAILERS[0], priceAed: 1.75 }]);
 
   await scan(page);
 
@@ -234,7 +235,7 @@ test("audit defect: an expensive out-of-category product is never the alternativ
     // Fresh, in stock, and the most expensive thing in the catalogue.
     { productSlug: OAT_DRINK, retailerSlug: "spinneys", priceAed: 24.0 },
     // Fresh, in stock, cheap, and actually a drink.
-    { productSlug: BETTER_DRINKS[0], retailerSlug: "carrefour-uae", priceAed: 1.75 },
+    { productSlug: BETTER_DRINKS[0], retailerSlug: BETTER_DRINK_RETAILERS[0], priceAed: 1.75 },
   ]);
 
   await scan(page);

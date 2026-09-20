@@ -135,8 +135,14 @@ export type FlaggedAdditive = {
    * the flag is reported and the check is not failed on it.
    */
   effect: FlagEffect;
-  /** Verbatim, from the instrument. Shown to the reader. */
+  /** Verbatim, from the instrument. Shown to the reader, in a note. */
   basis: string;
+  /**
+   * The same fact in one clause, for the check sentence itself, which the schema
+   * caps at 320 characters. The verbatim quotation goes in the note; this is what
+   * the checklist row says. Never a paraphrase that changes the claim.
+   */
+  short: string;
   /** Why the effect is "note" rather than "fail", where it is. */
   unmeasurable?: string;
   source: string;
@@ -156,6 +162,8 @@ export const FLAGGED_ADDITIVES: readonly FlaggedAdditive[] = [
     codes: ["E102", "E104", "E110", "E122", "E124", "E129"],
     label: "a colour that must carry a warning about children's attention",
     effect: "fail",
+    short:
+      "EU labelling rules make it carry a warning about children's activity and attention",
     basis:
       'Labelling must carry "may have an adverse effect on activity and attention in children".',
     source: "S16 — Reg (EC) 1333/2008, Art. 24 and Annex V",
@@ -166,6 +174,8 @@ export const FLAGGED_ADDITIVES: readonly FlaggedAdditive[] = [
     codes: ["E171"],
     label: "titanium dioxide",
     effect: "fail",
+    short:
+      "EFSA withdrew its safety conclusion for this additive in 2021",
     basis:
       'EFSA concluded that "titanium dioxide can no longer be considered safe as a food additive": it ' +
       '"could not exclude genotoxicity concerns" and set no acceptable daily intake.',
@@ -177,6 +187,8 @@ export const FLAGGED_ADDITIVES: readonly FlaggedAdditive[] = [
     codes: ["E338", "E339", "E340", "E341", "E343", "E450", "E451", "E452"],
     label: "phosphoric acid or a phosphate",
     effect: "fail",
+    short:
+      "EFSA found that children's dietary exposure to phosphates may exceed the safe daily intake",
     basis:
       "EFSA set a group acceptable daily intake of 40 mg/kg of body weight per day and found that " +
       '"dietary exposure to phosphates may exceed the new ADI for infants, toddlers and children ' +
@@ -189,6 +201,8 @@ export const FLAGGED_ADDITIVES: readonly FlaggedAdditive[] = [
     codes: ["E951", "E962"],
     label: "aspartame",
     effect: "fail",
+    short:
+      "EU labelling rules make it carry a phenylalanine warning",
     basis: 'Labelling must carry "contains a source of phenylalanine".',
     source: "S17 — Reg (EU) 1169/2011, Annex III",
     tier: 1,
@@ -198,6 +212,8 @@ export const FLAGGED_ADDITIVES: readonly FlaggedAdditive[] = [
     codes: ["E420", "E421", "E953", "E965", "E966", "E967", "E968"],
     label: "a polyol",
     effect: "note",
+    short:
+      "EU labelling rules make a high-polyol food carry a laxative warning",
     basis: 'Labelling must carry "excessive consumption may produce laxative effects".',
     unmeasurable:
       "that duty starts above 10% added polyols, and the published data does not say how much is present",
@@ -209,6 +225,8 @@ export const FLAGGED_ADDITIVES: readonly FlaggedAdditive[] = [
     codes: ["E958"],
     label: "glycyrrhizinic acid (liquorice)",
     effect: "note",
+    short:
+      "EU labelling rules make a liquorice food say so on the label",
     basis: 'Labelling must carry "contains liquorice".',
     unmeasurable:
       "that duty starts at 100 mg/kg, and the published data does not say how much is present",

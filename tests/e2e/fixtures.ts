@@ -135,6 +135,16 @@ export const SCANNED_PRODUCT = "coca-cola-330ml";
 export const BETTER_DRINKS = ["al-ain-water-500ml", "lipton-ice-tea-peach-500ml"] as const;
 
 /**
+ * A retailer each of the above is actually tracked at, in the same order.
+ *
+ * `addChecks` records a check against an EXISTING ProductListing, so naming a
+ * retailer the catalogue does not track a product at fails loudly rather than
+ * silently recording nothing — which is the right behaviour, and the reason this
+ * pairing is a constant rather than three hard-coded strings in the specs.
+ */
+export const BETTER_DRINK_RETAILERS = ["carrefour-uae", "noon"] as const;
+
+/**
  * The AED 24.00 oat drink from the audit defect. It is in a different category
  * from the cola, so however cheap, fresh and in stock its listing is, it must
  * never appear in the cola's alternatives.

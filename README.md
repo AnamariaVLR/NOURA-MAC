@@ -163,9 +163,8 @@ than a greyed tick. `DECISIONS.md` §6.
 
 ### The verdict and the checklist
 
-There is no 0-100 score — `DECISIONS.md` §19 explains why. Each rubric dimension in
-`lib/health/rubric.ts` resolves to one of three states, rendered as its own line
-with the value and source beside it:
+There is no 0-100 score — `DECISIONS.md` §19 explains why. Each check resolves to
+one of three states, rendered as its own line with the value and source beside it:
 
 ```
 ✓ Low saturated fat — 0 g per 100 ml, Open Food Facts, last verified 19 September 2026
@@ -173,19 +172,68 @@ with the value and source beside it:
   unknown  We could not check UAE certification — not verified, MOIAT …
 ```
 
-A nutrient check passes at or below the rubric's existing `good` ("low") threshold.
-The sugars dimension is the exception: it asks whether sugar was **added**, which is
-a claim about the ingredient list rather than a reading of the nutrition panel.
-Lactose in plain milk and fructose in fruit are not added by anyone, so a
-total-sugars figure never decides it (`lib/health/added-sugar.ts`, `DECISIONS.md`
-§29-31).
+A nutrient check passes at or below its category's "low" line — or, where a
+category has only one sourced line, at or below that. The added-sugar check is the
+exception: it asks whether sugar was **added**, which is a claim about the
+ingredient list rather than a reading of the nutrition panel. Lactose in plain
+milk, fructose in fruit and the sugars enzymes release from oat starch are not
+added by anyone, so a total-sugars figure never decides it
+(`lib/health/added-sugar.ts`, `DECISIONS.md` §29-31).
+
+### Where the thresholds come from
+
+[`RUBRIC.md`](RUBRIC.md) is the specification, written to be read by a
+nutritionist who has never seen the code. **Every rule in it carries an identifier
+and one of two tags:** SOURCED, naming a source in [`SOURCES.md`](SOURCES.md) and
+its reliability tier, or POLICY, giving the reason it is Noura's own editorial
+decision rather than a standard. No untagged rule exists.
+
+The identifiers are load-bearing. Every check function in `lib/health/` names the
+rule it implements, every threshold constant carries its tag in a comment, and
+every rule has a test named after it — `tests/unit/rubric-s3-universal.test.ts`,
+`rubric-s4-categories.test.ts`, and so on. A threshold cannot enter the code
+without entering RUBRIC.md first, and a test asserts that every nutrient line in
+`lib/health/categories/` carries both a rule identifier and a source.
+
+**Healthy is category-specific**, so there are eleven categories, not one rubric:
+
+```
+lib/health/categories/
+  fats-oils.ts   milk.ts    yogurt.ts   eggs.ts     bread.ts
+  cereal.ts      snacks.ts  drink.ts    food.ts     cosmetic.ts  supplement.ts
+```
+
+Eight of those follow the WHO EMRO regional model's own category boundaries.
+`food` is a declared fallback whose existence says Noura has **not** written a
+rule for the product, and the page says so. Cosmetics and supplements return
+COULD NOT VERIFY with a message naming the reason: assessing a cosmetic means
+checking its ingredients against the EU restricted-substance annexes, and Noura
+does not hold them.
+
+A **subcategory** does two things and no more: it picks the per-100 basis —
+drinking yoghurt is judged per 100 ml and spoonable yoghurt per 100 g — and it
+bounds the alternative ranking, so laban is never offered instead of a pot of
+yoghurt.
+
+Two things are shown and counted in nothing. The **processing classification**
+(NOVA) is a note because its source is a single research paper, which may add a
+note but not set a threshold. The **additive count** is a note because no
+retrieved source supports failing a product for containing an authorised
+additive; the additive check fails only on a short, cited list of additives a
+regulator has put a warning on, and the copy says plainly that the list is a
+floor rather than a clean bill of health.
+
+[`verdict-changes.md`](verdict-changes.md) records every product in the catalogue
+whose verdict moved when the specification was implemented, and the rule
+responsible for each.
 
 The verdict follows from the checklist by these rules, in order:
 
 | # | Condition | Verdict |
 |---|---|---|
 | 0 | No checks could be made | COULD NOT VERIFY |
-| 1 | Coverage < 50% of the category's dimensions | COULD NOT VERIFY |
+| 0 | The category is one Noura cannot assess (cosmetics, supplements) | COULD NOT VERIFY |
+| 1 | Coverage < 50% of the category's applicable checks | COULD NOT VERIFY |
 | 2 | A `disqualifying` check failed | NOT RECOMMENDED |
 | 3 | Pass rate ≥ 80% and ≥ 3 checks made | VERIFIED — GOOD CHOICE |
 | 4 | Pass rate ≥ 50% | VERIFIED — ACCEPTABLE |
@@ -193,22 +241,43 @@ The verdict follows from the checklist by these rules, in order:
 
 Coverage is `known / applicable`; pass rate is `passed / known`. Two things are
 `disqualifying` and override the tally: a **suspended certificate**, and a
-**nutrient clearly above the rubric's high mark** — otherwise four easy ticks would
-outvote 55 g of saturated fat (§21). "Clearly" means past the mark by more than 5%:
-a hairline crossing is a plain ✗ like any other failure (§33).
+**nutrient clearly above its category's disqualifying line** — otherwise four easy
+ticks would outvote 55 g of saturated fat (§21).
+
+"Clearly" is not a number Noura invented. The Gulf labelling standard already says
+how far a declared figure may sit from an analysed one, and a product must not be
+condemned for a difference smaller than that. Noura applies that tolerance, capped
+at 20% of the threshold, which puts the saturated-fat disqualifier for a solid
+food at 6.0 g per 100 g (`DECISIONS.md` §57).
+
+The 80 and 50 cut-offs, the coverage floor and the three-check minimum are all
+POLICY: no retrieved scheme maps a pass count to a verdict.
 
 ### Better alternatives
 
 `lib/recommend/rank.ts` documents the ordering in full at the top of the file. In
 short, candidates are compared on four keys in strict priority order:
 
-1. **More passed checks** — the signal the reader can verify on the page.
-2. **Stronger certification evidence** — accredited body (3) > valid (2) >
-   expired (1) > none (0) > suspended (−1).
-3. **Fewer additives** — unknown sorts last, never first.
-4. **Lower price per 100 g/ml** — last, because this is not a price comparison site.
+1. **Fewer failed checks** — a product that crosses fewer authoritative lines is
+   better on the only basis Noura can evidence. Counting *failures* rather than
+   passes stops a product looking worse merely because more is published about it.
+2. **Higher pass ratio** — among products with equal failures.
+3. **Stronger evidence** — how much of the checklist resolved, then certification:
+   accredited body (3) > valid (2) > expired (1) > none (0) > suspended (−1).
+4. **The category's own "better" attributes**, in the order its rubric section
+   lists them. Better bread is higher fibre first; better snacks are lower salt
+   first; better eggs is an **empty list**, because no source Noura holds
+   distinguishes one egg from another and it will not manufacture a ranking.
+5. **Lower price per 100 g/ml** — last, because this is not a price comparison site.
+6. Product name — a stable tie-break.
 
-Four filters run before the ranking: same category, a **fresh in-stock
+Key 1 replaced "more passed checks", which produced a real defect: a GOOD CHOICE
+bottled water at AED 1.75 ranked below an ACCEPTABLE oat drink at AED 24.00,
+because the oat drink had more checkable dimensions (`DECISIONS.md` §59). The
+subcategory filter below fixes the same case structurally — an oat drink is a
+plant milk and a bottled water is a drink, so they no longer meet.
+
+Four filters run before the ranking: **same subcategory**, a **fresh in-stock
 hand-verified check**, the candidate's own verdict must be VERIFIED, and it must
 rank **strictly** above the scanned product. Up to three survive, shown with medal
 ranks, a price in AED and a "Why" built from the checks it passes that the scanned

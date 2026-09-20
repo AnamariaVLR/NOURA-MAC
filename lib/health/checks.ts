@@ -367,9 +367,11 @@ function additivesCheck(
         assessment.failing.length === 1
           ? `Contains ${first.label}`
           : `Contains ${assessment.failing.length} additives regulators have flagged`,
-      detail: `${names}: ${first.basis} ${
+      // The one-clause reason here; the instrument's verbatim wording goes in the
+      // note, which is where a quotation belongs and where there is room for it.
+      detail: `${names}: ${first.short}. ${
         count > assessment.failing.length
-          ? `The other additives here are permitted and are not a finding against the product.`
+          ? "The other additives here are permitted and are not a finding against the product."
           : ""
       }`.trim(),
       evidence: { label, value: listed },
@@ -567,6 +569,18 @@ export function additiveNotes(assessment: AdditiveAssessment, basis: Basis): Not
         `${assessment.codes.join(", ")}. A long additive list is a sign of heavy processing. It ` +
         "is not a safety warning: every additive here is permitted for sale.",
       source: "S15 · tier 1",
+    });
+  }
+
+  // Every flag is explained in full here, quoting the instrument, whether it
+  // failed the check or not. A reader who wants to know why should not have to
+  // take the one-clause version on trust.
+  for (const { code, flag } of assessment.failing) {
+    notes.push({
+      rule: flag.rule,
+      label: "Why this additive is flagged",
+      text: `${code} is ${flag.label}. ${flag.basis}`,
+      source: flag.source,
     });
   }
 

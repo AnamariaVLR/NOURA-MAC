@@ -558,3 +558,328 @@ correct output whenever the alternative would otherwise be a guess.
   category-specific" — is honoured to the extent that food, drink, supplement and
   cosmetic have different checklists. Plain milk being judged against a saturated-fat
   line drawn for drinks generally is the sharpest remaining case.
+
+---
+
+# The rubric specification, implemented
+
+Everything below dates from 20 September 2026, when RUBRIC.md v1.1 was approved
+and `lib/health/` was rewritten against it. **One entry per threshold change**,
+as the approval required. Entries §43-§60 supersede the parts of §5, §20, §21,
+§25, §28, §33, §34 and §42 they name.
+
+## 43. Every rule is tagged SOURCED or POLICY, and the tag is in the code
+
+RUBRIC.md v1.0 cited sources but did not distinguish "a regulator set this
+number" from "we chose this number". Both read as authority to someone skimming.
+
+Every rule now carries an identifier (`U1.3`, `C4.6.1`, `V3`) and one of two
+tags. SOURCED names the source ID and its tier. POLICY gives the reason it is
+ours. **No untagged rule remains**, and the identifiers are load-bearing: each
+check function names the rule it implements, each threshold constant carries its
+tag in a comment, and each rule has a test named after it.
+
+The point is not tidiness. A POLICY rule must never be shown to a user as a
+standard, and the only way to keep that true as the code changes is to make the
+distinction impossible to lose.
+
+## 44. The EMRO table was re-extracted, and one recorded number was not a threshold
+
+SOURCES v1 read the EMRO category table from flattened PDF text, which does not
+preserve which of seven value columns a number belongs to. Three rows — yoghurt,
+cheese, fats and oils — were recorded as "column mapping uncertain" and were
+unusable.
+
+Re-read with a layout-preserving extractor: header-column centres measured in
+page points, every numeric cell assigned to its nearest centre. All eighteen rows
+are now mapped, and the raw output is committed under `evidence/` so the next
+reader can check rather than trust.
+
+**Category 10 (butter, other fats and oils) had been recorded as `15 / 20 /
+1.3`. The `15` sits at x≈271, inside the customs tariff code column (`04.05;
+15`). It is not a threshold.** The category's real lines are saturated fat 20 g
+and salt 1.3 g per 100 g, with no total-fat line — which is what one would expect
+of a category made of fat.
+
+The lesson, recorded in SOURCES §4: a table read from flattened PDF text is not
+evidence.
+
+## 45. Fats and oils get a saturated-fat line of 20 g/100 g
+
+**Old: U2 suspended for the category, no disqualifier. New: pass at ≤20 g,
+disqualify above 20 g plus tolerance. Source: S5 #10, tier 1.**
+
+RUBRIC v1.0 suspended the universal saturated-fat check for oils because judging
+olive oil (~14 g) by a composite-food line of 5 g is meaningless. That was right
+about the problem and wrong about the fix: suspending the check left **butter
+with no saturated-fat rule at all**, and butter is in the same S5 category.
+
+The re-extraction gave the category a real line. Olive oil passes it; salted
+butter at 55 g disqualifies on it. This is the category's only sourced
+saturated-fat line, so it is both the pass line and the disqualifier — a declared
+exception to the two-strength rule, written at C4.1.1 rather than assumed.
+
+## 46. Fats and oils get a salt line of 1.3 g/100 g
+
+**Old: salt not applicable. New: low 0.3 g (S12/S1), high 1.3 g (S5 #10). Tier 1.**
+
+"Not applicable" was written when the oil column was unknown and when the pilot
+category was imagined as olive oil alone. Salted butter is the obvious case it
+missed. 1.3 g is more conservative than the general 1.5 g, so H1 and H3 both
+select it.
+
+## 47. Yogurt gets a total-sugars fail line of 10 g and a saturated-fat high line of 2 g
+
+**Source: S5 #7, tier 1, column mapping recovered.**
+
+The two-strength rule (C0) applied to the row it was always meant to apply to:
+EMRO's marketing line **fails**, the general-population line **disqualifies**. A
+fruit yoghurt at 13 g of sugar fails and is not condemned; a dessert at 30 g is.
+Full-cream yoghurt at 2.3 g of saturated fat fails and is not condemned; the
+disqualifier stays at U2.2's 5 g.
+
+## 48. Yogurt's salt line of 0.1 g is declined, and the decline is shown
+
+EMRO sets yogurt at 0.1 g of salt per 100 g for marketing to children. That would
+fail plain unsweetened yoghurt, which is exactly the product the category exists
+to reward. Declined for the same reason §4.7 declines it for snacks, and — as
+C4.7.5 already required — **shown to the reader** with the fact that it was drawn
+for children and that Noura does not apply it.
+
+A decline the user cannot see is a decision taken on their behalf in private.
+
+## 49. Cheese has sourced thresholds and no rule, deliberately
+
+The re-extraction recovered S5 category 9: cheese, total fat 20 g, salt 1.3 g per
+100 g. **No cheese rule is written.** A category rule needs more than one number
+— it needs to know what "better" means inside the category, and that has not been
+decided.
+
+Puck Gouda slices therefore falls to the generic `food` rule, and the page says
+so (C4.11.2). Recorded at RUBRIC §9 L8 and Q13 rather than half-implemented.
+
+## 50. Total sugar is its own check, on the S10 band
+
+**Old: the excise band was applied to an added-sugar figure. New: a separate
+check on total sugars. Source: S10, tier 1, binding UAE.**
+
+S10's band is defined on *"natural sugar plus added sugar and other sweeteners
+combined"*. Applying it to an added-sugar figure was a category error — it asked
+one question with another question's number. Added sugar remains
+presence-decided (U1.7); total sugar is a quantity check where a category rule
+creates one.
+
+This is also what catches 100% fruit juice, closing §34.
+
+## 51. Milk's total-sugar check takes the high line only
+
+**Old (as first implemented): S10's full band, low 2.5 g and high 8 g. New: the
+high line only.**
+
+Found by running the rubric over the catalogue rather than by reading it. The low
+line failed plain milk on its 3.2 g of lactose and the Oatly drink on 3.4 g of
+sugar released from its own oat starch — the exact error §28-31 exist to prevent,
+arriving by a new route.
+
+**S10 excludes milk products from the excise altogether**, so its low band was
+never addressed to them. Using it as a pass line would have applied an
+instrument against the products it exempts.
+
+Recorded here because it is the clearest evidence for a working practice: a
+specification is not implemented until it has been run over real data.
+
+## 52. Drink sugar: low 1.5 → 2.5 g, high 11.25 → 8 g
+
+**Sources: S12 LOW SUGARS and S1 green for 2.5; S10's high-sugar band for 8,
+binding UAE and in force 1 January 2026. Both tier 1.**
+
+The shipped 1.5 g was stricter than every source retrieved and had no basis. The
+8 g line is where H1 (a binding UAE instrument) and H3 (the more conservative
+reading) agree against S1's 11.25 g. It is what now disqualifies Coca-Cola at
+10.6 g, which the shipped 11.25 g line with a 5% margin did not.
+
+## 53. Drink salt: low 0.15 → 0.3 g, and the question stays open
+
+**Source: S12, which states 0.12 g sodium "per 100 g or per 100 ml"; S1 green.
+Tier 1.**
+
+The shipped 0.15 g halved the food line on no authority. This is the change that
+flips Al Rawabi low-fat milk at 0.1575 g from a failure to a pass.
+
+It is also the change least comfortable to make on a reading. S12 gives one
+figure for both bases; whether that is the right line for a drink is a
+nutritionist's question, and the approving decision explicitly kept it open as
+RUBRIC §9 Q11.
+
+## 54. Protein: 8 g/100 g → 12% of energy, with energy derived when missing
+
+**Source: S12 SOURCE OF PROTEIN; energy factors S6 §3.3.1. Tier 1.**
+
+The EU defines the protein claims as a proportion of a food's energy, not an
+absolute mass. The shipped 8 g had no source, and it was wrong in both
+directions: it passed Special K (8 g at 392 kcal is 8% of energy) and failed
+plain yoghurt (4.2 g at 71 kcal is 24%).
+
+Where no energy figure is published it is derived from the macronutrients using
+the Codex factors — carbohydrate 4, protein 4, fat 9 kcal/g.
+
+**Derivation requires all three macronutrients.** A partial sum is not a smaller
+energy figure but a wrong one, and since protein is the numerator, an
+undercounted denominator would inflate the share and manufacture a pass. This is
+POLICY: no source covers a partial panel, and D6 says the answer is UNKNOWN.
+
+## 55. Processing is a note, not a check
+
+**Old: pass at NOVA ≤2, fail at 3-4. New: a note that counts toward nothing.
+Reason: S8 is tier 3.**
+
+Under H2 a tier-3 source may not set a threshold, and no retrieved tier-1 or
+tier-2 source uses NOVA. Demoting it also resolves the double-count §5 flagged:
+NOVA and the additive count measure the same thing from different sides.
+
+**The honest part.** This is the single largest driver of verdict change in the
+catalogue, and it removes a failed check from thirteen products and a passed
+check from one. A rule that only ever removes failures deserves suspicion. The
+justification is the source tier, not the outcome, and RUBRIC §9 Q10 asks a
+nutritionist whether to overturn it.
+
+## 56. The additive check is no longer a count
+
+**Old: pass at zero additives, fail at one. New: fails only on a flagged
+additive; the count is a note. Sources: S15 for the principle, S16-S19 per
+flagged row. Tier 1.**
+
+No retrieved source supports a zero-additive line, and S15 is explicit that EFSA
+authorises an additive only after assessing its chemistry, toxicity and dietary
+exposure. An authorised additive is one judged safe at permitted levels.
+
+The flagged table (RUBRIC §5.4) has six rows, each citing an instrument and
+quoting it verbatim. Two of them are **notes rather than failures**, because the
+labelling duty they rest on is triggered by a concentration Noura cannot measure
+— polyols above 10%, liquorice above 100 mg/kg. Flagging those as failures would
+assert something the instrument does not say about this product.
+
+**The table is a floor, not a screen**, and the copy says so. IARC and JECFA were
+not retrieved and no systematic list of EFSA re-evaluations was opened, so an
+additive absent from the table has not been cleared — it has not been looked at.
+Presenting an incomplete list as a clean bill of health would be the additive
+version of counting unknown as a pass.
+
+The approving decision said to flag where "EFSA or JECFA raised a concern". JECFA
+was not retrieved, so the rule is honoured on its EFSA limb alone, and SOURCES §3
+says so rather than papering over it.
+
+## 57. The disqualifier margin: a flat 5% → the GSO tolerance, capped at 20%
+
+**Old: `DISQUALIFIER_MARGIN = 1.05`, invented. New: GSO FDS 2233 Table 6 band for
+the nutrient, capped at ±20% of the threshold. Source: S9 Table 6, tier 1; the
+cap is POLICY.**
+
+§33 argued for a margin and picked 5% out of the air. There is a real number for
+this: the law already says how far a declared figure may sit from an analysed
+one, and a product must not be condemned for a difference smaller than that.
+
+Taken literally S9 is too permissive — saturated fat above 4 g carries ±8 g, so a
+disqualifier on a 5 g line could not fire below 13 g/100 g. The cap of 20%, the
+percentage figure S9 itself applies to most nutrients, puts it at 6.0 g.
+
+The tolerance is selected by the **threshold** being crossed, not by the
+product's declared value, so the allowance is a property of the line and two
+products crossing the same line get the same latitude.
+
+Visible effect: Puck Gouda at 1.7 g of salt against a 1.5 g line was disqualified
+by the old 5% margin (edge 1.575 g) and is now a plain failure (edge 1.8 g).
+
+## 58. Four categories became eleven, and subcategories bound the ranking
+
+**Source: S5's own category structure for the eight pilot categories, tier 1;
+POLICY for the `food` fallback.**
+
+§42 named this as the sharpest remaining problem: "plain milk being judged
+against a saturated-fat line drawn for drinks generally". One `food` rubric
+judging olive oil, eggs, cheese and bread by the same lines was the root of
+several misverdicts.
+
+`food` remains, as a declared fallback whose existence is a statement that Noura
+has not written a rule for the product — not that the product has been assessed
+against one. The page says so (C4.11.2).
+
+**Subcategories do exactly two things**: select the per-100 basis, and bound the
+alternative ranking. Laban, ayran and drinking yoghurt are a subcategory of
+yoghurt — S5 #7's own "included in category" column names them — assessed on the
+liquid lines because they are drunk. That closes §9 Q8.
+
+The milk split into dairy and plant is POLICY, and the reason is narrow: a plant
+drink loses to dairy on protein by construction, for reasons unrelated to the
+choice the shopper is making.
+
+## 59. Ranking: passes first → failures first
+
+**Old: most passed checks. New: fewest failed checks, then pass ratio, then
+evidence strength, then the category's own attributes, then price, then name.
+UNSOURCED — a product decision.**
+
+§25 argued that counting passes rewards a product for publishing more, and §42
+recorded the defect that produced: a GOOD CHOICE bottled water at AED 1.75 ranked
+below an ACCEPTABLE oat drink at AED 24.00.
+
+Counting **failures** removes the bias — a product cannot look worse merely
+because more is published about it — and the subcategory constraint stops the two
+meeting at all, since an oat drink is now `milk/plant_milk` and a water is
+`drink`. Both halves have a test; the second has an end-to-end test.
+
+The category's own "better" attributes sit between evidence strength and price,
+which is what makes "better" mean something specific: better bread is higher
+fibre first, better snacks are lower salt first, and **better eggs is an empty
+list**, because C4.4.4 says "better" within eggs is UNKNOWN and Noura will not
+manufacture a ranking.
+
+## 60. Cosmetics and supplements decline, rather than returning a quiet verdict
+
+**New rule D12. POLICY.**
+
+Both categories previously reached COULD NOT VERIFY by arithmetic — coverage of 1
+in 3 — which was the right answer for the wrong reason. Once additives stopped
+being applied to cosmetics (the E-number taxonomy is a food instrument), the
+Nivea spray would have reached coverage 0.50 and a pass rate of 1.0: VERIFIED —
+ACCEPTABLE on the strength of "it lists its ingredients".
+
+D12 makes an unsupported category return COULD NOT VERIFY with a message naming
+the reason, whatever its checks say. What decides whether a cosmetic is safe is
+its ingredients against the EU restricted-substance annexes, and Noura does not
+hold those.
+
+## 61. One threshold is shared rather than duplicated: "is there an ingredient list?"
+
+Not a threshold change so much as the removal of one. The transparency check used
+a minimum length of 10 characters while the added-sugar resolution rejected
+placeholders by name (§31). So `"Dates"` — a complete, honest ingredient list for
+a bag of dates — passed one check and failed the other.
+
+Both now go through `hasIngredientList()`. The length guard is gone, which also
+removes a number that was in the code and not in RUBRIC.md.
+
+## 62. What running the rubric over the catalogue caught, and what it did not
+
+[verdict-changes.md](verdict-changes.md) records every product whose verdict or
+checklist moved and the rule responsible. Two things belong here rather than
+there.
+
+**A defect no unit test would have found.** The additive check's detail sentence
+quoted the EFSA phosphate opinion verbatim and exceeded `CheckSchema`'s
+320-character cap for exactly one product in the catalogue. The build passed, 380
+unit tests passed, and `/api/scan` threw at request time. The quotation now lives
+in a note, where the cap is 600, and `tests/unit/rubric-catalogue.test.ts` runs
+all seventeen products through the schema so this class of failure cannot reach a
+request again.
+
+**A data-quality problem left open rather than patched.** Al Rawabi laban reaches
+GOOD CHOICE on four resolved checks, one of which is a reported 0 g of sugars for
+a fermented milk drink carrying 2.51 g of carbohydrate — almost certainly
+under-reported lactose, as §11 already said. The panel is internally consistent
+under the Codex factors, so `unexplainedEnergy()` does not flag it, and there is
+no published ingredient list to check it against.
+
+Noura shows what the source says and does not silently correct it. The candidate
+fix is a coherence rule for sugars against carbohydrate in a dairy product, and
+it would need a source. Recorded, not hacked around.
