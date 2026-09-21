@@ -156,3 +156,53 @@ test("every scan row records a mode, and only some modes may carry a verdict", a
     }
   }
 });
+
+/* ── K: the identity record survives the lifecycle ─────────────────────── */
+
+test("K: identity state, record and fingerprint persist on the scan", async ({ page }) => {
+  const id = await scan(page, PACK_PHOTO);
+  const stored = await row(id);
+
+  // Machine-readable, not a presentation label.
+  expect([
+    "IDENTIFIED_AND_VERIFIED",
+    "IDENTIFIED_BY_BARCODE",
+    "IDENTIFIED_BY_NAME_WITH_CORROBORATION",
+    "IDENTIFIED_BY_NAME_ONLY",
+    "NEEDS_CONFIRMATION",
+    "NOT_IDENTIFIED",
+    "INSUFFICIENT_EVIDENCE",
+  ]).toContain(stored.identityState);
+
+  // A scan carrying an analysis must carry the identity that analysis is about.
+  if (stored.analysis) {
+    expect(stored.identityFingerprint, "an analysed scan has no fingerprint").toBeTruthy();
+    expect(stored.identityJson).toBeTruthy();
+
+    const record = JSON.parse(stored.identityJson!) as Record<string, unknown>;
+    // Enough to audit the decision without re-running anything.
+    for (const key of [
+      "state", "fingerprint", "claimedBrand", "claimedName", "claimedBarcode",
+      "visibleText", "matchedProductId", "matchedBrand", "matchMethod",
+      "brandAgrees", "textCorroborates", "barcodeContradicted", "reason",
+    ]) {
+      expect(Object.keys(record), key).toContain(key);
+    }
+    expect(record.fingerprint).toBe(stored.identityFingerprint);
+    expect(record.matchedProductId).toBe(stored.productId);
+  }
+});
+
+test("K: a confirmed scan records the user as the identity, with a fresh fingerprint", async ({
+  page,
+}) => {
+  const pending = await seedPendingScan(page, ["Almarai milk full fat"]);
+  await page.goto(`/result/${pending.id}`);
+  await page.getByTestId("confirm-option").first().click();
+  await expect(page.getByTestId("verdict")).toBeVisible({ timeout: 60_000 });
+
+  const stored = await row(pending.id);
+  expect(stored.identityState).toBe("IDENTIFIED_AND_VERIFIED");
+  expect(stored.identityFingerprint).toBeTruthy();
+  expect(stored.productId).toBeTruthy();
+});

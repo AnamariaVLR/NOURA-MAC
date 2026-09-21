@@ -18,6 +18,7 @@
  * product?" has to lead somewhere.
  */
 import { NextResponse } from "next/server";
+import { fingerprint } from "@/lib/pipeline/identity";
 import { prisma } from "@/lib/db";
 import { analyseProduct, type CertificationWithBody } from "@/lib/pipeline/analyze";
 import { MatchCandidateSchema, parseJsonColumn } from "@/lib/schemas";
@@ -111,6 +112,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       // provenance Noura has, and the only one that does not rest on a model.
       identificationMode: "confirmed",
       identificationProvenance: "user_confirmed",
+      // The user's own choice is the strongest identity Noura holds, and the
+      // fingerprint is recomputed from the product they actually picked.
+      identityState: "IDENTIFIED_AND_VERIFIED",
+      identityFingerprint: fingerprint(product),
       error: null,
     },
   });

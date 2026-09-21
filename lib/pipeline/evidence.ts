@@ -20,7 +20,21 @@ import type {
   MatchSource,
   ProductCategory,
 } from "../schemas";
-import { basisPermitsAnalysis, decideMatch, identityBasis, type IdentityBasis, type Candidate } from "./match";
+import {
+  basisPermitsAnalysis,
+  brandCorroborated,
+  decideMatch,
+  identityBasis,
+  type IdentityBasis,
+  type Candidate,
+} from "./match";
+import {
+  barcodeIsContradicted,
+  fingerprint,
+  sameBrand,
+  type IdentityRecord,
+  type IdentityState,
+} from "./identity";
 
 export type EvidenceResult = {
   product: Product | null;
@@ -37,7 +51,39 @@ export type EvidenceResult = {
   candidates?: MatchCandidate[];
   /** What the identity rests on. "uncorroborated" may never carry a verdict. */
   identityBasis?: IdentityBasis;
+  /** The authoritative identity decision and the signals behind it. */
+  identity?: IdentityRecord;
 };
+
+/** Build the audit record every scan carries. */
+function identityRecord(args: {
+  state: IdentityState;
+  identification: Identification;
+  product: Product | null;
+  matchMethod: string;
+  reason: string;
+  barcodeContradicted?: boolean;
+}): IdentityRecord {
+  const { identification: id, product } = args;
+  return {
+    state: args.state,
+    fingerprint: product ? fingerprint(product) : null,
+    claimedBrand: id.brand ?? null,
+    claimedName: id.name ?? null,
+    claimedBarcode: id.barcode ?? null,
+    confidence: typeof id.confidence === "number" ? id.confidence : null,
+    visibleText: id.visibleText ?? null,
+    matchedProductId: product?.id ?? null,
+    matchedBrand: product?.brand ?? null,
+    matchedName: product?.name ?? null,
+    matchedBarcode: product?.barcode ?? null,
+    matchMethod: args.matchMethod,
+    brandAgrees: product ? sameBrand(id.brand, product.brand) : null,
+    textCorroborates: product ? brandCorroborated(id.visibleText, product.brand) : null,
+    barcodeContradicted: args.barcodeContradicted ?? false,
+    reason: args.reason,
+  };
+}
 
 /** Turns a matcher candidate into the shape the page and the database hold. */
 function toMatchCandidate(candidate: Candidate<Product>): MatchCandidate {
@@ -120,12 +166,50 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
   if (barcode) {
     const local = await prisma.product.findUnique({ where: { barcode } });
     if (local) {
+      // A barcode is normally decisive. It stops being decisive when the
+      // model's own claimed brand AND the text it read off the pack both name
+      // something else: three signals, three products, and the transcribed
+      // digits are the one that is most easily wrong by one character.
+      const contradicted = barcodeIsContradicted({
+        claimedBrand: brand,
+        visibleText,
+        matchedBrand: local.brand,
+      });
+
+      if (contradicted) {
+        return {
+          product: null,
+          method: "none",
+          identityBasis: "uncorroborated",
+          note:
+            `The barcode we read points to ${local.brand ?? "another product"}, but the pack ` +
+            `appears to say something else. We have not assessed anything — please confirm.`,
+          candidates: [toMatchCandidate({ product: local, containment: 1, unseenTokens: [], sizeMatches: false })],
+          identity: identityRecord({
+            state: "NEEDS_CONFIRMATION",
+            identification,
+            product: local,
+            matchMethod: "barcode-local",
+            barcodeContradicted: true,
+            reason:
+              "A barcode match was contradicted by both the claimed brand and the pack text.",
+          }),
+        };
+      }
+
       return {
         product: local,
         method: "barcode-local",
         matchSource: "BARCODE",
         note: null,
         identityBasis: "barcode",
+        identity: identityRecord({
+          state: "IDENTIFIED_BY_BARCODE",
+          identification,
+          product: local,
+          matchMethod: "barcode-local",
+          reason: "The transcribed barcode matched a catalogue product.",
+        }),
       };
     }
   }
@@ -135,12 +219,46 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
     const record = await lookupByBarcode(barcode, category);
     if (record) {
       const product = await upsertFromOpenDb(record, category, subcategory, sizeLabel);
+      const contradicted = barcodeIsContradicted({
+        claimedBrand: brand,
+        visibleText,
+        matchedBrand: product.brand,
+      });
+
+      if (contradicted) {
+        return {
+          product: null,
+          method: "none",
+          identityBasis: "uncorroborated",
+          note:
+            `The barcode we read points to ${product.brand ?? "another product"}, but the pack ` +
+            `appears to say something else. We have not assessed anything — please confirm.`,
+          candidates: [toMatchCandidate({ product, containment: 1, unseenTokens: [], sizeMatches: false })],
+          identity: identityRecord({
+            state: "NEEDS_CONFIRMATION",
+            identification,
+            product,
+            matchMethod: "barcode-open-db",
+            barcodeContradicted: true,
+            reason:
+              "A barcode match was contradicted by both the claimed brand and the pack text.",
+          }),
+        };
+      }
+
       return {
         product,
         method: "barcode-open-db",
         matchSource: "BARCODE",
         note: null,
         identityBasis: "barcode",
+        identity: identityRecord({
+          state: "IDENTIFIED_BY_BARCODE",
+          identification,
+          product,
+          matchMethod: "barcode-open-db",
+          reason: "The transcribed barcode matched a product in the open database.",
+        }),
       };
     }
   }
@@ -171,6 +289,13 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
         note: null,
         identityBasis: basis,
         candidates: decision.candidates.slice(0, 4).map(toMatchCandidate),
+        identity: identityRecord({
+          state: "IDENTIFIED_BY_NAME_ONLY",
+          identification,
+          product: decision.product,
+          matchMethod: "name-local",
+          reason: "Matched by name, but nothing read off the pack names that brand.",
+        }),
       };
     }
 
@@ -180,6 +305,13 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
       matchSource: "NAME_AUTO",
       note: "Matched by name because no barcode was readable.",
       identityBasis: basis,
+      identity: identityRecord({
+        state: "IDENTIFIED_BY_NAME_WITH_CORROBORATION",
+        identification,
+        product: decision.product,
+        matchMethod: "name-local",
+        reason: "Matched by name, and the pack text names the same brand.",
+      }),
     };
   }
 
@@ -191,6 +323,13 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
       method: "none",
       note: null,
       candidates: decision.candidates.map(toMatchCandidate),
+      identity: identityRecord({
+        state: "NEEDS_CONFIRMATION",
+        identification,
+        product: null,
+        matchMethod: "none",
+        reason: "Several products matched and the scan could not separate them.",
+      }),
     };
   }
 
@@ -213,6 +352,13 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
           "We found a product with a similar name, but nothing we could read on the pack " +
           "confirms it is the same one, so we have not assessed it.",
         candidates: [toMatchCandidate({ product, containment: 1, unseenTokens: [], sizeMatches: false })],
+        identity: identityRecord({
+          state: "IDENTIFIED_BY_NAME_ONLY",
+          identification,
+          product,
+          matchMethod: "name-open-db",
+          reason: "An open-database name search matched, with nothing on the pack to support it.",
+        }),
       };
     }
 
@@ -222,6 +368,13 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
       matchSource: "NAME_AUTO",
       note: "Matched by name search, not by barcode. Check the product below is the one in your hand.",
       identityBasis: basis,
+      identity: identityRecord({
+        state: "IDENTIFIED_BY_NAME_WITH_CORROBORATION",
+        identification,
+        product,
+        matchMethod: "name-open-db",
+        reason: "Matched by an open-database name search, corroborated by the pack text.",
+      }),
     };
   }
 
@@ -229,5 +382,12 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
     product: null,
     method: "none",
     note: "We could not find published evidence for this product. Rather than guess, we are showing you nothing.",
+    identity: identityRecord({
+      state: "INSUFFICIENT_EVIDENCE",
+      identification,
+      product: null,
+      matchMethod: "none",
+      reason: "Nothing in the catalogue or the open databases matched this identification.",
+    }),
   };
 }

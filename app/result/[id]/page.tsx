@@ -244,11 +244,13 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
       name: product.name,
       brand: product.brand,
       limit: 10,
+      identity: { fingerprint: scan.identityFingerprint, product },
     }),
     findVerifiedAlternatives({
       productId: product.id,
       scannedChecks: checks,
       limit: 3,
+      identityFingerprint: scan.identityFingerprint,
     }),
   ]);
 

@@ -18,6 +18,12 @@ import type { Identification } from "../schemas";
 import { analyseProduct, type CertificationWithBody } from "./analyze";
 import { gatherEvidence } from "./evidence";
 import { identifyProduct } from "./identify";
+import {
+  assertSameIdentity,
+  permitsAnalysis,
+  type IdentityRecord,
+  type IdentityState,
+} from "./identity";
 
 export type RunResult = {
   scanId: string;
@@ -68,6 +74,15 @@ export type StoredImageRef = {
   imageBytes?: Buffer | null;
 };
 
+/** The identity columns, written identically on every scan row. */
+function identityColumns(identity: IdentityRecord | undefined, fallback: IdentityState) {
+  return {
+    identityState: identity?.state ?? fallback,
+    identityJson: identity ? JSON.stringify(identity) : null,
+    identityFingerprint: identity?.fingerprint ?? null,
+  };
+}
+
 export async function runPipeline(args: {
   userKey: string;
   imageBase64: string;
@@ -94,6 +109,7 @@ export async function runPipeline(args: {
         mode,
         identificationMode: "failed",
         identificationProvenance: "none",
+        ...identityColumns(undefined, "NOT_IDENTIFIED"),
         identificationJson: JSON.stringify({ note, method: "none" }),
         error:
           note ??
@@ -131,6 +147,7 @@ export async function runPipeline(args: {
         // Read, but not separable. No analysis exists until the user answers.
         identificationMode: "uncertain",
         identificationProvenance: mode === "mock" ? "fixture" : "image_model",
+        ...identityColumns(evidence.identity, "NEEDS_CONFIRMATION"),
         identificationJson,
         candidatesJson: JSON.stringify(evidence.candidates),
       },
@@ -147,6 +164,7 @@ export async function runPipeline(args: {
         mode,
         identificationMode: "failed",
         identificationProvenance: "none",
+        ...identityColumns(evidence.identity, "INSUFFICIENT_EVIDENCE"),
         identificationJson,
         error: evidence.note ?? "No published evidence was found for this product.",
       },
@@ -156,6 +174,24 @@ export async function runPipeline(args: {
     return { scanId: scan.id, status: "failed" };
   }
 
+  // ── THE IDENTITY GATE ──────────────────────────────────────────────────
+  //
+  // One decision, made once, consumed by everything after it. Each stage
+  // re-checks the fingerprint of the product it is about to work on, so that
+  // "evidence for product A, nutrition for product B" cannot happen quietly:
+  // it throws instead.
+  const expected = evidence.identity?.fingerprint ?? null;
+
+  if (evidence.identity && !permitsAnalysis(evidence.identity.state)) {
+    // Belt and braces. gatherEvidence already returns product: null for these
+    // states, so reaching here means a future edit broke that contract.
+    throw new Error(
+      `Refusing to analyse: identity state ${evidence.identity.state} does not permit it.`,
+    );
+  }
+
+  assertSameIdentity("evidence retrieval", expected, evidence.product);
+
   const certifications = (await prisma.productCertification.findMany({
     where: { productId: evidence.product.id },
     include: { body: true },
@@ -164,6 +200,7 @@ export async function runPipeline(args: {
     where: { productId: evidence.product.id },
   });
 
+  assertSameIdentity("analysis", expected, evidence.product);
   const analysis = await analyseProduct(evidence.product, certifications, evidenceLookups);
 
   const scan = await prisma.scan.create({
@@ -179,6 +216,7 @@ export async function runPipeline(args: {
       identificationMode: mode === "mock" ? "mock" : "live",
       identificationProvenance:
         mode === "mock" ? "fixture" : evidence.matchSource === "BARCODE" ? "barcode" : "image_model",
+      ...identityColumns(evidence.identity, "IDENTIFIED_BY_BARCODE"),
       identificationJson,
       matchSource: evidence.matchSource ?? null,
       candidatesJson: evidence.candidates ? JSON.stringify(evidence.candidates) : null,

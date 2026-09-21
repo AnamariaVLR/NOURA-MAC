@@ -9,6 +9,7 @@
  */
 
 import { prisma } from "../db";
+import { assertSameIdentity } from "../pipeline/identity";
 import { hasIngredientList } from "../health/added-sugar";
 import { unitPriceFils } from "../format";
 import { evaluateProduct } from "../health/evaluate";
@@ -279,6 +280,13 @@ export async function findAlternatives(args: {
 
 export async function findVerifiedAlternatives(args: {
   productId: string;
+  /**
+   * The identity fingerprint of the scan this is for. Supplied whenever the
+   * caller has one: alternatives are generated AGAINST an identity, and a
+   * mismatch means we would be recommending substitutes for a different
+   * product than the one on the page.
+   */
+  identityFingerprint?: string | null;
   /** The scanned product's own checklist, as persisted against the scan. */
   scannedChecks?: Check[];
   limit?: number;
@@ -295,6 +303,9 @@ export async function findVerifiedAlternatives(args: {
   };
 
   const scannedRow = await prisma.product.findUnique({ where: { id: productId }, include });
+  if (scannedRow && args.identityFingerprint) {
+    assertSameIdentity("alternatives", args.identityFingerprint, scannedRow);
+  }
   if (!scannedRow) {
     return {
       alternatives: [],

@@ -5,6 +5,7 @@
  * in an aisle wants: verified-recently first, then in stock, then cheapest per
  * 100 g/ml.
  */
+import { assertSameIdentity, type IdentifiedProduct } from "../pipeline/identity";
 import { ListingQuerySchema, type Listing, type ListingQuery } from "../schemas";
 import { connectors, registerConnector, type ConnectorQuery } from "./connector";
 import { handConnector } from "./hand-connector";
@@ -57,7 +58,16 @@ export async function searchUaeListings(input: {
   brand?: string | null;
   inStockOnly?: boolean;
   limit?: number;
+  /** The scan's identity fingerprint, and the product it belongs to. */
+  identity?: { fingerprint: string | null; product: IdentifiedProduct } | null;
 }): Promise<Listing[]> {
+  // Commerce is the last stage and the one a shopper acts on. A price for a
+  // different product than the page is about would send someone to a shelf for
+  // the wrong thing, so the identity is re-checked here too.
+  if (input.identity?.fingerprint) {
+    assertSameIdentity("commerce", input.identity.fingerprint, input.identity.product);
+  }
+
   const query = ListingQuerySchema.parse({
     productId: input.productId,
     inStockOnly: input.inStockOnly ?? false,

@@ -336,6 +336,18 @@ model Scan {
   identificationMode String @default("failed")
   /// IdentificationProvenance: barcode | image_model | user_confirmed | fixture | none.
   identificationProvenance String @default("none")
+  /// IdentityState — the machine-readable identity decision. See
+  /// lib/pipeline/identity.ts. Distinct from identificationMode: that says HOW
+  /// the scan was produced, this says what we established about the PRODUCT,
+  /// and "matched by barcode" and "matched by name, corroborated" stay
+  /// distinguishable here rather than collapsing into one label.
+  identityState String @default("NOT_IDENTIFIED")
+  /// The full IdentityRecord as JSON: every signal that agreed or disagreed,
+  /// kept so a scan can be audited long after the fact without re-running it.
+  identityJson String?
+  /// Deterministic key for the resolved product. Every downstream stage
+  /// recomputes it and fails closed on a mismatch.
+  identityFingerprint String?
 
   /// JSON: IdentificationSchema — what stage 2 thought the product was.
   identificationJson String
