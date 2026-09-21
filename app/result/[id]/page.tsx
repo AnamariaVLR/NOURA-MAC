@@ -28,7 +28,8 @@ import { DISCLAIMER } from "@/lib/config";
 import { prisma } from "@/lib/db";
 import { formatAed, formatDate } from "@/lib/format";
 import { findVerifiedAlternatives } from "@/lib/recommend/alternatives";
-import { CERTIFICATION_LABEL } from "@/lib/health/certification";
+import { CERTIFICATION_LABEL, type CertificationState } from "@/lib/health/certification";
+import { describeAll } from "@/lib/evidence/lookups";
 import { COMMERCE_COPY } from "@/lib/recommend/verified-alternatives";
 import { freshnessLabel } from "@/lib/retail/freshness";
 import { bestPrice, searchUaeListings } from "@/lib/retail/search";
@@ -65,7 +66,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
     where: { id },
     include: {
       analysis: true,
-      product: { include: { certifications: { include: { body: true } } } },
+      product: { include: { certifications: { include: { body: true } }, evidenceLookups: true } },
     },
   });
 
@@ -208,6 +209,9 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   // Demo scaffolding is never shown as verification. The enum decides, not a prefix.
   const realCertifications = product.certifications.filter((c) => isVerifiableSource(c.source));
 
+  // Every question we asked a register, and what it answered — one fact each.
+  const claimEvidence = describeAll(product.evidenceLookups);
+
   // Provenance. What the page is entitled to claim depends on how the product
   // was arrived at, and the three cases say genuinely different things.
   const matchSource = MatchSourceSchema.safeParse(scan.matchSource).data ?? null;
@@ -281,16 +285,31 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
             <dt className="text-ink-soft">Last confirmed</dt>
             <dd className="text-right font-medium">{formatDate(product.lastVerifiedAt)}</dd>
           </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-ink-soft">UAE certification</dt>
-            <dd className="text-right font-medium" data-testid="certification-summary">
-              {realCertifications.length === 0 ? (
-                <span className="text-ink-faint">not verified</span>
-              ) : (
-                realCertifications.map((c) => c.certificateType).join(", ")
-              )}
-            </dd>
-          </div>
+          {/* One row per CLAIM, each naming the register that answered it.
+              A single "UAE certification: not verified" line would collapse
+              three different facts into one and imply a judgement about the
+              product that no register made. */}
+          {claimEvidence.length === 0 ? (
+            <div className="flex justify-between gap-3">
+              <dt className="text-ink-soft">Certification</dt>
+              <dd className="text-right font-medium text-ink-faint" data-testid="certification-summary">
+                no register searched yet
+              </dd>
+            </div>
+          ) : (
+            claimEvidence.map((claim) => (
+              <div key={claim.claim} className="flex justify-between gap-3" data-testid="claim-evidence">
+                <dt className="text-ink-soft">{claim.claimLabel}</dt>
+                <dd className="text-right font-medium">
+                  {CERTIFICATION_LABEL[claim.state as CertificationState] ?? claim.state}
+                  <span className="block text-[11px] font-normal text-ink-faint">
+                    {claim.sourceName}
+                    {claim.referenceNumber ? ` · ${claim.referenceNumber}` : ""}
+                  </span>
+                </dd>
+              </div>
+            ))
+          )}
           <div className="flex justify-between gap-3">
             <dt className="text-ink-soft">Prices</dt>
             <dd className="text-right font-medium">

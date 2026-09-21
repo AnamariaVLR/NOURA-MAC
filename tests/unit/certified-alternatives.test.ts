@@ -404,3 +404,72 @@ describe("the empty explanation names what was actually done", () => {
     expect(text).toContain("1 because");
   });
 });
+
+/* ── structured reasons (Phase 6) ───────────────────────────────────────── */
+
+describe("the engine emits structured reasons, not just prose", () => {
+  it("names the dimension, both sides, the evidence and the source", () => {
+    const scanned = candidate({
+      name: "Scanned",
+      checks: [check({ key: "salt", status: "fail" }), check({ key: "sugar" })],
+    });
+    const better = candidate({ name: "Better Oil", certification: "VERIFIED" });
+
+    const result = select(scanned, [better]);
+    const alt = result.alternatives[0];
+    expect(alt).toBeDefined();
+    expect(alt.differences.length).toBeGreaterThan(0);
+
+    for (const d of alt.differences) {
+      expect(["failed_checks", "resolved_evidence", "certification"]).toContain(d.dimension);
+      expect(d.scanned, d.dimension).toBeTruthy();
+      expect(d.alternative, d.dimension).toBeTruthy();
+      expect(d.evidence.length, d.dimension).toBeGreaterThan(10);
+      expect(d.source.length, d.dimension).toBeGreaterThan(3);
+    }
+
+    const cert = alt.differences.find((d) => d.dimension === "certification");
+    expect(cert?.scanned).toBe("NOT_FOUND");
+    expect(cert?.alternative).toBe("VERIFIED");
+    expect(cert?.source).toMatch(/MOIAT/);
+  });
+
+  it("keeps the prose and the structure in lockstep — one sentence per reason", () => {
+    const scanned = candidate({ name: "S", checks: [check({ key: "salt", status: "fail" })] });
+    const better = candidate({ name: "B", certification: "VERIFIED" });
+    const alt = select(scanned, [better]).alternatives[0];
+    expect(alt.betterOn).toEqual(alt.differences.map((d) => d.sentence));
+    for (const s of alt.betterOn) expect(alt.why).toContain(s);
+  });
+
+  it("emits no reasons at all when nothing is better — the empty case is not prose", () => {
+    const scanned = candidate({ name: "S" });
+    const same = candidate({ name: "Same" });
+    const result = select(scanned, [same]);
+    expect(result.alternatives).toHaveLength(0);
+    expect(result.emptyReason).toBeTruthy();
+  });
+});
+
+describe("availability is separate evidence from price", () => {
+  it("keeps retailer, size, price, availability and lastChecked as distinct fields", () => {
+    const l = listing();
+    expect(l.retailer.name).toBeTruthy();
+    expect(l.sizeLabel).toBeTruthy();
+    expect(l.priceFils).toBeGreaterThan(0);
+    expect(typeof l.inStock).toBe("boolean");
+    expect(l.checkedAt).toBeTruthy();
+    expect(l.checkedBy).toBeTruthy();
+  });
+
+  it("never estimates a price for a product nobody has checked", () => {
+    const c = candidate({ name: "Unpriced", bestListing: null });
+    expect(c.bestListing).toBeNull();
+    const alt = select(
+      candidate({ name: "S", checks: [check({ key: "salt", status: "fail" })] }),
+      [c],
+    ).alternatives[0];
+    expect(alt.commerce).toBe("PRICE_UNVERIFIED");
+    expect(JSON.stringify(alt)).not.toMatch(/estimat|approx|around AED/i);
+  });
+});
