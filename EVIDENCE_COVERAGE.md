@@ -78,3 +78,50 @@ row. The work is recorded here so it can be picked up without repeating the rese
   (519 UAE-tagged barcodes harvested, 0 intersection). That sample is too thin to support a
   conclusion, so **no claim is made** about how many EU Ecolabel products reach UAE shelves. The
   zero above rests on the regulatory scope exclusion, which is not a sampling question.
+
+---
+
+## M2 — Evidence and commerce coverage after the catalogue expansion (21 September 2026)
+
+262 products, 1,013 retailer listings, 786 EvidenceLookup rows.
+
+### MOIAT, by claim
+
+| Claim | VERIFIED | BRAND_LEVEL_ONLY | EXPIRED | NOT_FOUND |
+|---|---|---|---|---|
+| UAE conformity | 37 | 64 | 3 | 158 |
+| Halal | 6 | 33 | 2 | 221 |
+| Organic | 0 | 10 | 0 | 252 |
+
+262 products asked, **0 query failures**. Every NOT_FOUND above is a fact about
+the register, established by asking it.
+
+The three rows differ, which is the whole argument for keeping them apart: a
+single "certification" verdict would have to pick one of them and discard two.
+
+### Operational buckets
+
+| Bucket | Count | Share |
+|---|---|---|
+| A — verified for the exact product, on some claim | 42 | 16% |
+| B — brand-level only | 86 | 33% |
+| C — not found in the source searched | 134 | 51% |
+| D — unknown or never asked | 1 | <1% |
+| **E — no verified price** | **262** | **100%** |
+| **F — no verified availability** | **262** | **100%** |
+
+Counts A-D are exclusive and ordered by strength; E and F are independent.
+
+### What this says
+
+Certification coverage is now reasonable and, more importantly, *honest* — every
+state traces to a named register and a retrieval date. **Commerce coverage is
+zero**, and that is the whole of the remaining gap. Noura can say what a product
+is and what can be proved about it; it cannot yet finish the sentence "…that you
+can buy at this price, here, today".
+
+`npm run price:priority` ranks the products whose prices would unlock the most
+recommendations. The distribution is steep — the top two products alone account
+for 114 recommendation slots — so this is an afternoon of fieldwork, not a data
+programme.
+
