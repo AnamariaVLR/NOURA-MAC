@@ -384,6 +384,41 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
     // shopper to check. A note is not a gate. It is how a scan of an
     // unidentifiable image became a verdict about a product called "Momo black".
     const product = await upsertFromOpenDb(record, category, subcategory, sizeLabel);
+
+    // THE SAME VARIANT RULE AS THE LOCAL MATCHER, APPLIED HERE TOO.
+    //
+    // searchByName returns whatever the open database ranked first, and until
+    // now a corroborated brand was enough to accept it. A real photograph broke
+    // that: a bottle reading "renewing + argan oil of morocco PENETRATING OIL"
+    // matched "Renewing Argan Oil of Morocco EXTRA Penetrating Oil" — same
+    // brand, same size, neighbouring SKU. The brand corroborated perfectly,
+    // because the brand was never the thing that was wrong.
+    //
+    // decideMatch already refuses a candidate carrying words the scan did not
+    // read, for exactly this reason. Running the open-database result through
+    // it means one rule governs both paths instead of the weaker path deciding
+    // what the stricter one would have rejected.
+    const openDecision = decideMatch({ name, brand, sizeLabel, visibleText }, [product]);
+    if (openDecision.kind !== "auto") {
+      return {
+        product: null,
+        method: "none",
+        identityBasis: "uncorroborated",
+        note:
+          `The closest match we found is ${product.brand ?? "a product"} — ${product.name}, ` +
+          "which is not quite what the pack says. Please confirm before we assess anything.",
+        candidates: [toMatchCandidate({ product, containment: 1, unseenTokens: [], sizeMatches: false })],
+        identity: identityRecord({
+          state: "NEEDS_CONFIRMATION",
+          identification,
+          product,
+          matchMethod: "name-open-db",
+          reason:
+            "An open-database name search returned a product carrying words the scan never read.",
+        }),
+      };
+    }
+
     const basis = identityBasis({ barcode, visibleText, matchedBrand: product.brand });
 
     if (!basisPermitsAnalysis(basis)) {

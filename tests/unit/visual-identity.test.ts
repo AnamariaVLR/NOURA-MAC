@@ -200,3 +200,59 @@ describe("the hierarchy is visual first, barcode corroborating", () => {
     expect(permitsAnalysis("IDENTIFIED_BY_NAME_WITH_CORROBORATION")).toBe(true);
   });
 });
+
+/* ── the variant case a real photograph found ───────────────────────────── */
+
+describe("a neighbouring SKU is not the product in the photograph", () => {
+  it("refuses a match carrying words the scan never read", () => {
+    // From a real phone photo: a bottle reading
+    //   "renewing + argan oil of morocco PENETRATING OIL"
+    // matched an open-database record for
+    //   "Renewing Argan Oil of Morocco EXTRA Penetrating Oil"
+    // Same brand, same 100 ml size, neighbouring SKU. The brand corroborated
+    // perfectly, because the brand was never the thing that was wrong.
+    const openDbResult = [
+      {
+        id: "ogx-extra",
+        slug: "ogx-extra",
+        name: "Renewing Argan Oil of Morocco Extra Penetrating Oil",
+        brand: "OGX",
+        sizeLabel: "100 ml",
+        imageUrl: null,
+      },
+    ];
+    const decision = decideMatch(
+      {
+        name: "Renewing + Argan Oil of Morocco Penetrating Oil",
+        brand: "OGX",
+        sizeLabel: "100 ml",
+        visibleText: "renewing + argan oil of morocco PENETRATING OIL all hair types",
+      },
+      openDbResult,
+    );
+    expect(decision.kind).not.toBe("auto");
+  });
+
+  it("accepts the same record once the scan has read the distinguishing word", () => {
+    const openDbResult = [
+      {
+        id: "ogx-extra",
+        slug: "ogx-extra",
+        name: "Renewing Argan Oil of Morocco Extra Penetrating Oil",
+        brand: "OGX",
+        sizeLabel: "100 ml",
+        imageUrl: null,
+      },
+    ];
+    const decision = decideMatch(
+      {
+        name: "Renewing Argan Oil of Morocco Extra Penetrating Oil",
+        brand: "OGX",
+        sizeLabel: "100 ml",
+        visibleText: "OGX renewing argan oil of morocco extra penetrating oil",
+      },
+      openDbResult,
+    );
+    expect(decision.kind).toBe("auto");
+  });
+});
