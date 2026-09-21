@@ -148,6 +148,8 @@ CREATE TABLE "Scan" (
     "matchSource" TEXT,
     "candidatesJson" TEXT,
     "mode" TEXT NOT NULL,
+    "identificationMode" TEXT NOT NULL DEFAULT 'failed',
+    "identificationProvenance" TEXT NOT NULL DEFAULT 'none',
     "identificationJson" TEXT NOT NULL,
     "productId" TEXT,
     "error" TEXT,

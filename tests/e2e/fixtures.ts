@@ -18,7 +18,7 @@ const BASE_URL = `http://127.0.0.1:${process.env.PORT ?? 3100}`;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 let client: PrismaClient | null = null;
-function prisma(): PrismaClient {
+export function prisma(): PrismaClient {
   if (!client) client = new PrismaClient();
   return client;
 }

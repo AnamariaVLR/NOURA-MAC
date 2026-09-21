@@ -31,6 +31,10 @@ import { findVerifiedAlternatives } from "@/lib/recommend/alternatives";
 import { CERTIFICATION_LABEL, type CertificationState } from "@/lib/health/certification";
 import { describeAll } from "@/lib/evidence/lookups";
 import {
+  VERDICT_BEARING_MODES,
+  type IdentificationMode,
+} from "@/lib/schemas";
+import {
   availabilitySentence,
   commerceKindOf,
   priceSentence,
@@ -75,8 +79,18 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   });
 
   if (!scan) notFound();
-  // Scans are per-browser. Someone else's id is not found, not forbidden.
-  if (userKey && scan.userKey !== userKey) notFound();
+  // Scans are per-browser, and "per-browser" has to mean it.
+  //
+  // This read `userKey && scan.userKey !== userKey`, so the check only applied
+  // to a visitor who ALREADY had a cookie. Anyone without one — a fresh
+  // browser, a cleared session, a private window — skipped it entirely and
+  // could open any scan by its id. The promise on the not-found page ("scans
+  // belong to the browser that made them") was not enforced for exactly the
+  // visitors it describes.
+  //
+  // No cookie is now the same as the wrong cookie: not found, not forbidden,
+  // because whether a scan exists is itself none of a stranger's business.
+  if (!userKey || scan.userKey !== userKey) notFound();
 
   const identification = parseJsonColumn(scan.identificationJson, IdentificationWithMetaSchema);
 
@@ -117,6 +131,41 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
         <Link href="/" className="block text-center text-[13px] underline underline-offset-2">
           Scan something else
+        </Link>
+      </div>
+    );
+  }
+
+  // THE INVARIANT, ENFORCED AT RENDER.
+  //
+  // A verdict may be shown only for a scan whose recorded identificationMode
+  // says a product was actually identified from the user's input or chosen by
+  // them. This is a second gate, deliberately: the pipeline already refuses to
+  // WRITE an analysis without one, and this refuses to SHOW one. The Coca-Cola
+  // page looked entirely normal, so a check that depends on the page looking
+  // wrong is not a check.
+  const identifiedProperly = VERDICT_BEARING_MODES.includes(
+    scan.identificationMode as IdentificationMode,
+  );
+
+  if (!identifiedProperly) {
+    return (
+      <div className="space-y-4">
+        <EmptyState
+          title="Product not identified"
+          body={
+            scan.error ??
+            "Noura could not establish what this product is, so it has assessed nothing. " +
+              "No verdict, no certification and no alternatives are shown, because all three " +
+              "would be about a product you did not photograph."
+          }
+          testId="not-identified"
+        />
+        <p className="px-1 text-[12px] leading-relaxed text-ink-faint">
+          Identification mode: {scan.identificationMode}. Provenance: {scan.identificationProvenance}.
+        </p>
+        <Link href="/scan" className="block text-center text-[13px] underline underline-offset-2">
+          Try another photo
         </Link>
       </div>
     );
@@ -241,12 +290,13 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
             Nothing was read from your photo
           </p>
           <p className="mt-2 text-[14px] leading-snug text-ink">
-            This server has no product identification configured, so Noura is showing a{" "}
-            <strong>fixture product</strong> instead. The name, the checks and the sources below
-            are real — and they are about that fixture, not about the thing you photographed.
+            This is a <strong>fixture used for testing</strong>. The product below was not
+            identified from your image.
           </p>
           <p className="mt-2 text-[12px] leading-relaxed text-ink-soft">
-            Set ANTHROPIC_API_KEY and scan again. Nothing on this page should be acted on.
+            A fixture is only ever shown when NOURA_FORCE_MOCK is set explicitly. The checks and
+            sources below are real and are about the fixture, not about anything you photographed.
+            Nothing on this page should be acted on.
           </p>
         </div>
       ) : null}

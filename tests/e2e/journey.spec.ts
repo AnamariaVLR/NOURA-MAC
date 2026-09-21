@@ -232,24 +232,6 @@ test("recording neither fact is refused, rather than stored as a blank check", a
   );
 });
 
-/* ── the fixture warning, as a person would meet it ─────────────────────── */
-
-test("a fixture scan says so before it says anything else", async ({ page }) => {
-  // The whole suite runs with NOURA_FORCE_MOCK=1, so every scan here is a
-  // fixture — which makes this the right place to assert the warning exists and
-  // comes first.
-  await page.goto("/scan");
-  await page.getByTestId("file-input").setInputFiles(FIXTURE);
-  await page.getByTestId("analyse-button").click();
-  await page.waitForURL(/\/result\/[a-z0-9]+/i, { timeout: 60_000 });
-
-  const warning = page.getByTestId("fixture-warning");
-  await expect(warning).toBeVisible();
-  await expect(warning).toContainText(/nothing was read from your photo/i);
-  await expect(warning).toContainText(/fixture product/i);
-
-  // Above the product name on the page, not tucked in beside it.
-  const warningBox = await warning.boundingBox();
-  const nameBox = await page.getByTestId("product-name").boundingBox();
-  expect(warningBox!.y).toBeLessThan(nameBox!.y);
-});
+/* The fixture warning is asserted in tests/e2e/identity.spec.ts (case B), which
+   checks the rendered geometry AND the scan row's recorded mode. One test, in
+   the file about identity, rather than two that can disagree. */

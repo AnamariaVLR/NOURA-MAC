@@ -27,6 +27,7 @@ import { certificationCheck } from "@/lib/health/checks";
 import { CheckSchema } from "@/lib/schemas";
 import { limitKey, windowStartFor } from "@/lib/rate-limit";
 import { fixtureAllowed, scanLimitPerAddressPerHour, scanLimitPerHour } from "@/lib/config";
+import { MIN_IDENTIFY_CONFIDENCE, isUsableIdentification } from "@/lib/pipeline/identify";
 import { CATALOGUE } from "@/prisma/seed-data/catalogue";
 import { CATEGORY_RULES } from "@/lib/health/categories";
 import type { Basis } from "@/lib/health/categories/types";
@@ -476,10 +477,23 @@ describe("a fixture identification can never masquerade as a real one", () => {
     expect(fixtureAllowed()).toBe(true);
   });
 
-  it("allows a fixture in development, where the banner explains it", () => {
+  it("refuses a fixture in development too — a wrong answer teaches a developer the wrong thing", () => {
+    // The first version of this fix allowed development to fall back to a
+    // fixture. That is still a person holding a yoghurt and being shown
+    // Coca-Cola, and it is the door the real incident came through.
     (process.env as Record<string, string | undefined>).NODE_ENV = "development";
     delete process.env.NOURA_FORCE_MOCK;
-    expect(fixtureAllowed()).toBe(true);
+    expect(fixtureAllowed()).toBe(false);
+  });
+
+  it("makes NOURA_FORCE_MOCK the only door", () => {
+    for (const env of ["production", "development", "test"]) {
+      (process.env as Record<string, string | undefined>).NODE_ENV = env;
+      delete process.env.NOURA_FORCE_MOCK;
+      expect(fixtureAllowed(), env).toBe(false);
+      process.env.NOURA_FORCE_MOCK = "1";
+      expect(fixtureAllowed(), env).toBe(true);
+    }
   });
 
   it("warns before the product name, not after it", () => {
@@ -491,5 +505,49 @@ describe("a fixture identification can never masquerade as a real one", () => {
     expect(warning).toBeGreaterThan(-1);
     expect(warning).toBeLessThan(product);
     expect(page).toMatch(/Nothing was read from your photo/);
+  });
+});
+
+/* ── "I don't know" is not a product name ──────────────────────────────── */
+
+describe("a model's refusal to identify is never treated as an identification", () => {
+  const base = {
+    name: "Greek Yoghurt",
+    brand: "Al Rawabi",
+    barcode: null as string | null,
+    category: "yogurt",
+    subcategory: null,
+    sizeLabel: "360 g",
+    confidence: 0.9,
+    visibleText: null,
+  };
+
+  it("accepts a confident, named read", () => {
+    expect(isUsableIdentification(base as never)).toBe(true);
+  });
+
+  it("rejects the words a model uses to say it could not tell", () => {
+    // The live model returned exactly this, correctly, and the pipeline searched
+    // Open Food Facts for the string "Unknown", matched "Momo black", and
+    // rendered a complete verdict about it.
+    for (const name of ["Unknown", "unknown", "N/A", "none", "unclear", "unreadable", "?", ""]) {
+      expect(isUsableIdentification({ ...base, name, confidence: 0.1 } as never), name).toBe(false);
+    }
+  });
+
+  it("rejects a named read the model has itself disclaimed", () => {
+    expect(
+      isUsableIdentification({ ...base, confidence: MIN_IDENTIFY_CONFIDENCE - 0.01 } as never),
+    ).toBe(false);
+    expect(
+      isUsableIdentification({ ...base, confidence: MIN_IDENTIFY_CONFIDENCE } as never),
+    ).toBe(true);
+  });
+
+  it("lets a barcode settle it whatever the confidence says", () => {
+    // A read barcode is an identity, not an opinion.
+    expect(
+      isUsableIdentification({ ...base, name: "Unknown", confidence: 0.05, barcode: "6291103793003" } as never),
+    ).toBe(true);
   });
 });

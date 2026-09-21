@@ -92,6 +92,8 @@ export async function runPipeline(args: {
         imageMime: args.image.imageMime ?? args.mime,
         status: "failed",
         mode,
+        identificationMode: "failed",
+        identificationProvenance: "none",
         identificationJson: JSON.stringify({ note, method: "none" }),
         error:
           note ??
@@ -126,6 +128,9 @@ export async function runPipeline(args: {
         ...image,
         status: "needs_confirmation",
         mode,
+        // Read, but not separable. No analysis exists until the user answers.
+        identificationMode: "uncertain",
+        identificationProvenance: mode === "mock" ? "fixture" : "image_model",
         identificationJson,
         candidatesJson: JSON.stringify(evidence.candidates),
       },
@@ -140,6 +145,8 @@ export async function runPipeline(args: {
         ...image,
         status: "failed",
         mode,
+        identificationMode: "failed",
+        identificationProvenance: "none",
         identificationJson,
         error: evidence.note ?? "No published evidence was found for this product.",
       },
@@ -165,6 +172,13 @@ export async function runPipeline(args: {
       ...image,
       status: "complete",
       mode,
+      // The one place a scan acquires a verdict. The mode says how it got the
+      // identity that verdict is about; a "mock" here can only have come from
+      // an explicitly requested fixture, because fixtureAllowed() is the only
+      // door and it opens on NOURA_FORCE_MOCK alone.
+      identificationMode: mode === "mock" ? "mock" : "live",
+      identificationProvenance:
+        mode === "mock" ? "fixture" : evidence.matchSource === "BARCODE" ? "barcode" : "image_model",
       identificationJson,
       matchSource: evidence.matchSource ?? null,
       candidatesJson: evidence.candidates ? JSON.stringify(evidence.candidates) : null,

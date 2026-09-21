@@ -398,9 +398,17 @@ export function Disclaimer({ text }: { text: string }) {
   );
 }
 
-export function EmptyState({ title, body }: { title: string; body: string }) {
+export function EmptyState({
+  title,
+  body,
+  testId,
+}: {
+  title: string;
+  body: string;
+  testId?: string;
+}) {
   return (
-    <Card className="text-center">
+    <Card className="text-center" testId={testId}>
       <p className="font-display text-[22px] leading-tight">{title}</p>
       <p className="mx-auto mt-2.5 max-w-[40ch] text-[13.5px] leading-relaxed text-ink-soft">{body}</p>
     </Card>

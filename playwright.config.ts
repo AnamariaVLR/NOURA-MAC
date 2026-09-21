@@ -29,6 +29,9 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD?.trim() || "playwright-admin-p
 process.env.ADMIN_PASSWORD = ADMIN_PASSWORD;
 const baseURL = `http://127.0.0.1:${PORT}`;
 
+const UNCONFIGURED_PORT = PORT + 1;
+const unconfiguredURL = `http://127.0.0.1:${UNCONFIGURED_PORT}`;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 90_000,
@@ -43,7 +46,23 @@ export default defineConfig({
     viewport: { width: 390, height: 844 },
     trace: "retain-on-failure",
   },
-  webServer: {
+  // Two projects, because the incident this suite exists to prevent is a
+  // CONFIGURATION, and a configuration cannot be tested from inside a server
+  // started with the opposite one.
+  projects: [
+    {
+      name: "fixture",
+      testIgnore: /no-identification\.spec\.ts/,
+    },
+    {
+      name: "unconfigured",
+      testMatch: /no-identification\.spec\.ts/,
+      use: { baseURL: unconfiguredURL },
+    },
+  ],
+
+  webServer: [
+   {
     // Runs against a production build with no ANTHROPIC_API_KEY, i.e. mock mode.
     command: `npm run build && npm run start -- --port ${PORT}`,
     url: baseURL,
@@ -72,5 +91,28 @@ export default defineConfig({
       // of the test is that a wrong password is refused and the right one is not.
       ADMIN_PASSWORD,
     },
-  },
+   },
+   {
+    // THE CONFIGURATION THAT CAUSED THE INCIDENT.
+    //
+    // No NOURA_FORCE_MOCK and no usable key: a server that cannot identify
+    // anything. It used to answer every photo with Coca-Cola. The
+    // no-identification suite runs here and asserts that it now answers with
+    // nothing at all.
+    //
+    // NOURA_DISABLE_IDENTIFICATION defeats whatever key .env holds, because
+    // .env beats webServer.env and a developer with a real key would otherwise
+    // never run this test at all.
+    command: `npm run start -- --port ${UNCONFIGURED_PORT}`,
+    url: unconfiguredURL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 240_000,
+    env: {
+      NOURA_DISABLE_IDENTIFICATION: "1",
+      VERIFIED_OFFLINE: "1",
+      SCAN_RATE_LIMIT_PER_HOUR: "100000",
+      ADMIN_PASSWORD,
+    },
+   },
+  ],
 });

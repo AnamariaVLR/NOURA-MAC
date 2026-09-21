@@ -53,12 +53,27 @@ export function forceMock(): boolean {
  * A failed scan is a worse demo and a better product.
  */
 export function fixtureAllowed(): boolean {
-  if (forceMock()) return true;
-  return process.env.NODE_ENV !== "production";
+  // Explicit, and nothing else. Not "production is stricter than development":
+  // a developer holding a yoghurt and reading Coca-Cola learns the wrong thing
+  // about their own app, and the fixture that reached a user reached them
+  // through exactly this door being merely ajar.
+  return forceMock();
+}
+
+/**
+ * Hard-off switch for identification, so the unconfigured case is testable.
+ *
+ * .env beats anything a test harness passes in — the trap that has now bitten
+ * this project three times — so "just unset the key" cannot produce a server
+ * that genuinely cannot identify. A flag the app reads first can.
+ */
+export function identificationDisabled(): boolean {
+  return process.env.NOURA_DISABLE_IDENTIFICATION === "1";
 }
 
 export function runMode(): RunMode {
   if (forceMock()) return "mock";
+  if (identificationDisabled()) return "mock";
   return apiKey() ? "live" : "mock";
 }
 

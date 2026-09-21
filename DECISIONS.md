@@ -1601,3 +1601,57 @@ Whether "GOOD CHOICE" itself is the right summary of "80% of resolved checks
 passed" is a separate question, and it is not mine to answer: RUBRIC §9 Q16 now
 asks the nutritionist, alongside Q7 on the cut-offs themselves.
 
+## 100. One authoritative identity per scan, recorded on the row
+
+A photograph of Al Rawabi Greek yoghurt returned a complete Coca-Cola
+assessment. Correct sugar figure, real EFSA citation, cited sources — and about
+a product nobody photographed.
+
+The invariant is now explicit: a verdict, certification, alternatives or
+commerce may exist only where the scan's own `identificationMode` says a product
+was established from the user's input or chosen by them. It is stored on the row
+rather than derived at render, because the bad page looked entirely normal and
+the only thing wrong with it was invisible.
+
+  live       a model read the user's image
+  confirmed  the user chose from candidates we offered
+  mock       nothing was read; a fixture was explicitly requested
+  failed     identification produced no product
+  uncertain  read, not separable, awaiting an answer
+
+Analysis may be written for the first three only, and the page enforces the same
+rule a second time before rendering.
+
+## 101. A fixture is asked for, never fallen into
+
+`runMode()` returned "mock" whenever ANTHROPIC_API_KEY was absent, and mock mode
+returns a real catalogue product with real evidence. `fixtureAllowed()` is now
+`forceMock()` and nothing else — not "production is stricter than development",
+because a developer holding a yoghurt and being shown Coca-Cola learns the wrong
+thing about their own app, and that door is how this reached a user.
+
+## 102. "Unknown" is not a product name
+
+Found by running the live model rather than by reasoning about it. Asked to
+identify a synthetic test image, the model answered correctly:
+`{ name: "Unknown", confidence: 0.1, barcode: null }`. The pipeline took that
+refusal, searched Open Food Facts for the literal string "Unknown", matched a
+product called "Momo black", and rendered a complete verdict about it.
+
+`confidence` had been parsed since the beginning, documented as "surfaced to the
+user, never used to gate silently", and never read by anything.
+
+`isUsableIdentification` now decides. A barcode settles identity whatever the
+confidence says — a read barcode is an identity, not an opinion. Without one, a
+name that is a refusal, or a confidence the model has itself disclaimed below
+MIN_IDENTIFY_CONFIDENCE (0.35, POLICY), is not an identification and cannot
+become one.
+
+## 103. A scan belongs to the browser that made it, including a browser with no cookie
+
+The result page checked ownership as `userKey && scan.userKey !== userKey`, so
+the check applied only to visitors who already had a cookie. A fresh browser, a
+cleared session or a private window skipped it entirely and could open any scan
+by id — the exact visitors the not-found copy describes. No cookie is now the
+same as the wrong cookie.
+

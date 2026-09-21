@@ -96,6 +96,51 @@ function mediaType(mime: string): "image/jpeg" | "image/png" | "image/webp" | "i
   }
 }
 
+/**
+ * Words a model uses to say it could not identify the product.
+ *
+ * The model is behaving correctly when it returns these — it is refusing to
+ * guess. The bug is downstream treating the refusal as a name.
+ */
+const NON_ANSWERS = new Set([
+  "unknown", "unidentified", "not identified", "n/a", "na", "none", "unclear",
+  "unreadable", "not visible", "no product", "product", "item", "?", "-",
+]);
+
+/**
+ * Below this, a model's self-reported confidence is not an identification.
+ *
+ * POLICY, and arbitrary in the way every threshold is arbitrary: no source sets
+ * a floor for a vision model's self-assessment. It sits low on purpose, so that
+ * it catches only answers the model has effectively disclaimed, and the name
+ * check above does the real work.
+ */
+export const MIN_IDENTIFY_CONFIDENCE = 0.35;
+
+/**
+ * Did the model actually identify something?
+ *
+ * A BARCODE settles it whatever the confidence says: a read barcode is an
+ * identity, not an opinion. Without one, all we have is the name, and a name
+ * that is a refusal — or a confidence the model has itself disclaimed — is not
+ * an identification and must not become one.
+ *
+ * This existed as a gap, not a decision. A live scan returned
+ * `{ name: "Unknown", confidence: 0.1, barcode: null }` — the model correctly
+ * saying it could not tell — and the pipeline searched Open Food Facts for the
+ * literal string "Unknown", matched a product called "Momo black", and rendered
+ * a complete verdict about it.
+ */
+export function isUsableIdentification(identification: Identification): boolean {
+  if (identification.barcode) return true;
+
+  const name = identification.name?.trim().toLowerCase() ?? "";
+  if (name.length < 2) return false;
+  if (NON_ANSWERS.has(name)) return false;
+
+  return identification.confidence >= MIN_IDENTIFY_CONFIDENCE;
+}
+
 export async function identifyProduct(image: {
   base64: string;
   mime: string;
@@ -167,6 +212,20 @@ export async function identifyProduct(image: {
       mode: "live",
       model: MODEL,
       note: `We could not read this product from the photo (${issue?.path.join(".") || "answer"}: ${issue?.message ?? "invalid"}).`,
+    };
+  }
+
+  if (!isUsableIdentification(parsed.data)) {
+    // The model answered honestly that it could not tell. Passing that answer
+    // down the pipeline turns "I don't know" into a search term, and a search
+    // term into somebody else's product.
+    return {
+      identification: null,
+      mode: "live",
+      model: MODEL,
+      note:
+        "Noura could not identify a product in this image. Nothing has been assessed. " +
+        "Try the front of the pack, or a barcode, in better light.",
     };
   }
 

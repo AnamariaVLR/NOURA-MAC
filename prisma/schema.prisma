@@ -329,6 +329,13 @@ model Scan {
   candidatesJson String?
   /// "live" (Anthropic API) | "mock" (no ANTHROPIC_API_KEY)
   mode           String
+  /// IdentificationMode: live | confirmed | mock | failed | uncertain.
+  /// The authoritative record of HOW this scan acquired a product, checked by
+  /// the pipeline before any analysis is written and by the page before any
+  /// verdict is rendered.
+  identificationMode String @default("failed")
+  /// IdentificationProvenance: barcode | image_model | user_confirmed | fixture | none.
+  identificationProvenance String @default("none")
 
   /// JSON: IdentificationSchema — what stage 2 thought the product was.
   identificationJson String

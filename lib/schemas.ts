@@ -104,6 +104,42 @@ export type Verdict = z.infer<typeof VerdictSchema>;
  * entitled to claim. Provenance, like everything else here — see DECISIONS §73.
  */
 export const MatchSourceSchema = z.enum(["BARCODE", "NAME_AUTO", "USER_CONFIRMED"]);
+
+/**
+ * HOW a scan came to be about a product, recorded on the scan row itself.
+ *
+ * The invariant: a verdict may exist only when this is `live`, `confirmed` or
+ * `mock`, and `mock` may exist only when a fixture was explicitly asked for.
+ * Putting it in the database rather than deriving it at render time means the
+ * claim can be checked without trusting the page — the Coca-Cola result looked
+ * entirely normal, and the only thing wrong with it was invisible.
+ */
+export const IdentificationModeSchema = z.enum([
+  /** A model read the user's image. */
+  "live",
+  /** The user chose from candidates we offered. */
+  "confirmed",
+  /** Nothing was read; a fixture was explicitly requested. */
+  "mock",
+  /** Identification was attempted or impossible, and produced no product. */
+  "failed",
+  /** Read, but not separable — awaiting the user's answer. */
+  "uncertain",
+]);
+export type IdentificationMode = z.infer<typeof IdentificationModeSchema>;
+
+/** WHAT the identity rests on. */
+export const IdentificationProvenanceSchema = z.enum([
+  "barcode",
+  "image_model",
+  "user_confirmed",
+  "fixture",
+  "none",
+]);
+export type IdentificationProvenance = z.infer<typeof IdentificationProvenanceSchema>;
+
+/** The modes for which a product verdict may exist at all. */
+export const VERDICT_BEARING_MODES: readonly IdentificationMode[] = ["live", "confirmed", "mock"];
 export type MatchSource = z.infer<typeof MatchSourceSchema>;
 
 /** One option in a "Which one is this?" question. */

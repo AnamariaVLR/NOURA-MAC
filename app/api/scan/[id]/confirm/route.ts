@@ -103,7 +103,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   await prisma.scan.update({
     where: { id: scan.id },
-    data: { productId: product.id, status: "complete", matchSource: "USER_CONFIRMED", error: null },
+    data: {
+      productId: product.id,
+      status: "complete",
+      matchSource: "USER_CONFIRMED",
+      // The user picked this from candidates we offered. That is the strongest
+      // provenance Noura has, and the only one that does not rest on a model.
+      identificationMode: "confirmed",
+      identificationProvenance: "user_confirmed",
+      error: null,
+    },
   });
 
   return NextResponse.json({ id: scan.id, product: product.name }, { status: 200 });
