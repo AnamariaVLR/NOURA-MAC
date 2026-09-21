@@ -36,6 +36,21 @@ export function ageInDays(checkedAt: Date, now: Date = new Date()): number {
 }
 
 /**
+ * The sources that can carry a price at all. An allow-list rather than a chain
+ * of negations: adding a source now means adding it here deliberately, and
+ * forgetting to means the price is hidden rather than silently promoted.
+ *
+ * Being on this list decides only whether a price may be SHOWN. What it may be
+ * CALLED is lib/retail/provenance.ts, which is a separate question — a retailer
+ * page is quotable and is never "verified by hand".
+ */
+const COMMERCE_SOURCES: ReadonlySet<DataSource> = new Set([
+  "HAND_VERIFIED",
+  "RETAILER_PAGE",
+  "RETAILER_API",
+]);
+
+/**
  * Is this check something we may present as a verified price?
  *
  * Two conditions, both required:
@@ -47,12 +62,10 @@ export function isFreshCheck(
   now: Date = new Date(),
 ): boolean {
   if (!isVerifiableSource(check.source)) return false;
-  if (check.source !== ("HAND_VERIFIED" satisfies DataSource)) {
-    // A future live connector will qualify here too; nothing ships that does yet.
-    if (check.source !== ("RETAILER_API" satisfies DataSource)) return false;
-  }
+  if (!COMMERCE_SOURCES.has(check.source as DataSource)) return false;
   return ageInDays(check.checkedAt, now) < FRESHNESS_DAYS;
 }
+
 
 export type Staleness = "fresh" | "stale" | "never-checked" | "not-evidence";
 
@@ -68,8 +81,15 @@ export function stalenessOf(
 }
 
 /**
- * The sentence shown beside a price. Never says "live", never implies a number is
- * current when it is not.
+ * The sentence for a HAND-CHECKED price, and only for one.
+ *
+ * ⚠️ This function assumes a person made the check. It has no idea what source
+ * the row came from, so calling it for a retailer-page price would announce a
+ * scraped number as hand-verified — the exact misattribution the product cannot
+ * afford. Anything user-facing that renders a price must go through
+ * lib/retail/provenance.ts `priceSentence()`, which takes the source kind.
+ *
+ * Retained for the admin queue, where every row is a hand check by construction.
  */
 export function freshnessLabel(
   staleness: Staleness,

@@ -102,7 +102,7 @@ test("better alternative: shows what to buy instead, with who checked it and whe
   for (const card of await alternatives.all()) {
     const text = await card.innerText();
     if (/AED \d+\.\d{2}/.test(text)) {
-      expect(text).toMatch(/Verified by hand on .+ by E2E Checker/);
+      expect(text).toMatch(/Price checked by hand on .+ by E2E Checker/);
     } else {
       await expect(card.getByTestId("alt-no-price")).toContainText(/price not verified yet|availability not verified recently/i);
     }
@@ -114,7 +114,7 @@ test("better alternative: shows what to buy instead, with who checked it and whe
   // we happen to hold a price.
   const priced = alternatives.filter({ hasText: /AED \d/ });
   for (const card of await priced.all()) {
-    await expect(card).toContainText(/Verified by hand on .+ by E2E Checker/);
+    await expect(card).toContainText(/Price checked by hand on .+ by E2E Checker/);
   }
 
   // The five blocks, in order. Headings render uppercase via CSS, and innerText
@@ -233,12 +233,12 @@ test("stale listing: shown with its date, never as a live price", async ({ page 
   await expect(label).toContainText(/not verified recently/i);
   // The date is still there — it is the last thing we actually know.
   await expect(label).toContainText(/\d{4}/);
-  await expect(label).not.toContainText(/Verified by hand/i);
+  await expect(label).not.toContainText(/checked by hand/i);
 
   // A lapsed check cannot be the cheapest verified price, and cannot assert stock.
   const whereToBuy = await page.getByTestId("where-to-buy").innerText();
   expect(whereToBuy).toMatch(/AED 2\.75/); // the number is still shown
-  expect(whereToBuy).not.toMatch(/Cheapest verified/i);
+  expect(whereToBuy).not.toMatch(/Lowest recorded price/i);
   expect(whereToBuy).not.toMatch(/in stock/i);
 });
 
@@ -256,8 +256,8 @@ test("stale listing: a fresh check outranks a lapsed cheaper one", async ({ page
 
   // The verified price is the headline, even though it is nine times the lapsed one.
   const whereToBuy = await page.getByTestId("where-to-buy").innerText();
-  expect(whereToBuy).toMatch(/Cheapest verified:\s*AED 9\.00/);
-  expect(whereToBuy).not.toMatch(/Cheapest verified:\s*AED 1\.00/);
+  expect(whereToBuy).toMatch(/Lowest recorded price:\s*AED 9\.00/);
+  expect(whereToBuy).not.toMatch(/Lowest recorded price:\s*AED 1\.00/);
 });
 
 /* ===========================================================================
@@ -389,7 +389,7 @@ test("the full journey: front door → scan → evidence → assessment → alte
   await expect(listing).toBeVisible();
   await expect(listing).toContainText(/AED \d+\.\d{2}/);
   await expect(listing.getByTestId("availability")).toBeVisible();
-  await expect(listing.getByTestId("freshness-label")).toContainText(/verified by hand/i);
+  await expect(listing.getByTestId("freshness-label")).toContainText(/checked by hand/i);
 });
 
 /* ===========================================================================

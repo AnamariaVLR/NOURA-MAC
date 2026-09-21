@@ -149,7 +149,9 @@ export function additiveSortKey(additiveCount: number | null): number {
 /** Price per 100 g/ml, falling back to pack price when the size is unparseable. */
 export function priceSortKey(listing: Listing | null): number {
   if (!listing) return Number.POSITIVE_INFINITY;
-  return listing.unitPriceFils ?? listing.priceFils;
+  // A listing with availability but no price sorts last rather than first: it is
+  // not cheaper, it is simply unpriced, and a null must never read as zero.
+  return listing.unitPriceFils ?? listing.priceFils ?? Number.POSITIVE_INFINITY;
 }
 
 /**

@@ -121,11 +121,17 @@ model ListingCheck {
   listingId String
 
   /// Price in fils (1/100 AED). Integer minor units — never a float.
-  priceFils Int
-  currency  String  @default("AED")
+  ///
+  /// NULLABLE, because price and availability are independent facts. Someone can
+  /// walk past a shelf and record "it is there" without noting the price, and a
+  /// retailer page can list a price for something it will not ship. Forcing both
+  /// meant every check had to invent whichever half was missing.
+  priceFils Int?
+  currency  String @default("AED")
   /// The pack size actually observed, which may differ from the listing's.
   sizeLabel String
-  inStock   Boolean
+  /// Null means nobody recorded availability — which is not the same as false.
+  inStock   Boolean?
 
   /// Optional photo of the shelf or the page. Served only by /api/listing-photo/[id].
   /// Stored the same three ways as a scan image — see Scan above and lib/storage.ts.
@@ -136,7 +142,9 @@ model ListingCheck {
   photoBytes   Bytes?
 
   /// Who made the check. A name or initials — enough to ask them about it later.
-  checkedBy   String
+  /// Null for a RETAILER_PAGE or feed reading, where no person vouches for it;
+  /// required for HAND_VERIFIED, enforced in lib/schemas.ts.
+  checkedBy   String?
   /// When they looked. Drives the 14-day freshness rule in lib/retail/freshness.ts.
   checkedAt   DateTime
   /// The retailer page checked, when the check was done online. Null in store.

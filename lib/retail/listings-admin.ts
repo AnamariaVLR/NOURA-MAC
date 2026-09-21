@@ -81,7 +81,7 @@ export async function listingQueue(now: Date = new Date()): Promise<ListingQueue
       ageDays: check ? ageInDays(check.checkedAt, now) : null,
       daysLeft: check && staleness === "fresh" ? daysUntilStale(check.checkedAt, now) : null,
       priceFils: check?.priceFils ?? null,
-      priceLabel: check ? formatAed(check.priceFils) : null,
+      priceLabel: check && check.priceFils !== null ? formatAed(check.priceFils) : null,
       inStock: check?.inStock ?? null,
       hasPhoto: Boolean(check?.photoPath || check?.photoBlobUrl || check?.photoBytes),
       checkCount: listing._count.checks,

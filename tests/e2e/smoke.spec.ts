@@ -104,7 +104,7 @@ test("upload a fixture image and reach a full result page", async ({ page }) => 
   await expect(page.getByTestId("listings")).toContainText(/AED \d+\.\d{2}/);
 
   // ---- prices carry an author and a date ---------------------------------
-  await expect(page.getByTestId("freshness-label").first()).toContainText(/Verified by hand on/i);
+  await expect(page.getByTestId("freshness-label").first()).toContainText(/Price checked by hand on/i);
 
   // ---- alternatives ------------------------------------------------------
   await expect(page.getByText(/Better options/i).first()).toBeVisible();
@@ -163,7 +163,7 @@ test("the fixture product is judged, and its alternatives are in stock", async (
   const cards = page.getByTestId("alternatives").locator("> li");
   for (const card of await cards.all()) {
     const text = await card.innerText();
-    if (/AED \d/.test(text)) expect(text).toMatch(/Verified by hand/i);
+    if (/AED \d/.test(text)) expect(text).toMatch(/checked by hand/i);
     else expect(text).toMatch(/price not verified yet|availability not verified recently/i);
   }
 });

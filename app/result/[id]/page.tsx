@@ -30,8 +30,12 @@ import { formatAed, formatDate } from "@/lib/format";
 import { findVerifiedAlternatives } from "@/lib/recommend/alternatives";
 import { CERTIFICATION_LABEL, type CertificationState } from "@/lib/health/certification";
 import { describeAll } from "@/lib/evidence/lookups";
+import {
+  availabilitySentence,
+  commerceKindOf,
+  priceSentence,
+} from "@/lib/retail/provenance";
 import { COMMERCE_COPY } from "@/lib/recommend/verified-alternatives";
-import { freshnessLabel } from "@/lib/retail/freshness";
 import { bestPrice, searchUaeListings } from "@/lib/retail/search";
 import { ConfirmProduct, NotThisProduct } from "@/components/confirm-product";
 import { resolveSubcategory, ruleFor } from "@/lib/health/categories";
@@ -512,7 +516,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                           </p>
                         </div>
                         {/* PRICE — or an explicit absence, never a blank. */}
-                        {listing ? (
+                        {listing && listing.priceFils !== null ? (
                           <p className="tnum shrink-0 text-[14px] font-semibold">
                             {formatAed(listing.priceFils)}
                           </p>
@@ -551,11 +555,14 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                             {listing.sizeLabel ? ` \u00b7 ${listing.sizeLabel}` : ""}
                           </p>
                           <p className="mt-0.5 text-[11px] text-band-excellent">
-                            {freshnessLabel(
-                              "fresh",
-                              formatDate(listing.checkedAt),
-                              listing.checkedBy,
-                            )}
+                            {priceSentence({
+                              kind: commerceKindOf(listing.sourceKind),
+                              retailerName: listing.retailer.name,
+                              formattedDate: formatDate(listing.checkedAt),
+                              checkedBy: listing.checkedBy,
+                              isFresh: listing.isFresh,
+                              ageDays: listing.ageDays,
+                            })}
                           </p>
                         </>
                       ) : (
@@ -594,9 +601,9 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           </div>
         ) : (
           <>
-            {cheapest ? (
+            {cheapest && cheapest.priceFils !== null ? (
               <p className="mb-3 text-[13px]">
-                Cheapest verified:{" "}
+                Lowest recorded price:{" "}
                 <span className="tnum font-semibold">{formatAed(cheapest.priceFils)}</span> at{" "}
                 {cheapest.retailer.name}
               </p>
@@ -635,11 +642,14 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                       }`}
                       data-testid="freshness-label"
                     >
-                      {freshnessLabel(
-                        listing.isFresh ? "fresh" : "stale",
-                        formatDate(listing.checkedAt),
-                        listing.isFresh ? listing.checkedBy : undefined,
-                      )}
+                      {priceSentence({
+                        kind: commerceKindOf(listing.sourceKind),
+                        retailerName: listing.retailer.name,
+                        formattedDate: formatDate(listing.checkedAt),
+                        checkedBy: listing.checkedBy,
+                        isFresh: listing.isFresh,
+                        ageDays: listing.ageDays,
+                      })}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -648,7 +658,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                         listing.isFresh ? "" : "text-ink-faint"
                       }`}
                     >
-                      {formatAed(listing.priceFils)}
+                      {listing.priceFils === null ? "No price recorded" : formatAed(listing.priceFils)}
                     </p>
                     {/* Availability is only a claim while the check is fresh. Past
                         the window it is not hidden — hiding it implies nothing is
@@ -656,18 +666,17 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
                     <p
                       data-testid="availability"
                       className={`mt-0.5 text-[11px] ${
-                        listing.isFresh
-                          ? listing.inStock
-                            ? "text-band-excellent"
-                            : "text-ink-faint"
+                        listing.isFresh && listing.inStock === true
+                          ? "text-band-excellent"
                           : "text-ink-faint"
                       }`}
                     >
-                      {listing.isFresh
-                        ? listing.inStock
-                          ? "in stock"
-                          : "out of stock"
-                        : "stock not confirmed recently"}
+                      {availabilitySentence(listing.inStock, {
+                        kind: commerceKindOf(listing.sourceKind),
+                        formattedDate: formatDate(listing.checkedAt),
+                        isFresh: listing.isFresh,
+                        ageDays: listing.ageDays,
+                      })}
                     </p>
                   </div>
                 </li>

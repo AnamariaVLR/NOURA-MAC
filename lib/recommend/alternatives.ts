@@ -166,11 +166,16 @@ function toCandidate(
   );
   const evaluation = evaluateProduct(input);
 
-  // Buyable means: somebody checked it recently, and it was in stock when they did.
-  // A lapsed check is not a price and an out-of-stock shelf is not an option.
+  // Quotable means: a recent check that actually recorded a price, and was not
+  // recorded as out of stock. `inStock === null` (nobody looked) does not
+  // disqualify — a known price with unrecorded availability is still a price,
+  // and the page says which half we hold.
   const buyable = product.listings
     .map((listing) => toListing(listing, now))
-    .filter((l): l is Listing => l !== null && l.isFresh && l.inStock)
+    .filter(
+      (l): l is Listing & { priceFils: number } =>
+        l !== null && l.isFresh && l.priceFils !== null && l.inStock !== false,
+    )
     .sort((a, b) => (a.unitPriceFils ?? a.priceFils) - (b.unitPriceFils ?? b.priceFils));
 
   // The newest check of any kind, fresh or not. Used only to say WHY there is no

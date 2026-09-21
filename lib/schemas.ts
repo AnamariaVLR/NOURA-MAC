@@ -69,6 +69,9 @@ export const DataSourceSchema = z.enum([
   "HAND_VERIFIED",
   "REGULATOR_IMPORT",
   "OPEN_DATA",
+  /** Read from an official retailer product page. See lib/retail/provenance.ts. */
+  "RETAILER_PAGE",
+  /** A structured feed or API published by a retailer. Nothing ships using it. */
   "RETAILER_API",
   "SYNTHETIC",
 ]);
@@ -279,20 +282,22 @@ export type ModelCheckProse = z.infer<typeof ModelCheckProseSchema>;
 export const ListingSchema = z.object({
   id: z.string().min(1),
   retailer: z.object({ slug: z.string(), name: z.string(), websiteUrl: z.string() }),
-  priceFils: z.number().int().nonnegative(),
+  /** Null when the check recorded availability but no price. */
+  priceFils: z.number().int().nonnegative().nullable(),
   currency: z.literal("AED"),
   sizeLabel: z.string().min(1),
-  /** Price per 100 g/ml in fils, or null when the size could not be parsed. */
+  /** Price per 100 g/ml in fils, or null when the size or price is unknown. */
   unitPriceFils: z.number().int().nonnegative().nullable(),
-  inStock: z.boolean(),
+  /** Null means nobody recorded it — different from recording "out of stock". */
+  inStock: z.boolean().nullable(),
   url: z.string().url(),
   source: SourceRefSchema,
 
   /* ---- provenance of the price itself ---------------------------------- */
   /** DataSource of the check behind this price. */
   sourceKind: DataSourceSchema,
-  /** Who made the check, shown as "Verified by hand on {date}". */
-  checkedBy: z.string().min(1),
+  /** Who made the check. Null for a retailer-page or feed reading. */
+  checkedBy: z.string().min(1).nullable(),
   checkedAt: z.string().min(1),
   /** Whole days since the check. */
   ageDays: z.number().int().nonnegative(),

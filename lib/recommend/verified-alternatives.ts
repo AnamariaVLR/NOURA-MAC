@@ -146,9 +146,14 @@ export function dimensionsOf(candidate: AlternativeCandidate): EvidenceDimension
   };
 }
 
-/** A listing that a shopper could act on today. */
+/**
+ * A listing a shopper could act on today.
+ *
+ * `inStock === null` means nobody recorded availability, which is not a reason
+ * to withhold a known price — only a recorded FALSE is.
+ */
 export function isBuyable(listing: Listing | null): boolean {
-  return listing !== null && listing.isFresh && listing.inStock;
+  return listing !== null && listing.isFresh && listing.priceFils !== null && listing.inStock !== false;
 }
 
 /**

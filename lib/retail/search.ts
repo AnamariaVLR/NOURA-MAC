@@ -30,8 +30,14 @@ export function rankListings(listings: Listing[]): Listing[] {
     const bUnit = b.unitPriceFils;
     if (aUnit !== null && bUnit !== null && aUnit !== bUnit) return aUnit - bUnit;
 
-    // 4. Pack price.
-    if (a.priceFils !== b.priceFils) return a.priceFils - b.priceFils;
+    // 4. Pack price. An unpriced listing sorts after every priced one.
+    const aPrice = a.priceFils ?? Number.POSITIVE_INFINITY;
+    const bPrice = b.priceFils ?? Number.POSITIVE_INFINITY;
+    if (aPrice !== bPrice) {
+      if (!Number.isFinite(aPrice)) return 1;
+      if (!Number.isFinite(bPrice)) return -1;
+      return aPrice - bPrice;
+    }
 
     // 5. Stable tie-break so the same data always renders in the same order.
     return a.retailer.name.localeCompare(b.retailer.name);

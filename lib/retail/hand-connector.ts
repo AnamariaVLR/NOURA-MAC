@@ -44,11 +44,16 @@ export const handConnector: RetailerConnector = {
           priceFils: check.priceFils,
           currency: check.currency,
           sizeLabel: check.sizeLabel,
-          unitPriceFils: unitPriceFils(check.priceFils, check.sizeLabel),
+          unitPriceFils:
+            check.priceFils === null ? null : unitPriceFils(check.priceFils, check.sizeLabel),
           inStock: check.inStock,
           url: check.retailerUrl ?? listing.url ?? listing.retailer.websiteUrl,
           source: {
-            name: `Checked by ${check.checkedBy}`,
+            // Attribution follows the source kind: a retailer page is cited as
+            // the retailer, not as a person who never looked at it.
+            name: check.checkedBy
+              ? `Checked by ${check.checkedBy}`
+              : `Shown by ${listing.retailer.name}`,
             url: check.retailerUrl ?? listing.url ?? null,
             lastVerifiedAt: check.checkedAt.toISOString(),
           },
