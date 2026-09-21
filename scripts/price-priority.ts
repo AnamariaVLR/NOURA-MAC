@@ -12,42 +12,25 @@
  */
 import "../lib/load-env";
 import { prisma } from "../lib/db";
-import { findVerifiedAlternatives } from "../lib/recommend/alternatives";
+import { pricePriority } from "../lib/retail/priority";
 
 async function main(): Promise<void> {
-  const products = await prisma.product.findMany({
-    select: { id: true, name: true, brand: true, category: true, subcategory: true },
-    orderBy: { name: "asc" },
-  });
+  const { rows, productsWithAlternatives, totalProducts, slotsCovered } = await pricePriority(25);
 
-  const appearsFor = new Map<string, number>();
-  let withAlternatives = 0;
-
-  for (const p of products) {
-    const result = await findVerifiedAlternatives({ productId: p.id, limit: 3 });
-    if (result.alternatives.length > 0) withAlternatives += 1;
-    for (const alt of result.alternatives) {
-      const key = alt.candidate.productId;
-      appearsFor.set(key, (appearsFor.get(key) ?? 0) + 1);
-    }
-  }
-
-  const byId = new Map(products.map((p) => [p.id, p]));
-  const ranked = [...appearsFor.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 25)
-    .map(([id, n]) => ({ n, p: byId.get(id)! }));
-
-  console.log(`${withAlternatives} of ${products.length} products produce at least one alternative.\n`);
+  console.log(
+    `${productsWithAlternatives} of ${totalProducts} products produce at least one alternative.\n`,
+  );
   console.log("Highest-value price checks — each row is a product recommended to N others:");
-  for (const { n, p } of ranked) {
+  for (const row of rows) {
     console.log(
-      `  ${String(n).padStart(3)}  ${(p.brand ?? "?").slice(0, 18).padEnd(18)} ${p.name.slice(0, 38).padEnd(38)} ${p.category}`,
+      `  ${String(row.recommendedTo).padStart(3)}  ${(row.brand ?? "?").slice(0, 18).padEnd(18)} ` +
+        `${row.name.slice(0, 38).padEnd(38)} ${row.category}`,
     );
   }
-  const total = ranked.reduce((s, r) => s + r.n, 0);
-  console.log(`\nVerifying a price for these ${ranked.length} products would give a quotable`);
-  console.log(`price to ${total} recommendation slots.`);
+  console.log(`\nVerifying a price for these ${rows.length} products would give a quotable`);
+  console.log(`price to ${slotsCovered} recommendation slots.\n`);
+  console.log("To turn this into a shopping list:");
+  console.log("  npm run listings:export -- trip.csv --priority 15");
 }
 
 void main().finally(() => prisma.$disconnect());

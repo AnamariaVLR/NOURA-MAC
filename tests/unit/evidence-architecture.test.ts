@@ -5,6 +5,7 @@
  * the product is about to tell someone something it cannot support.
  */
 
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   CERTIFICATION_STATES,
@@ -254,5 +255,25 @@ describe("no category line can call a threshold 'low' without evidence", () => {
     }
     // A single-band line says "the applicable line for X is N", never "low".
     expect(unsafe, `lines that could wrongly read as "low": ${unsafe.join(", ")}`).toEqual([]);
+  });
+});
+
+/* ── the price-priority weighting ───────────────────────────────────────── */
+
+describe("the field list is ordered by what it unlocks, not by staleness", () => {
+  it("produces no prices of its own — only an ordering", async () => {
+    // The guard that matters. This module exists to say WHICH products to check;
+    // if it ever returned a number that looked like a price, that number would
+    // have been invented, and an invented price is the one thing Noura may
+    // never show.
+    const source = readFileSync("lib/retail/priority.ts", "utf8");
+    expect(source).not.toMatch(/priceFils|priceAed|price:\s*\d/);
+    expect(source).not.toMatch(/createMany|\.create\(|\.update\(|upsert/);
+  });
+
+  it("says in its own documentation how a price may enter", () => {
+    const source = readFileSync("lib/retail/priority.ts", "utf8");
+    expect(source).toMatch(/ListingCheck/);
+    expect(source).toMatch(/person records/i);
   });
 });
