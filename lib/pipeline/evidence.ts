@@ -32,6 +32,8 @@ import {
   barcodeIsContradicted,
   fingerprint,
   sameBrand,
+  sceneOf,
+  scenePermitsAnalysis,
   type IdentityRecord,
   type IdentityState,
 } from "./identity";
@@ -65,9 +67,18 @@ function identityRecord(args: {
   barcodeContradicted?: boolean;
 }): IdentityRecord {
   const { identification: id, product } = args;
+  const scene = sceneOf({
+    distinctProductsVisible: id.distinctProductsVisible ?? 1,
+    otherProducts: id.otherProducts ?? [],
+  });
   return {
     state: args.state,
-    fingerprint: product ? fingerprint(product) : null,
+    scene,
+    otherProductsSeen: id.otherProducts ?? [],
+    // The scene is bound INTO the fingerprint, so a stage cannot inherit an
+    // identity established for a single-product photo and apply it to a scan
+    // whose scene was something else.
+    fingerprint: product ? fingerprint(product, scene) : null,
     claimedBrand: id.brand ?? null,
     claimedName: id.name ?? null,
     claimedBarcode: id.barcode ?? null,
@@ -161,6 +172,49 @@ async function upsertFromOpenDb(
 export async function gatherEvidence(identification: Identification): Promise<EvidenceResult> {
   const { barcode, name, brand, category, subcategory, sizeLabel, visibleText } =
     identification;
+
+  // THE SCENE GATE, BEFORE ANY MATCHING.
+  //
+  // How many products the photograph is about is a question about the IMAGE,
+  // and it is settled before we start asking which catalogue row anything
+  // corresponds to. Answering "which product is this" for a photo containing
+  // two of them is answering a question nobody asked.
+  //
+  // Case B from the spec — one clear product with neighbours mostly out of
+  // frame — is handled at the vision step rather than here: the model is told
+  // to count only packages substantially visible, so a pack cropped at the
+  // edge or blurred in the background never reaches this gate as a rival.
+  const scene = sceneOf({
+    distinctProductsVisible: identification.distinctProductsVisible ?? 1,
+    otherProducts: identification.otherProducts ?? [],
+  });
+
+  if (!scenePermitsAnalysis(scene)) {
+    const others = (identification.otherProducts ?? [])
+      .map((o) => `${o.brand ? `${o.brand} — ` : ""}${o.name}`)
+      .join(", ");
+    return {
+      product: null,
+      method: "none",
+      identityBasis: "uncorroborated",
+      note:
+        scene === "MULTIPLE_PRODUCTS"
+          ? `There is more than one product in this photo${others ? ` — we also saw ${others}` : ""}. ` +
+            "Tell us which one you want checked, or take a photo of just that one."
+          : "We could not tell whether this photo shows one product or several, so we have not " +
+            "assessed anything. Try a photo of a single product.",
+      identity: identityRecord({
+        state: "NEEDS_CONFIRMATION",
+        identification,
+        product: null,
+        matchMethod: "none",
+        reason:
+          scene === "MULTIPLE_PRODUCTS"
+            ? "More than one product is readable in the image."
+            : "The number of products in the image could not be established.",
+      }),
+    };
+  }
 
   // VISUAL IDENTITY FIRST, ALWAYS.
   //

@@ -215,6 +215,20 @@ export const IdentificationSchema = z.object({
   confidence: z.number().min(0).max(1),
   /** What the model actually read off the pack. */
   visibleText: z.string().max(600).nullable().default(null),
+  /**
+   * How many separate product packages are substantially visible.
+   *
+   * Defaults to 1 rather than 0: a model that omits the field has told us
+   * nothing about the scene, and the safe reading of "nothing" is the ordinary
+   * case rather than an alarm. A genuinely unreadable scene produces no usable
+   * identification anyway.
+   */
+  distinctProductsVisible: z.number().int().min(1).max(50).default(1),
+  /** The other readable packages, which become the choices a shopper is offered. */
+  otherProducts: z
+    .array(z.object({ name: z.string().max(160), brand: z.string().max(120).nullable().default(null) }))
+    .max(12)
+    .default([]),
 });
 export type Identification = z.infer<typeof IdentificationSchema>;
 

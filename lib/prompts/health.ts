@@ -41,6 +41,12 @@ export const IDENTIFY_SYSTEM = [
   // Rule 5 — the subcategory decides whether the product is judged per 100 g or
   // per 100 ml, so it must be read off the pack rather than inferred.
   "Set subcategory only when the pack makes it plain: olive_oil or other_fats_oils; dairy_milk or plant_milk; spoonable_yogurt or drinking_yogurt. Null is a correct answer and is better than a guess.",
+  // Rule 6 — the scene, not only the product. A photograph with two packs in it
+  // is a different question from a photograph with one, and answering the
+  // second question when you were asked the first is how a shopper gets a
+  // verdict about the wrong item.
+  "Report the SCENE as well as the product. Set distinctProductsVisible to the number of separate product packages that are substantially visible — readable enough to tell what they are. A pack cropped at the frame edge, blurred in the background, or too small to read does not count. List the other readable packages in otherProducts.",
+  "Record the most prominent product as the main one, and do not silently ignore the others: if two products are equally prominent, still report both, one as the main and one in otherProducts.",
   "Use the record_product tool exactly once. Do not write any prose.",
 ].join("\n");
 
@@ -95,6 +101,28 @@ export const IDENTIFY_TOOL = {
         type: ["string", "null"],
         description: "The text you could actually read on the pack.",
       },
+      distinctProductsVisible: {
+        type: "integer",
+        description:
+          "How many SEPARATE product packages are substantially visible — enough that someone " +
+          "could read what each one is. Count 1 when there is a single product. A pack cropped " +
+          "at the edge of the frame, blurred in the background, or too small to read is NOT " +
+          "counted. Shelves and groups count every readable package.",
+      },
+      otherProducts: {
+        type: "array",
+        description:
+          "The other readable product packages in the image, excluding the one recorded above. " +
+          "Empty when there is only one. These become the choices a shopper is offered.",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            brand: { type: ["string", "null"] },
+          },
+          required: ["name"],
+        },
+      },
     },
     required: [
       "name",
@@ -105,6 +133,8 @@ export const IDENTIFY_TOOL = {
       "sizeLabel",
       "confidence",
       "visibleText",
+      "distinctProductsVisible",
+      "otherProducts",
     ],
   },
 };

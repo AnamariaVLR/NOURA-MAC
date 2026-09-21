@@ -81,6 +81,8 @@ export function mockIdentification(slug: string = MOCK_PRODUCT_SLUG): Identifica
     confidence: 1,
     visibleText:
       "Fixture product — no ANTHROPIC_API_KEY is set, so nothing was read from your image.",
+    distinctProductsVisible: 1,
+    otherProducts: [],
   };
 }
 

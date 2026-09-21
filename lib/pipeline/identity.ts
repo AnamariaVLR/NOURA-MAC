@@ -86,12 +86,76 @@ export const IDENTITY_STATE_LABEL: Record<IdentityState, string> = {
 };
 
 /* ---------------------------------------------------------------------------
+ * Scene multiplicity
+ * ------------------------------------------------------------------------- */
+
+/**
+ * How many products the photograph is ABOUT.
+ *
+ * A camera does not crop to intent. Someone photographing a pot of yoghurt on a
+ * shelf captures the four pots beside it, and someone photographing two items
+ * to compare them captures exactly the same scene. The image cannot tell those
+ * apart, and neither can we — so where more than one product is readable, the
+ * answer is to ask rather than to pick the one that happens to be nearest the
+ * middle.
+ *
+ * A real photograph proved the need: two cosmetics lying side by side, both
+ * plainly readable, and the identification reported only one of them without
+ * any signal that a second existed. It ended safely only because neither was in
+ * the catalogue. Had one been, that product would have received a verdict and
+ * the other would have vanished from the record entirely.
+ */
+export const SCENE_STATES = ["SINGLE_PRODUCT", "MULTIPLE_PRODUCTS", "UNCLEAR_MULTIPLE"] as const;
+export type SceneMultiplicity = (typeof SCENE_STATES)[number];
+
+export type SceneInput = {
+  /** Packages substantially visible — readable enough to tell what they are. */
+  distinctProductsVisible: number;
+  /** The other readable packages, excluding the primary one. */
+  otherProducts: { name: string; brand: string | null }[];
+};
+
+/**
+ * Read the scene.
+ *
+ * The count and the list can disagree — a model may say "2" and list none, or
+ * say "1" and list one anyway. Disagreement is not resolved by preferring one
+ * field; it is itself the finding, and resolves to UNCLEAR_MULTIPLE.
+ */
+export function sceneOf(input: SceneInput): SceneMultiplicity {
+  const counted = Number.isFinite(input.distinctProductsVisible)
+    ? Math.max(1, Math.floor(input.distinctProductsVisible))
+    : 1;
+  const listed = input.otherProducts?.length ?? 0;
+
+  if (counted === 1 && listed === 0) return "SINGLE_PRODUCT";
+  if (counted > 1 && listed > 0) return "MULTIPLE_PRODUCTS";
+  // One field says several, the other says one. We do not know which to believe.
+  return "UNCLEAR_MULTIPLE";
+}
+
+/** Only a single-product scene may proceed without asking. */
+export function scenePermitsAnalysis(scene: SceneMultiplicity): boolean {
+  return scene === "SINGLE_PRODUCT";
+}
+
+export const SCENE_LABEL: Record<SceneMultiplicity, string> = {
+  SINGLE_PRODUCT: "One product in the photo",
+  MULTIPLE_PRODUCTS: "More than one product in the photo",
+  UNCLEAR_MULTIPLE: "We could not tell how many products are in the photo",
+};
+
+/* ---------------------------------------------------------------------------
  * The audit record
  * ------------------------------------------------------------------------- */
 
 /** Everything that went into the decision, kept so it can be re-examined. */
 export type IdentityRecord = {
   state: IdentityState;
+  /** How many products the photograph is about. */
+  scene: SceneMultiplicity;
+  /** The other readable packages, so the record shows what was NOT chosen. */
+  otherProductsSeen: { name: string; brand: string | null }[];
   /** Deterministic key for the resolved product. Null when none was resolved. */
   fingerprint: string | null;
   /** What the model said. */
@@ -136,13 +200,18 @@ export type IdentifiedProduct = {
  * closed rather than continuing -- which is the only way to be sure that
  * evidence, analysis, alternatives and commerce are all about the same thing.
  */
-export function fingerprint(product: IdentifiedProduct): string {
+export function fingerprint(product: IdentifiedProduct, scene: SceneMultiplicity = "SINGLE_PRODUCT"): string {
   const parts = [
     product.id,
     product.barcode ?? "",
     (product.brand ?? "").trim().toLowerCase(),
     product.name.trim().toLowerCase(),
     (product.sizeLabel ?? "").trim().toLowerCase(),
+    // The scene is part of the identity, not context around it. A verdict
+    // reached because ONE product was in frame is not the same claim as the
+    // same verdict reached while a second sat beside it, and a later stage must
+    // not be able to inherit the first while the truth was the second.
+    scene,
   ];
   return createHash("sha256").update(parts.join(" ")).digest("hex").slice(0, 32);
 }
