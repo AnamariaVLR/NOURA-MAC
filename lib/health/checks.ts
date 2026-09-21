@@ -453,6 +453,24 @@ function additivesCheck(
  * U7 / §6 — UAE certification
  * ----------------------------------------------------------------------- */
 
+/**
+ * Register text, cut to a length a sentence can carry.
+ *
+ * Everything MOIAT returns is free text of unbounded length — company names,
+ * certificate numbers and product types all routinely run past sixty
+ * characters. Interpolating three of them into one sentence overflowed the
+ * 320-character cap on `detail`, and because CheckSchema is validated when the
+ * analysis is persisted, that threw at REQUEST time while every unit test
+ * passed: the fixtures used short invented names and the real register does not.
+ *
+ * Clamping here keeps the sentence legal whatever the register sends. The full
+ * untruncated value is always available in the certificate row itself.
+ */
+function clampRegisterText(value: string, max: number): string {
+  const clean = value.trim();
+  return clean.length <= max ? clean : `${clean.slice(0, max - 1).trimEnd()}\u2026`;
+}
+
 export function certificationCheck(
   input: EvidenceInput,
   fallbackSource: SourceRef,
@@ -507,7 +525,8 @@ export function certificationCheck(
         claim: `${c.certificateType} certificate verified for this exact product`,
         // C6.5 — the disclaimer is on every passing certification line, always.
         detail:
-          `Certificate ${c.certificateNumber}${c.bodyName ? `, issued by ${c.bodyName}` : ""}, ` +
+          `Certificate ${clampRegisterText(c.certificateNumber, 40)}` +
+          `${c.bodyName ? `, issued by ${clampRegisterText(c.bodyName, 50)}` : ""}, ` +
           `matched to this product by its barcode${c.expiresAt ? ` and valid until ${c.expiresAt.toISOString().slice(0, 10)}` : ""}. ` +
           "A certificate confirms the product meets that standard; it is not a statement that the product is nutritionally better.",
         // C6.5 — the accrediting body is part of the claim: a certificate means
@@ -535,8 +554,8 @@ export function certificationCheck(
           ? `Its ${c.certificateType} certificate is suspended`
           : `Its ${c.certificateType} certificate has lapsed`,
         detail: suspended
-          ? `Certificate ${c.certificateNumber} is recorded as ${c.rawStatus ?? "suspended"}. Treat any claim resting on it with caution.`
-          : `Certificate ${c.certificateNumber} covered this exact product and is no longer valid. A lapsed certificate is not a finding against the product; it means the assurance is out of date.`,
+          ? `Certificate ${clampRegisterText(c.certificateNumber, 40)} is recorded as ${c.rawStatus ?? "suspended"}. Treat any claim resting on it with caution.`
+          : `Certificate ${clampRegisterText(c.certificateNumber, 40)} covered this exact product and is no longer valid. A lapsed certificate is not a finding against the product; it means the assurance is out of date.`,
         evidence: { label, value: `${c.certificateType} — ${suspended ? "suspended" : "expired"}` },
         source,
       };
@@ -550,9 +569,11 @@ export function certificationCheck(
       return unknown(
         key,
         "The brand is in the UAE register, this product is not",
-        `${c.registerCompany ?? c.registerBrand ?? "This brand"} holds certificate ${c.certificateNumber}` +
-          `${c.registerProductType ? ` for ${c.registerProductType.toLowerCase()}` : ""}, but nothing in the register names this product. ` +
-          "A certificate covering one product is not evidence about another, so Noura does not count it.",
+        `${clampRegisterText(c.registerCompany ?? c.registerBrand ?? "This brand", 60)} holds ` +
+          `certificate ${clampRegisterText(c.certificateNumber, 40)}` +
+          `${c.registerProductType ? ` for ${clampRegisterText(c.registerProductType.toLowerCase(), 60)}` : ""}, ` +
+          "but this product is not named in the register. A certificate for one product is not " +
+          "evidence about another.",
         source,
         "brand only, not this product",
       );
@@ -563,10 +584,8 @@ export function certificationCheck(
         key,
         "No certificate for this product is in the UAE register",
         "We searched the UAE conformity register for this barcode and it returned nothing. " +
-          "That is not the same as uncertified. The register's food coverage is uneven: it holds " +
-          "categories for processed food, organic food, edible vegetable oil, honey, eggs, dairy " +
-          "and bottled water, but a product is only listed once its manufacturer has sought a " +
-          "certificate, and many never do.",
+          "That is not the same as uncertified: the register does cover food, but a product " +
+          "appears only once its manufacturer has applied, and many never do.",
         source,
         "searched, none found",
       );

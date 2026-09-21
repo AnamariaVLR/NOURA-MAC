@@ -23,6 +23,8 @@ import {
   planFor,
 } from "@/lib/evidence/registry";
 import { describeAll, describeLookup, uaeConformityLookup } from "@/lib/evidence/lookups";
+import { certificationCheck } from "@/lib/health/checks";
+import { CheckSchema } from "@/lib/schemas";
 import { CATEGORY_RULES } from "@/lib/health/categories";
 import type { Basis } from "@/lib/health/categories/types";
 
@@ -275,5 +277,91 @@ describe("the field list is ordered by what it unlocks, not by staleness", () =>
     const source = readFileSync("lib/retail/priority.ts", "utf8");
     expect(source).toMatch(/ListingCheck/);
     expect(source).toMatch(/person records/i);
+  });
+});
+
+/* ── every generated sentence must be renderable ────────────────────────── */
+
+describe("register text can never overflow the check schema", () => {
+  const LONG_COMPANY = "VIVA PREMIER E GENERAL TRADING (BR OF VIVA PREMIERE INVESTMENT L.L.C)";
+  const LONG_TYPE = "Halal-Processing 3 (Products with long shelf life at room temperature)";
+  const LONG_NUMBER = "26-01-180805/E26-01-188528/NB0002-EXTENDED-SUFFIX-0001";
+
+  function longCert(matchBasis: string) {
+    return {
+      certificateNumber: LONG_NUMBER,
+      certificateType: "ECAS",
+      status: "valid",
+      rawStatus: "Active",
+      matchBasis,
+      issuedAt: new Date("2025-01-01"),
+      expiresAt: new Date("2027-01-01"),
+      bodyName: "SAMPLE — A Very Long Notified Body Name For Conformity Assessment",
+      registerBrand: LONG_COMPANY,
+      registerModelNumber: "6291001000012",
+      registerProductType: LONG_TYPE,
+      registerCompany: LONG_COMPANY,
+      sourceKind: "REGULATOR_IMPORT",
+      sourceName: "MOIAT Conformity Register",
+      sourceUrl: "https://moiat.gov.ae/en/open-data/product-conformity-data",
+      lastVerifiedAt: new Date("2026-09-21"),
+      source: {
+        name: "MOIAT Conformity Register",
+        url: "https://moiat.gov.ae/en/open-data/product-conformity-data",
+        lastVerifiedAt: "2026-09-21T00:00:00.000Z",
+      },
+    };
+  }
+
+  const REGISTER: import("@/lib/schemas").SourceRef = {
+    name: "MOIAT Conformity Register",
+    url: "https://moiat.gov.ae/en/open-data/product-conformity-data",
+    lastVerifiedAt: "2026-09-21T00:00:00.000Z",
+  };
+
+  // The real failure this guards: unit fixtures used short invented names, the
+  // register sends 70-character ones, and CheckSchema is validated when the
+  // analysis is PERSISTED — so it threw at request time with every test green.
+  for (const basis of ["BARCODE", "BRAND"]) {
+    it(`survives maximal register text on a ${basis} match`, () => {
+      const check = certificationCheck(
+        {
+          certifications: [longCert(basis)],
+          certificationLookup: {
+            barcode: "6291001000012",
+            exactMatches: basis === "BARCODE" ? 1 : 0,
+            brandMatches: basis === "BARCODE" ? 0 : 5,
+            succeeded: true,
+            source: "MOIAT Conformity Register",
+            sourceUrl: "https://moiat.gov.ae",
+            checkedAt: new Date("2026-09-21"),
+          },
+        } as never,
+        REGISTER,
+      );
+      expect(CheckSchema.safeParse(check).success, check.detail).toBe(true);
+    });
+  }
+
+  it("keeps the NOT_FOUND and UNKNOWN sentences inside the cap too", () => {
+    for (const succeeded of [true, false]) {
+      const check = certificationCheck(
+        {
+          certifications: [],
+          certificationLookup: {
+            barcode: "6291001000012",
+            exactMatches: 0,
+            brandMatches: 0,
+            succeeded,
+            source: "MOIAT Conformity Register",
+            sourceUrl: "https://moiat.gov.ae",
+            checkedAt: new Date("2026-09-21"),
+          },
+        } as never,
+        REGISTER,
+      );
+      const parsed = CheckSchema.safeParse(check);
+      expect(parsed.success, `${succeeded ? "NOT_FOUND" : "UNKNOWN"}: ${check.detail.length} chars`).toBe(true);
+    }
   });
 });
