@@ -18,6 +18,7 @@ import {
   clearScans,
   disconnect,
   seedPendingScan,
+  signInAsAdmin,
   withoutCertification,
 } from "./fixtures";
 
@@ -162,4 +163,36 @@ test("390px: the six questions are answerable without pinching", async ({ page }
   // The verdict must not borrow the evidence layer's vocabulary.
   const verdict = await page.getByTestId("verdict").innerText();
   expect(verdict).not.toMatch(/VERIFIED —/);
+});
+
+/* ── the operational surface (§13) ──────────────────────────────────────── */
+
+test("admin coverage shows, per product, which source was asked what", async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto("/admin/coverage");
+
+  await expect(page.getByTestId("coverage-page")).toBeVisible();
+
+  // The six buckets an operator works from.
+  const buckets = page.getByTestId("coverage-buckets");
+  for (const label of [
+    /verified for the exact product/i,
+    /brand-level only/i,
+    /not found in the source/i,
+    /unknown or never asked/i,
+    /no verified price/i,
+    /no verified availability/i,
+  ]) {
+    await expect(buckets).toContainText(label);
+  }
+
+  // Per-product rows naming the register and the date.
+  const rows = page.getByTestId("coverage-row");
+  await expect(rows).not.toHaveCount(0);
+  await expect(rows.first()).toContainText(/MOIAT|no source asked yet/);
+
+  // The rule restated where an operator will read it.
+  await expect(page.getByTestId("coverage-page")).toContainText(
+    /not a statement that the product is uncertified/i,
+  );
 });
