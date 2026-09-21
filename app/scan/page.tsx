@@ -67,7 +67,16 @@ export default async function ScanPage() {
           <li>1. It is identified — by barcode where one is legible, by name otherwise.</li>
           <li>2. Ingredients, nutrition and UAE certification are looked up, with sources.</li>
           <li>3. Each thing we check gets a plain yes, no, or &ldquo;we could not tell&rdquo;.</li>
-          <li>4. We show what scores better and where to buy it, at a price a person checked.</li>
+          {/* Two claims were wrong here. "Scores better" describes a score, and
+              Noura deliberately has none — it compares named evidence dimensions
+              and says which one differs. "At a price a person checked" promises
+              commerce evidence that may not exist for a given product, and today
+              exists for none. */}
+          <li>
+            4. Where the evidence supports it, we show a comparable product that differs on a
+            dimension we can name, and what we know about buying it — including when we know
+            nothing.
+          </li>
         </ol>
         <p className="mt-3 text-[11px] text-ink-faint">
           The image is stored on this server and served back only to your browser.

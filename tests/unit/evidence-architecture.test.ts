@@ -414,3 +414,36 @@ describe("no product name reaches a page carrying markup", () => {
     expect(fetcher).toMatch(/name: decodeEntities\(/);
   });
 });
+
+/* ── the promises the app makes about itself ───────────────────────────── */
+
+describe("no page promises a score or a price Noura may not have", () => {
+  const pages = ["app/page.tsx", "app/scan/page.tsx"]
+    .map((f) => ({ file: f, source: readFileSync(f, "utf8") }));
+
+  /** Copy a reader sees, with our own explanatory comments removed. */
+  function visibleCopy(source: string): string {
+    return source
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/^\s*\/\/.*$/gm, " ")
+      .toLowerCase();
+  }
+
+  it("never describes the comparison as a score", () => {
+    // RUBRIC and DECISIONS both refuse an aggregate score; the marketing copy
+    // described one anyway ("we show what scores better"), which is a promise
+    // the engine does not keep and deliberately never will.
+    for (const { file, source } of pages) {
+      expect(visibleCopy(source), file).not.toMatch(/\bscores?\s+(better|higher|well)\b/);
+      expect(visibleCopy(source), file).not.toMatch(/\bhealth score\b/);
+    }
+  });
+
+  it("never promises that a price has been checked by a person", () => {
+    // True of no product today, and only ever true per-listing. The result page
+    // states provenance per price; a blanket promise up front cannot.
+    for (const { file, source } of pages) {
+      expect(visibleCopy(source), file).not.toMatch(/at a price a person checked/);
+    }
+  });
+});
