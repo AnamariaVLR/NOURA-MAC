@@ -126,7 +126,7 @@ test("upload a fixture image and reach a full result page", async ({ page }) => 
       // Certification is stated on every card, in all five of its states.
       await expect(alt.getByTestId("alt-certification")).toContainText(/UAE certification:/);
       // The price question is answered either way, and never left blank.
-      expect(await alt.innerText()).toMatch(/AED \d+\.\d{2}|have not verified a price/i);
+      expect(await alt.innerText()).toMatch(/AED \d+\.\d{2}|price not verified yet|availability not verified recently/i);
     }
   }
 
@@ -164,7 +164,7 @@ test("the fixture product is judged, and its alternatives are in stock", async (
   for (const card of await cards.all()) {
     const text = await card.innerText();
     if (/AED \d/.test(text)) expect(text).toMatch(/Verified by hand/i);
-    else expect(text).toMatch(/have not verified a price/i);
+    else expect(text).toMatch(/price not verified yet|availability not verified recently/i);
   }
 });
 

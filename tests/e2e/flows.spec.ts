@@ -104,7 +104,7 @@ test("better alternative: shows what to buy instead, with who checked it and whe
     if (/AED \d+\.\d{2}/.test(text)) {
       expect(text).toMatch(/Verified by hand on .+ by E2E Checker/);
     } else {
-      await expect(card.getByTestId("alt-no-price")).toContainText(/have not verified a price/i);
+      await expect(card.getByTestId("alt-no-price")).toContainText(/price not verified yet|availability not verified recently/i);
     }
   }
 
@@ -147,7 +147,7 @@ test("a lapsed price is disclosed, never used to hide a better product", async (
 
   // And the gap is stated in words, with no number attached.
   await expect(alternatives.first().getByTestId("alt-no-price")).toContainText(
-    /have not verified a price/i,
+    /price not verified yet|availability not verified recently/i,
   );
   expect(await alternatives.first().innerText()).not.toMatch(/AED \d/);
 
@@ -325,7 +325,7 @@ test("audit defect: an expensive out-of-category product is never the alternativ
   // Ranking is on evidence, so the top card is not necessarily the one we
   // priced by hand; what must hold is that it answers the price question.
   const firstText = await first.innerText();
-  expect(firstText).toMatch(/AED \d+\.\d{2}|have not verified a price/i);
+  expect(firstText).toMatch(/AED \d+\.\d{2}|price not verified yet|availability not verified recently/i);
 });
 
 /* ===========================================================================
