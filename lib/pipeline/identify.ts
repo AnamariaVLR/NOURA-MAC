@@ -4,6 +4,7 @@
  * Live: Claude vision + a single forced tool call, re-validated with Zod.
  * Mock: a fixture product, clearly flagged, so the whole UI is demoable with no key.
  */
+import { brandCorroborated } from "./match";
 import { CATALOGUE } from "../../prisma/seed-data/catalogue";
 import { callTool } from "../anthropic";
 import { MOCK_PRODUCT_SLUG, MODEL, fixtureAllowed, runMode } from "../config";
@@ -137,6 +138,20 @@ export function isUsableIdentification(identification: Identification): boolean 
   const name = identification.name?.trim().toLowerCase() ?? "";
   if (name.length < 2) return false;
   if (NON_ANSWERS.has(name)) return false;
+
+  // Corroborated visual evidence stands on its own, whatever the model thinks
+  // of itself.
+  //
+  // A shopper points a camera at the front of a pack. There is no barcode —
+  // that is on the bottom — and the model reports 0.2 because the lighting is
+  // poor and half the label is in shadow. But it read "AL RAWABI" and it says
+  // the brand is Al Rawabi: two statements about the same image that agree.
+  //
+  // That agreement is evidence the model did not simply invent a brand, and it
+  // is independent of the number the model attached to its own answer. Vetoing
+  // it on that number would discard a real identification for a self-assessment
+  // the model is not well calibrated to make.
+  if (brandCorroborated(identification.visibleText, identification.brand)) return true;
 
   return identification.confidence >= MIN_IDENTIFY_CONFIDENCE;
 }

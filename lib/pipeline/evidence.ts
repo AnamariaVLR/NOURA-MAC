@@ -162,14 +162,58 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
   const { barcode, name, brand, category, subcategory, sizeLabel, visibleText } =
     identification;
 
-  // 1. Barcode, locally.
+  // VISUAL IDENTITY FIRST, ALWAYS.
+  //
+  // A barcode lives on the bottom of a pot, the back of a carton, under the
+  // shrink-wrap, or nowhere a shopper can photograph while holding a basket.
+  // Pointing a camera at the front of a product is the normal case, not a
+  // degraded one, so the brand, name, variant and size read off the front are
+  // the foundation of identity and the barcode corroborates them.
+  //
+  // This is resolved BEFORE the barcode rather than as a fallback after it.
+  // Computing it either way is what makes the two comparable: previously a
+  // barcode short-circuited, so when it resolved to a different product than
+  // the visuals did, nobody ever found out.
+  const catalogue = await prisma.product.findMany();
+  const visual = decideMatch({ name, brand, sizeLabel, visibleText }, catalogue);
+  const visualProduct = visual.kind === "auto" ? visual.product : null;
+
+  // 1. Barcode, locally — as corroboration of the above, or as identity in its
+  //    own right when there is no visual match to corroborate.
   if (barcode) {
     const local = await prisma.product.findUnique({ where: { barcode } });
     if (local) {
-      // A barcode is normally decisive. It stops being decisive when the
-      // model's own claimed brand AND the text it read off the pack both name
-      // something else: three signals, three products, and the transcribed
-      // digits are the one that is most easily wrong by one character.
+      // The visuals resolved to a DIFFERENT product than the digits did. Both
+      // are real products with real evidence; the disagreement is the finding.
+      // A misread digit lands on a neighbouring SKU far more easily than a
+      // model misreads a brand and a product name and a size together.
+      if (visualProduct && visualProduct.id !== local.id) {
+        return {
+          product: null,
+          method: "none",
+          identityBasis: "uncorroborated",
+          note:
+            `The barcode points to ${local.brand ?? "one product"} — ${local.name} — while the ` +
+            `pack looks like ${visualProduct.brand ?? "another"} — ${visualProduct.name}. ` +
+            "We have not assessed either. Please confirm which one this is.",
+          candidates: [
+            toMatchCandidate({ product: visualProduct, containment: 1, unseenTokens: [], sizeMatches: true }),
+            toMatchCandidate({ product: local, containment: 1, unseenTokens: [], sizeMatches: false }),
+          ],
+          identity: identityRecord({
+            state: "NEEDS_CONFIRMATION",
+            identification,
+            product: null,
+            matchMethod: "barcode-local",
+            barcodeContradicted: true,
+            reason:
+              "The barcode and the visual evidence resolved to two different catalogue products.",
+          }),
+        };
+      }
+      // And when there is no visual match to compare against, the weaker
+      // check still applies: the claimed brand and the transcribed text both
+      // naming something else is enough to stop.
       const contradicted = barcodeIsContradicted({
         claimedBrand: brand,
         visibleText,
@@ -269,8 +313,7 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
   // carton as `drink` when the catalogue files it under `milk` would otherwise
   // never see it, and the category is the model's guess while the name is what
   // it actually read.
-  const local = await prisma.product.findMany();
-  const decision = decideMatch({ name, brand, sizeLabel, visibleText }, local);
+  const decision = visual;
 
   if (decision.kind === "auto") {
     const basis = identityBasis({

@@ -205,7 +205,25 @@ export function decideMatch<P extends MatchProduct>(
 
   if (candidates.length === 0) return { kind: "none", candidates: [] };
 
-  const only = candidates.length === 1 ? candidates[0] : null;
+  // A LEGIBLE PACK SIZE IS IDENTITY EVIDENCE, NOT A TIE-BREAK.
+  //
+  // "360g" is printed on the front of the pot in the same breath as the brand
+  // and the name, and it is frequently the ONLY thing separating two otherwise
+  // identical entries — the 160 g and 360 g tubs of the same yoghurt carry the
+  // same brand and the same product name.
+  //
+  // Size used to sort candidates without narrowing them, so those two tubs
+  // always went to confirmation even when the photograph plainly said which one
+  // it was. Asking a question already answered by the image is its own kind of
+  // dishonesty about what we know.
+  //
+  // Only narrows when the size was actually read AND some candidate agrees with
+  // it: an unreadable or unparseable size falls back to the full list rather
+  // than eliminating everything.
+  const sized = query.sizeLabel ? candidates.filter((c) => c.sizeMatches) : [];
+  const shortlist = sized.length > 0 ? sized : candidates;
+
+  const only = shortlist.length === 1 ? shortlist[0] : null;
 
   // Auto-match needs all three: one candidate, a brand the model actually read,
   // a size that agrees, and nothing about the product the scan did not see.
@@ -215,9 +233,9 @@ export function decideMatch<P extends MatchProduct>(
     only.sizeMatches &&
     only.unseenTokens.length === 0;
 
-  if (canAuto) return { kind: "auto", product: only.product, candidates };
+  if (canAuto) return { kind: "auto", product: only.product, candidates: shortlist };
 
-  return { kind: "confirm", candidates: candidates.slice(0, MAX_CONFIRM_CANDIDATES) };
+  return { kind: "confirm", candidates: shortlist.slice(0, MAX_CONFIRM_CANDIDATES) };
 }
 
 /* ===========================================================================
