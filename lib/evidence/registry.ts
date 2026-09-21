@@ -278,8 +278,16 @@ export function integratedSourcesFor(category: ProductCategory): EvidenceSource[
  */
 export function capStateForSource(state: string, sourceKey: string): string {
   const source = EVIDENCE_SOURCES[sourceKey];
+  // An unrecognised source is not evidence. Defaulting to the claimed state
+  // would let any future caller launder an arbitrary string into VERIFIED.
   if (!source) return "UNKNOWN";
+
+  // AUTHORITY FIRST, then granularity. Order matters: a manufacturer claim is
+  // NOT_ADDRESSABLE *and* not a registry, and checking granularity first would
+  // cap it at BRAND_LEVEL_ONLY — a pack claim wearing a registry's clothes.
+  if (!source.isAuthoritativeRegistry) {
+    return state === "UNKNOWN" || state === "NOT_FOUND" ? state : "CLAIM_ONLY";
+  }
   if (state === "VERIFIED" && !source.canVerifyExactProduct) return "BRAND_LEVEL_ONLY";
-  if (state === "VERIFIED" && !source.isAuthoritativeRegistry) return "CLAIM_ONLY";
   return state;
 }

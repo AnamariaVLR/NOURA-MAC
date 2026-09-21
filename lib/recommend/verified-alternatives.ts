@@ -69,6 +69,23 @@ export const COMMERCE_COPY: Record<CommerceStatus, string> = {
   PRICE_UNVERIFIED: "We have not verified a price for this yet",
 };
 
+/**
+ * One structured reason why an alternative beats the scan, on one dimension.
+ *
+ * The page and the model both read THIS, never a sentence someone wrote by
+ * hand. A reason assembled after the decision can drift from the decision; a
+ * reason that IS the decision cannot. The `sentence` is a readable default the
+ * LLM may rewrite — it may not add, drop or reorder a reason.
+ */
+export type EvidenceDifference = {
+  dimension: "failed_checks" | "resolved_evidence" | "certification";
+  scanned: string;
+  alternative: string;
+  evidence: string;
+  source: string;
+  sentence: string;
+};
+
 export type EvidenceDimensions = {
   /** Authoritative lines crossed. Fewer is better. */
   failedChecks: number;
@@ -95,6 +112,8 @@ export type VerifiedAlternative = {
   rank: number;
   /** The dimensions on which it beats the scanned product. Never empty. */
   betterOn: string[];
+  /** The same decision, structured. What the LLM is given to explain. */
+  differences: EvidenceDifference[];
   why: string;
   /** Whether we can quote a price, stated either way. Never a silent omission. */
   commerce: CommerceStatus;
@@ -140,12 +159,19 @@ export function isBuyable(listing: Listing | null): boolean {
 export function compareEvidence(
   candidate: EvidenceDimensions,
   scanned: EvidenceDimensions,
-): { better: boolean; betterOn: string[] } {
-  const betterOn: string[] = [];
+): { better: boolean; differences: EvidenceDifference[]; betterOn: string[] } {
+  const differences: EvidenceDifference[] = [];
   let worseOnSomething = false;
 
   if (candidate.failedChecks < scanned.failedChecks) {
-    betterOn.push("crosses fewer of the lines we check");
+    differences.push({
+      dimension: "failed_checks",
+      scanned: `${scanned.failedChecks} lines crossed`,
+      alternative: `${candidate.failedChecks} lines crossed`,
+      evidence: "Category checklist, applied to both products on the same per-100 basis",
+      source: "RUBRIC.md §3-§4",
+      sentence: "crosses fewer of the lines we check",
+    });
   } else if (candidate.failedChecks > scanned.failedChecks) {
     worseOnSomething = true;
   }
@@ -153,22 +179,42 @@ export function compareEvidence(
   const certDelta =
     CERTIFICATION_RANK[candidate.certification] - CERTIFICATION_RANK[scanned.certification];
   if (certDelta > 0) {
-    betterOn.push(
-      candidate.certification === "VERIFIED"
-        ? "has a UAE certificate we verified for the exact product"
-        : "has more certification evidence in the UAE register",
-    );
+    differences.push({
+      dimension: "certification",
+      scanned: scanned.certification,
+      alternative: candidate.certification,
+      evidence:
+        candidate.certification === "VERIFIED"
+          ? "A live certificate in the UAE conformity register matched on this exact barcode"
+          : "The register holds a record for the brand, not for this exact product",
+      source: "MOIAT Conformity Register",
+      sentence:
+        candidate.certification === "VERIFIED"
+          ? "has a UAE certificate we verified for the exact product"
+          : "has more certification evidence in the UAE register",
+    });
   } else if (certDelta < 0) {
     worseOnSomething = true;
   }
 
   if (candidate.resolvedChecks > scanned.resolvedChecks) {
-    betterOn.push("has more of its evidence available to check");
+    differences.push({
+      dimension: "resolved_evidence",
+      scanned: `${scanned.resolvedChecks} checks resolved`,
+      alternative: `${candidate.resolvedChecks} checks resolved`,
+      evidence: "How many applicable checks could be answered at all, rather than left UNKNOWN",
+      source: "Open Food Facts evidence held for each product",
+      sentence: "has more of its evidence available to check",
+    });
   } else if (candidate.resolvedChecks < scanned.resolvedChecks) {
     worseOnSomething = true;
   }
 
-  return { better: betterOn.length > 0 && !worseOnSomething, betterOn };
+  return {
+    better: differences.length > 0 && !worseOnSomething,
+    differences,
+    betterOn: differences.map((d) => d.sentence),
+  };
 }
 
 /**
@@ -289,11 +335,12 @@ export function selectVerifiedAlternatives(
   const ranked = [...surviving].sort(compareAlternatives).slice(0, limit);
 
   const alternatives: VerifiedAlternative[] = ranked.map((candidate, index) => {
-    const { betterOn } = compareEvidence(dimensionsOf(candidate), dimensionsOf(scanned));
+    const { betterOn, differences } = compareEvidence(dimensionsOf(candidate), dimensionsOf(scanned));
     return {
       candidate,
       rank: index + 1,
       betterOn,
+      differences,
       why: `Suggested because it ${sentenceList(betterOn)}.`,
       commerce: candidate.bestListing !== null ? "PRICED" : "PRICE_UNVERIFIED",
     };

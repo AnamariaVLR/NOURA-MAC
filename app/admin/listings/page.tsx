@@ -80,6 +80,10 @@ npm run listings:import -- checks.csv`}
       </Card>
 
       <p className="flex items-center justify-center gap-3 text-center text-[12px] text-ink-faint">
+        <Link href="/admin/coverage" className="underline underline-offset-2">
+          Evidence coverage
+        </Link>
+        {" · "}
         <Link href="/admin/missing" className="underline underline-offset-2">
           Missing products
         </Link>

@@ -111,21 +111,20 @@ export async function withoutCertification(
   const certs = await prisma().productCertification.findMany({
     where: { product: { slug: productSlug } },
   });
-  const lookup = await prisma().certificationLookup.findFirst({
+  const lookups = await prisma().evidenceLookup.findMany({
     where: { product: { slug: productSlug } },
   });
 
   await prisma().productCertification.deleteMany({ where: { product: { slug: productSlug } } });
-  await prisma().certificationLookup.deleteMany({ where: { product: { slug: productSlug } } });
+  await prisma().evidenceLookup.deleteMany({ where: { product: { slug: productSlug } } });
   try {
     await body();
   } finally {
     for (const { id: _id, ...cert } of certs) {
       await prisma().productCertification.create({ data: cert });
     }
-    if (lookup) {
-      const { id: _id, ...rest } = lookup;
-      await prisma().certificationLookup.create({ data: rest });
+    for (const { id: _id, ...rest } of lookups) {
+      await prisma().evidenceLookup.create({ data: rest });
     }
   }
 }
