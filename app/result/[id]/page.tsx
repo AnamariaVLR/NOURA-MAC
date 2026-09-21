@@ -231,6 +231,26 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="space-y-4">
+      {scan.mode === "mock" ? (
+        <div
+          className="rounded-md border border-bad/40 bg-bad/5 px-4 py-3.5"
+          data-testid="fixture-warning"
+          role="alert"
+        >
+          <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-bad">
+            Nothing was read from your photo
+          </p>
+          <p className="mt-2 text-[14px] leading-snug text-ink">
+            This server has no product identification configured, so Noura is showing a{" "}
+            <strong>fixture product</strong> instead. The name, the checks and the sources below
+            are real — and they are about that fixture, not about the thing you photographed.
+          </p>
+          <p className="mt-2 text-[12px] leading-relaxed text-ink-soft">
+            Set ANTHROPIC_API_KEY and scan again. Nothing on this page should be acted on.
+          </p>
+        </div>
+      ) : null}
+
       {/* ================= 1. PRODUCT ================= */}
       <Card>
         <div className="flex items-start gap-3">

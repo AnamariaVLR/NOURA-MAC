@@ -6,7 +6,7 @@
  */
 import { CATALOGUE } from "../../prisma/seed-data/catalogue";
 import { callTool } from "../anthropic";
-import { MOCK_PRODUCT_SLUG, MODEL, runMode } from "../config";
+import { MOCK_PRODUCT_SLUG, MODEL, fixtureAllowed, runMode } from "../config";
 import { IDENTIFY_SYSTEM, IDENTIFY_TOOL, IDENTIFY_USER } from "../prompts/health";
 import { ALL_SUBCATEGORY_KEYS } from "../health/categories";
 import { IdentificationSchema, type Identification } from "../schemas";
@@ -101,6 +101,19 @@ export async function identifyProduct(image: {
   mime: string;
 }): Promise<IdentifyResult> {
   if (runMode() === "mock") {
+    // A fixture is asked for, never fallen into. In production without a key the
+    // honest answer is that we could not read the photo — not a confident
+    // assessment of a product the shopper is not holding.
+    if (!fixtureAllowed()) {
+      return {
+        identification: null,
+        mode: "live",
+        model: MODEL,
+        note:
+          "Noura could not read this photo because product identification is not " +
+          "configured on this server. Nothing has been assessed.",
+      };
+    }
     return {
       identification: mockIdentification(),
       mode: "mock",

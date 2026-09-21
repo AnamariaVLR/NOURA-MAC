@@ -6,7 +6,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   CERTIFICATION_STATES,
   CERTIFICATION_RANK,
@@ -26,7 +26,7 @@ import { describeAll, describeLookup, uaeConformityLookup } from "@/lib/evidence
 import { certificationCheck } from "@/lib/health/checks";
 import { CheckSchema } from "@/lib/schemas";
 import { limitKey, windowStartFor } from "@/lib/rate-limit";
-import { scanLimitPerAddressPerHour, scanLimitPerHour } from "@/lib/config";
+import { fixtureAllowed, scanLimitPerAddressPerHour, scanLimitPerHour } from "@/lib/config";
 import { CATALOGUE } from "@/prisma/seed-data/catalogue";
 import { CATEGORY_RULES } from "@/lib/health/categories";
 import type { Basis } from "@/lib/health/categories/types";
@@ -445,5 +445,51 @@ describe("no page promises a score or a price Noura may not have", () => {
     for (const { file, source } of pages) {
       expect(visibleCopy(source), file).not.toMatch(/at a price a person checked/);
     }
+  });
+});
+
+/* ── a fixture is asked for, never fallen into ─────────────────────────── */
+
+describe("a fixture identification can never masquerade as a real one", () => {
+  const ORIGINAL = process.env.NODE_ENV;
+  const ORIGINAL_MOCK = process.env.NOURA_FORCE_MOCK;
+
+  afterEach(() => {
+    if (ORIGINAL === undefined) delete (process.env as Record<string, string | undefined>).NODE_ENV;
+    else (process.env as Record<string, string | undefined>).NODE_ENV = ORIGINAL;
+    if (ORIGINAL_MOCK === undefined) delete process.env.NOURA_FORCE_MOCK;
+    else process.env.NOURA_FORCE_MOCK = ORIGINAL_MOCK;
+  });
+
+  it("refuses a fixture in production, where a wrong answer reaches a shopper", () => {
+    // A scan of a yoghurt returned a complete, confident Coca-Cola assessment
+    // because the server had no API key. In production the honest output is a
+    // failed scan, not a real product nobody photographed.
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    delete process.env.NOURA_FORCE_MOCK;
+    expect(fixtureAllowed()).toBe(false);
+  });
+
+  it("allows a fixture when it is explicitly asked for, even in production", () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    process.env.NOURA_FORCE_MOCK = "1";
+    expect(fixtureAllowed()).toBe(true);
+  });
+
+  it("allows a fixture in development, where the banner explains it", () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+    delete process.env.NOURA_FORCE_MOCK;
+    expect(fixtureAllowed()).toBe(true);
+  });
+
+  it("warns before the product name, not after it", () => {
+    // By the time a reader has seen the name, they have believed it. A chip
+    // among other chips is not proportionate to a fabricated identification.
+    const page = readFileSync("app/result/[id]/page.tsx", "utf8");
+    const warning = page.indexOf('data-testid="fixture-warning"');
+    const product = page.indexOf("================= 1. PRODUCT");
+    expect(warning).toBeGreaterThan(-1);
+    expect(warning).toBeLessThan(product);
+    expect(page).toMatch(/Nothing was read from your photo/);
   });
 });

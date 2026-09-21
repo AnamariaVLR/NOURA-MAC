@@ -11,6 +11,7 @@
  *   Alalali Skipjack tuna             UAE conformity NOT_FOUND
  */
 
+import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import {
   addChecks,
@@ -22,6 +23,7 @@ import {
   withoutCertification,
 } from "./fixtures";
 
+const FIXTURE = resolve(__dirname, "../../fixtures/product.png");
 const PHONE = { width: 390, height: 844 };
 
 test.beforeEach(async ({ page }) => {
@@ -228,4 +230,26 @@ test("recording neither fact is refused, rather than stored as a blank check", a
   await expect(page.getByTestId("check-message")).toContainText(
     /record a price, or whether it was in stock/i,
   );
+});
+
+/* ── the fixture warning, as a person would meet it ─────────────────────── */
+
+test("a fixture scan says so before it says anything else", async ({ page }) => {
+  // The whole suite runs with NOURA_FORCE_MOCK=1, so every scan here is a
+  // fixture — which makes this the right place to assert the warning exists and
+  // comes first.
+  await page.goto("/scan");
+  await page.getByTestId("file-input").setInputFiles(FIXTURE);
+  await page.getByTestId("analyse-button").click();
+  await page.waitForURL(/\/result\/[a-z0-9]+/i, { timeout: 60_000 });
+
+  const warning = page.getByTestId("fixture-warning");
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText(/nothing was read from your photo/i);
+  await expect(warning).toContainText(/fixture product/i);
+
+  // Above the product name on the page, not tucked in beside it.
+  const warningBox = await warning.boundingBox();
+  const nameBox = await page.getByTestId("product-name").boundingBox();
+  expect(warningBox!.y).toBeLessThan(nameBox!.y);
 });

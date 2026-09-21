@@ -28,6 +28,35 @@ export function forceMock(): boolean {
   return process.env.NOURA_FORCE_MOCK === "1";
 }
 
+/**
+ * Whether a fixture identification may be served at all.
+ *
+ * ── Why this gate exists ────────────────────────────────────────────────────
+ *
+ * Mock mode returns a real catalogue product — Coca-Cola — with real evidence,
+ * a real verdict and real sources. Photographed a pot of yoghurt? The page says
+ * Coca-Cola, NOT RECOMMENDED, 10.6 g of sugar per 100 ml, confirmed 20 September.
+ * Every one of those statements is true about Coca-Cola and none of them is
+ * about the thing in your hand.
+ *
+ * That happened: a scan of an Al Rawabi Greek yoghurt page returned a complete,
+ * confident Coca-Cola assessment because the server had no ANTHROPIC_API_KEY.
+ * The mode was signalled by a small chip among other chips, which is not
+ * proportionate to presenting a fabricated identification as a real one.
+ *
+ * So a fixture is now something you ASK for, never something you fall into:
+ *
+ *   NOURA_FORCE_MOCK=1   explicit — tests and demos
+ *   development, no key  allowed, and the page says so unmissably
+ *   production, no key   REFUSED. The scan fails honestly instead.
+ *
+ * A failed scan is a worse demo and a better product.
+ */
+export function fixtureAllowed(): boolean {
+  if (forceMock()) return true;
+  return process.env.NODE_ENV !== "production";
+}
+
 export function runMode(): RunMode {
   if (forceMock()) return "mock";
   return apiKey() ? "live" : "mock";
