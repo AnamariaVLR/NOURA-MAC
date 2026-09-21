@@ -219,3 +219,92 @@ export function decideMatch<P extends MatchProduct>(
 
   return { kind: "confirm", candidates: candidates.slice(0, MAX_CONFIRM_CANDIDATES) };
 }
+
+/* ===========================================================================
+ * CORROBORATION — the defence against a confident wrong read
+ *
+ * A model can be fluently, confidently wrong. It reads an Al Rawabi pot and
+ * says "Almarai Greek Yoghurt" at 0.95, Almarai Greek Yoghurt is a real product
+ * with real evidence, and the page that follows is immaculate research about
+ * something the shopper is not holding. No confidence number catches that,
+ * because the number is the thing that is wrong.
+ *
+ * What does catch it is a SECOND, INDEPENDENT signal from the same image. The
+ * model already returns `visibleText` — the characters it actually transcribed
+ * off the pack — and that is a different claim from its conclusion about what
+ * the product is. When the two disagree, we have caught the model contradicting
+ * itself and must not proceed silently.
+ *
+ * Three bases, and only the first three may proceed without asking:
+ *
+ *   barcode         decisive. Digits are checkable and a wrong one is a
+ *                   transcription error, not an inference.
+ *   corroborated    the matched product's brand appears in the text actually
+ *                   read off the pack.
+ *   user_confirmed  a person chose it from candidates we offered.
+ *   uncorroborated  matched, with nothing from the image supporting it.
+ * ========================================================================= */
+
+export type IdentityBasis = "barcode" | "corroborated" | "user_confirmed" | "uncorroborated";
+
+/** Letters and digits only, lowercased: "Al-Rawabi" and "AL RAWABI" must agree. */
+function flatten(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+/**
+ * Does the text read off the pack support this product's brand?
+ *
+ * Deliberately asks about the BRAND rather than the product name. A name is
+ * marketing language that varies between the pack, the catalogue and the open
+ * database — "Greek Style Plain Yogurt" against "GREEK YOGHURT Low Fat Plain" —
+ * whereas a brand is printed in one form, is the thing a shopper recognises,
+ * and is precisely what a confident misidentification gets wrong.
+ *
+ * Returns false when there is no text to check. Absence of corroboration is not
+ * corroboration, and the honest consequence is a question rather than a verdict.
+ */
+export function brandCorroborated(
+  visibleText: string | null | undefined,
+  brand: string | null | undefined,
+): boolean {
+  if (!brand?.trim()) return false;
+  if (!visibleText?.trim()) return false;
+
+  const haystack = flatten(visibleText);
+  if (haystack.length === 0) return false;
+
+  // Every word of the brand must appear. "Al Rawabi" is not corroborated by a
+  // pack that only says "Al", which half the dairy brands in the UAE begin with.
+  const words = brand
+    .split(/[^A-Za-z0-9]+/)
+    .map(flatten)
+    .filter((w) => w.length >= 2);
+  if (words.length === 0) return false;
+
+  return words.every((word) => haystack.includes(word));
+}
+
+/**
+ * The basis on which this identity may be acted on.
+ *
+ * `matchedBrand` is the brand of the product we matched TO, not the brand the
+ * model claimed. Those differ exactly when something has gone wrong, and it is
+ * the match that the verdict will be about.
+ */
+export function identityBasis(args: {
+  barcode: string | null | undefined;
+  visibleText: string | null | undefined;
+  matchedBrand: string | null | undefined;
+  userConfirmed?: boolean;
+}): IdentityBasis {
+  if (args.userConfirmed) return "user_confirmed";
+  if (args.barcode?.trim()) return "barcode";
+  if (brandCorroborated(args.visibleText, args.matchedBrand)) return "corroborated";
+  return "uncorroborated";
+}
+
+/** May a product-specific verdict be produced on this basis alone? */
+export function basisPermitsAnalysis(basis: IdentityBasis): boolean {
+  return basis !== "uncorroborated";
+}

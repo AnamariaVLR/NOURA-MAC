@@ -20,7 +20,7 @@ import type {
   MatchSource,
   ProductCategory,
 } from "../schemas";
-import { decideMatch, type Candidate } from "./match";
+import { basisPermitsAnalysis, decideMatch, identityBasis, type IdentityBasis, type Candidate } from "./match";
 
 export type EvidenceResult = {
   product: Product | null;
@@ -35,6 +35,8 @@ export type EvidenceResult = {
    * this into a scan awaiting confirmation rather than a failure.
    */
   candidates?: MatchCandidate[];
+  /** What the identity rests on. "uncorroborated" may never carry a verdict. */
+  identityBasis?: IdentityBasis;
 };
 
 /** Turns a matcher candidate into the shape the page and the database hold. */
@@ -118,7 +120,13 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
   if (barcode) {
     const local = await prisma.product.findUnique({ where: { barcode } });
     if (local) {
-      return { product: local, method: "barcode-local", matchSource: "BARCODE", note: null };
+      return {
+        product: local,
+        method: "barcode-local",
+        matchSource: "BARCODE",
+        note: null,
+        identityBasis: "barcode",
+      };
     }
   }
 
@@ -127,7 +135,13 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
     const record = await lookupByBarcode(barcode, category);
     if (record) {
       const product = await upsertFromOpenDb(record, category, subcategory, sizeLabel);
-      return { product, method: "barcode-open-db", matchSource: "BARCODE", note: null };
+      return {
+        product,
+        method: "barcode-open-db",
+        matchSource: "BARCODE",
+        note: null,
+        identityBasis: "barcode",
+      };
     }
   }
 
@@ -141,11 +155,31 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
   const decision = decideMatch({ name, brand, sizeLabel, visibleText }, local);
 
   if (decision.kind === "auto") {
+    const basis = identityBasis({
+      barcode,
+      visibleText,
+      matchedBrand: decision.product.brand,
+    });
+
+    // The matcher is satisfied; the IMAGE is not. Nothing the model transcribed
+    // off the pack names this brand, so its conclusion is unsupported by its own
+    // reading. Ask rather than assert.
+    if (!basisPermitsAnalysis(basis)) {
+      return {
+        product: null,
+        method: "none",
+        note: null,
+        identityBasis: basis,
+        candidates: decision.candidates.slice(0, 4).map(toMatchCandidate),
+      };
+    }
+
     return {
       product: decision.product,
       method: "name-local",
       matchSource: "NAME_AUTO",
       note: "Matched by name because no barcode was readable.",
+      identityBasis: basis,
     };
   }
 
@@ -163,12 +197,31 @@ export async function gatherEvidence(identification: Identification): Promise<Ev
   // 4. Name, open database.
   const record = await searchByName(`${brand ?? ""} ${name}`.trim(), category);
   if (record) {
+    // This path had NO guard at all: whatever an open-database name search
+    // returned first became the authoritative identity, with a note asking the
+    // shopper to check. A note is not a gate. It is how a scan of an
+    // unidentifiable image became a verdict about a product called "Momo black".
     const product = await upsertFromOpenDb(record, category, subcategory, sizeLabel);
+    const basis = identityBasis({ barcode, visibleText, matchedBrand: product.brand });
+
+    if (!basisPermitsAnalysis(basis)) {
+      return {
+        product: null,
+        method: "none",
+        identityBasis: basis,
+        note:
+          "We found a product with a similar name, but nothing we could read on the pack " +
+          "confirms it is the same one, so we have not assessed it.",
+        candidates: [toMatchCandidate({ product, containment: 1, unseenTokens: [], sizeMatches: false })],
+      };
+    }
+
     return {
       product,
       method: "name-open-db",
       matchSource: "NAME_AUTO",
       note: "Matched by name search, not by barcode. Check the product below is the one in your hand.",
+      identityBasis: basis,
     };
   }
 

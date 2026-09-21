@@ -37,3 +37,5 @@ next-env.d.ts
 # Claude Code local state and worktrees
 .claude/
 trip.csv
+fixtures/real/*
+!fixtures/real/README.md

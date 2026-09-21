@@ -33,6 +33,7 @@
     "catalogue:audit": "tsx scripts/catalogue-audit.ts",
     "pilot:set": "tsx scripts/pilot-set.ts",
     "pilot:acceptance": "tsx scripts/acceptance.ts",
+    "identify": "tsx scripts/identify-image.ts",
     "discover:uae": "tsx scripts/discover-uae.ts",
     "db:wal": "tsx scripts/sqlite-wal.ts",
     "seed:bodies": "tsx scripts/import-notified-bodies.ts"
