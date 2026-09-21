@@ -1520,3 +1520,46 @@ run fails on a login form quietly refusing it. That presented as a broken form.
 It is the second time my own limiter has been misread as an application fault;
 `LOGIN_RATE_LIMIT_PER_HOUR` exists so it is the last.
 
+## 93. A source's granularity is a ceiling, not a preference
+
+`capStateForSource` caps what any importer can record. USDA and TRACES list
+operations, so they can never produce VERIFIED for a SKU however complete their
+records are; a manufacturer claim can never exceed CLAIM_ONLY. This is not
+caution — it is what the registers physically contain. Organic certification
+certifies an operator and a process, not a package.
+
+Order inside that function matters and was wrong once: granularity was checked
+before authority, so a manufacturer claim came out BRAND_LEVEL_ONLY — a pack
+claim wearing a registry's clothes. Authority is asked first.
+
+## 94. Evidence is keyed on (product, source, claim)
+
+One MOIAT query settles three separate facts. Al Wazir olive oil is
+BRAND_LEVEL_ONLY on UAE conformity and NOT_FOUND on halal and organic, from a
+single request. A `certified` boolean cannot express that, and a single
+"certification" row on the page implies a verdict no register issued.
+
+## 95. EU Ecolabel was measured and rejected, having been recommended
+
+`CERTIFICATION_SOURCES.md` ranked it the first integration: 26,149 live GTINs,
+a public CSV, no key. The gate was "how many match Noura products". The answer
+is zero, because Regulation (EC) 66/2010 excludes food and feed and Noura is 49
+food products and one cosmetic. The measurement existed to catch exactly this.
+Recorded in `EVIDENCE_COVERAGE.md` so the work can be picked up unchanged the
+day Noura sells cleaning products.
+
+## 96. The coverage view has no score
+
+`/admin/coverage` reports six buckets and no percentage. A single "72% covered"
+number would be read as progress, when the useful reading is the opposite: a
+list of what is still unknown, per product, per source. The two biggest buckets
+today are E and F — 100% of products have no verified price and no verified
+availability — and no certification work changes that.
+
+## 97. A lapsed price check is its own state
+
+Never-checked and checked-five-weeks-ago both rendered as "no price". The second
+is real work, and the shopper should know a person has been there. Candidates
+carry `staleListing` purely to explain the absence, never to quote from; a test
+asserts the lapsed copy contains no digits so an old price cannot leak back.
+
