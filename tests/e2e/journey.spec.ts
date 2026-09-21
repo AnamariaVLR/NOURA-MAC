@@ -196,3 +196,36 @@ test("admin coverage shows, per product, which source was asked what", async ({ 
     /not a statement that the product is uncertified/i,
   );
 });
+
+test("a checker can record availability without inventing a price", async ({ page }) => {
+  // The capability §4 asked for: price and availability are independent
+  // observations, and a form that demands both forces the checker to invent
+  // whichever half they did not see.
+  await signInAsAdmin(page);
+  await page.goto("/admin/listings");
+
+  const firstRow = page.getByTestId("queue-row").first();
+  await firstRow.click();
+
+  // Stock defaults to "didn't look", so nothing is recorded by accident.
+  await expect(page.getByTestId("in-stock-unknown")).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByTestId("in-stock-yes").click();
+  await page.getByTestId("checked-by-input").fill("Aisle Checker");
+  await page.getByTestId("save-check").click();
+
+  await expect(page.getByTestId("check-message")).toContainText(/Saved/i);
+});
+
+test("recording neither fact is refused, rather than stored as a blank check", async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto("/admin/listings");
+  await page.getByTestId("queue-row").first().click();
+
+  await page.getByTestId("checked-by-input").fill("Aisle Checker");
+  await page.getByTestId("save-check").click();
+
+  await expect(page.getByTestId("check-message")).toContainText(
+    /record a price, or whether it was in stock/i,
+  );
+});

@@ -43,10 +43,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That listing no longer exists." }, { status: 404 });
   }
 
-  const priceAed = parsePriceAed(text("priceAed"));
-  if (priceAed === null) {
+  // Price and availability are independent observations. A checker who saw the
+  // pack but not the shelf label records one; a checker reading a product page
+  // records the other. Requiring both would force them to invent the half they
+  // did not see, which is exactly what this form exists to prevent.
+  const rawPrice = text("priceAed");
+  const priceAed = rawPrice ? parsePriceAed(rawPrice) : null;
+  if (rawPrice && priceAed === null) {
     return NextResponse.json(
       { error: "Enter the price as a number, for example 12.50." },
+      { status: 400 },
+    );
+  }
+
+  const rawStock = text("inStock");
+  const inStock = rawStock === "" ? null : rawStock !== "false";
+
+  if (priceAed === null && inStock === null) {
+    return NextResponse.json(
+      { error: "Record a price, or whether it was in stock — or both." },
       { status: 400 },
     );
   }
@@ -62,7 +77,6 @@ export async function POST(request: Request) {
   // Default to the listing's tracked size: the common case is that the pack on the
   // shelf is the one we track, and one less field is one less thing to type.
   const sizeLabel = text("sizeLabel") || listing.sizeLabel;
-  const inStock = text("inStock") !== "false";
   const retailerUrl = text("retailerUrl") || null;
   const note = text("note") || null;
 
@@ -98,7 +112,7 @@ export async function POST(request: Request) {
   try {
     const created = await recordCheck({
       listingId,
-      priceFils: aedToFils(priceAed),
+      priceFils: priceAed === null ? null : aedToFils(priceAed),
       sizeLabel,
       inStock,
       checkedBy,

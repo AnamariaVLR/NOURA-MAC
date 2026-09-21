@@ -67,7 +67,7 @@ describe("round trip", () => {
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
       expect(outcome.check.priceFils).toBe(1205);
-      expect(formatAed(outcome.check.priceFils)).toBe("AED 12.05");
+      expect(formatAed(outcome.check.priceFils ?? 0)).toBe("AED 12.05");
     }
   });
 
@@ -174,10 +174,29 @@ describe("parseRow", () => {
     }
   });
 
-  it("SKIPS a row with no price — that is a listing nobody checked, not an error", () => {
-    const outcome = parseRow(row({ price_aed: "" }), NOW);
+  it("SKIPS a row with neither price nor availability — nobody checked it", () => {
+    const outcome = parseRow(row({ price_aed: "", in_stock: "" }), NOW);
     expect(outcome.ok).toBe(false);
     if (!outcome.ok) expect(outcome.kind).toBe("skipped");
+  });
+
+  it("accepts availability alone — seeing the shelf is an observation", () => {
+    const outcome = parseRow(row({ price_aed: "", in_stock: "yes" }), NOW);
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.check.priceFils).toBeNull();
+      expect(outcome.check.inStock).toBe(true);
+    }
+  });
+
+  it("accepts a price alone — reading a label is an observation too", () => {
+    const outcome = parseRow(row({ price_aed: "12.50", in_stock: "" }), NOW);
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.check.priceFils).toBe(1250);
+      // Nobody said it was in stock, so we do not say it either.
+      expect(outcome.check.inStock).toBeNull();
+    }
   });
 
   it("rejects a priced row with no checker: a price needs an author", () => {

@@ -110,9 +110,11 @@ export function csvToRecords(text: string): Array<Record<string, string>> {
 
 export type ParsedCheck = {
   listingId: string;
-  priceFils: number;
+  /** Null when the row recorded availability but no price. */
+  priceFils: number | null;
   sizeLabel: string;
-  inStock: boolean;
+  /** Null when the row recorded a price but no shelf observation. */
+  inStock: boolean | null;
   checkedBy: string;
   checkedAt: Date;
   retailerUrl: string | null;
@@ -181,18 +183,29 @@ export function parseRow(record: Record<string, string>, now: Date = new Date())
   }
   const row: ListingCheckCsvRow = shaped.data;
 
-  if (!record.price_aed?.trim()) {
-    return { ok: false, kind: "skipped", reason: "no price filled in" };
+  // Price and availability are independent. A row carrying either one is a real
+  // observation; a row carrying neither is simply one nobody got to, which is
+  // the normal state of an exported queue and is skipped rather than rejected.
+  const hasPrice = Boolean(record.price_aed?.trim());
+  const hasStock = Boolean(record.in_stock?.trim());
+  if (!hasPrice && !hasStock) {
+    return { ok: false, kind: "skipped", reason: "no price or availability filled in" };
   }
 
-  const priceAed = parsePriceAed(row.price_aed);
-  if (priceAed === null) {
-    return { ok: false, kind: "rejected", reason: `price "${row.price_aed}" is not a number` };
+  let priceAed: number | null = null;
+  if (hasPrice) {
+    priceAed = parsePriceAed(row.price_aed);
+    if (priceAed === null) {
+      return { ok: false, kind: "rejected", reason: `price "${row.price_aed}" is not a number` };
+    }
   }
 
-  const inStock = parseInStock(row.in_stock);
-  if (inStock === null) {
-    return { ok: false, kind: "rejected", reason: `in_stock "${row.in_stock}" is not yes or no` };
+  let inStock: boolean | null = null;
+  if (hasStock) {
+    inStock = parseInStock(row.in_stock);
+    if (inStock === null) {
+      return { ok: false, kind: "rejected", reason: `in_stock "${row.in_stock}" is not yes or no` };
+    }
   }
 
   const checkedBy = record.checked_by?.trim() ?? "";
@@ -213,7 +226,7 @@ export function parseRow(record: Record<string, string>, now: Date = new Date())
     ok: true,
     check: {
       listingId: row.listing_id,
-      priceFils: aedToFils(priceAed),
+      priceFils: priceAed === null ? null : aedToFils(priceAed),
       sizeLabel: record.size_label?.trim() || row.size_label,
       inStock,
       checkedBy,

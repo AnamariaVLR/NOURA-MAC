@@ -322,14 +322,25 @@ export type ListingQuery = z.infer<typeof ListingQuerySchema>;
 /** What the admin form posts for one check. */
 export const ListingCheckInputSchema = z.object({
   listingId: z.string().min(1),
-  priceAed: z.number().positive().max(100_000),
+  /**
+   * Both facts are optional and at least one is required — see the refinement
+   * below. Someone can record "it is on the shelf" without noting the price,
+   * and a price without looking at the shelf. Forcing both meant whichever half
+   * the checker did not observe had to be invented, which is the one thing a
+   * price-recording form must never require.
+   */
+  priceAed: z.number().positive().max(100_000).optional(),
   sizeLabel: z.string().min(1).max(60),
-  inStock: z.boolean(),
+  inStock: z.boolean().optional(),
   checkedBy: z.string().min(1).max(80),
   checkedAt: z.string().min(1).optional(),
   retailerUrl: z.string().url().max(2000).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
-});
+})
+  .refine((v) => v.priceAed !== undefined || v.inStock !== undefined, {
+    message: "Record a price, or whether it was in stock — or both.",
+    path: ["priceAed"],
+  });
 export type ListingCheckInput = z.infer<typeof ListingCheckInputSchema>;
 
 /** One row of the listings CSV. Every field is a string: CSV has no types. */

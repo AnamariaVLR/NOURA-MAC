@@ -124,9 +124,11 @@ export async function listingQueue(now: Date = new Date()): Promise<ListingQueue
  */
 export async function recordCheck(input: {
   listingId: string;
-  priceFils: number;
+  /** Null when the checker recorded availability but not price. */
+  priceFils: number | null;
   sizeLabel: string;
-  inStock: boolean;
+  /** Null when the checker recorded a price but did not look at the shelf. */
+  inStock: boolean | null;
   checkedBy: string;
   checkedAt: Date;
   retailerUrl: string | null;

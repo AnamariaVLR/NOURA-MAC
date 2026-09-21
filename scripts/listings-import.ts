@@ -90,8 +90,14 @@ async function main() {
   for (const problem of report.problems.slice(0, 20)) console.log(`  ${problem}`);
 
   if (report.imported > 0) {
-    const total = writable.reduce((sum, c) => sum + c.priceFils, 0);
-    console.log(`Recorded prices totalling ${formatAed(total)} across ${report.imported} checks.`);
+    // Availability-only rows carry no price and are counted separately rather
+    // than summed as zero, which would understate the total silently.
+    const priced = writable.filter((c) => c.priceFils !== null);
+    const total = priced.reduce((sum, c) => sum + (c.priceFils ?? 0), 0);
+    console.log(
+      `Recorded ${report.imported} check(s): ${priced.length} with a price, ` +
+        `totalling ${formatAed(total)}.`,
+    );
   }
 }
 

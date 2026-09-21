@@ -5,7 +5,10 @@
  *
  * What that costs in design:
  *   - The checker's name is remembered in localStorage, so it is typed once ever.
- *   - The price field is the only required input: size defaults to the pack we
+ *   - Price and stock are BOTH optional and one is required: a checker records
+ *     what they actually observed. "Didn't look" is the stock default, so the
+ *     form never stores an observation nobody made.
+ *   - Size defaults to the pack we
  *     track, stock defaults to yes, the date defaults to now.
  *   - The keyboard opens on a numeric pad and the field is focused on open.
  *   - "In stock" is a two-button toggle, not a checkbox: bigger target, no ambiguity.
@@ -39,7 +42,7 @@ export function ListingCheckForm({
   const [checkedBy, setCheckedBy] = useState("");
   const [price, setPrice] = useState("");
   const [sizeLabel, setSizeLabel] = useState(listing.sizeLabel);
-  const [inStock, setInStock] = useState(true);
+  const [inStock, setInStock] = useState<boolean | null>(null);
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -83,7 +86,8 @@ export function ListingCheckForm({
     body.append("listingId", listing.listingId);
     body.append("priceAed", price);
     body.append("sizeLabel", sizeLabel);
-    body.append("inStock", String(inStock));
+    // Empty string means "not observed" — the server reads that as null.
+    body.append("inStock", inStock === null ? "" : String(inStock));
     body.append("checkedBy", checkedBy);
     if (listing.retailerUrl) body.append("retailerUrl", listing.retailerUrl);
     if (note) body.append("note", note);
@@ -143,7 +147,6 @@ export function ListingCheckForm({
             inputMode="decimal"
             autoComplete="off"
             placeholder="12.50"
-            required
             className="tnum w-full rounded-xl border border-line bg-card px-3 py-3 text-[17px]"
           />
         </label>
@@ -153,11 +156,22 @@ export function ListingCheckForm({
           <div className="flex overflow-hidden rounded-xl border border-line">
             <button
               type="button"
+              onClick={() => setInStock(null)}
+              data-testid="in-stock-unknown"
+              aria-pressed={inStock === null}
+              className={`px-3 py-3 text-[14px] font-semibold ${
+                inStock === null ? "bg-ink/10 text-ink" : "bg-card text-ink-soft"
+              }`}
+            >
+              Didn&rsquo;t look
+            </button>
+            <button
+              type="button"
               onClick={() => setInStock(true)}
               data-testid="in-stock-yes"
-              aria-pressed={inStock}
+              aria-pressed={inStock === true}
               className={`px-4 py-3 text-[14px] font-semibold ${
-                inStock ? "bg-brand text-white" : "bg-card text-ink-soft"
+                inStock === true ? "bg-brand text-white" : "bg-card text-ink-soft"
               }`}
             >
               Yes
@@ -166,9 +180,9 @@ export function ListingCheckForm({
               type="button"
               onClick={() => setInStock(false)}
               data-testid="in-stock-no"
-              aria-pressed={!inStock}
+              aria-pressed={inStock === false}
               className={`px-4 py-3 text-[14px] font-semibold ${
-                !inStock ? "bg-ink text-paper" : "bg-card text-ink-soft"
+                inStock === false ? "bg-ink text-paper" : "bg-card text-ink-soft"
               }`}
             >
               No
