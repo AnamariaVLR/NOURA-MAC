@@ -48,9 +48,29 @@ import {
   MIN_KNOWN_FOR_GOOD_CHOICE,
 } from "./rubric";
 
+/**
+ * What the banner says. RUBRIC §7 V3-V5; the judgement words are POLICY and §9
+ * Q7 still asks a nutritionist to set them.
+ *
+ * ── Why "VERIFIED —" was removed ────────────────────────────────────────────
+ *
+ * The labels read "VERIFIED — GOOD CHOICE" and "VERIFIED — ACCEPTABLE". On the
+ * same screen, the evidence rows use VERIFIED to mean something completely
+ * different and much stronger: a certificate in the UAE register matched to
+ * this exact barcode.
+ *
+ * Measured on the 262-product catalogue, 97 of them — 37% — displayed a banner
+ * beginning "VERIFIED" while their certification state was NOT_FOUND or
+ * BRAND_LEVEL_ONLY. A shopper reading "VERIFIED — ACCEPTABLE" above a row
+ * saying "no record found in MOIAT" is being shown one word meaning two things.
+ *
+ * The prefix is gone. Nothing else changed: the thresholds, the ordering and
+ * the decision logic are untouched, and the line immediately beneath still
+ * states the arithmetic the label rests on ("7 of 8 checks passed").
+ */
 export const VERDICT_LABEL: Record<Verdict, string> = {
-  good_choice: "VERIFIED — GOOD CHOICE",
-  acceptable: "VERIFIED — ACCEPTABLE",
+  good_choice: "GOOD CHOICE",
+  acceptable: "ACCEPTABLE",
   not_recommended: "NOT RECOMMENDED",
   could_not_verify: "COULD NOT VERIFY",
 };

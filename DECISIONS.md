@@ -233,8 +233,8 @@ reader sees, and marks a severe failure (§21).
 | 0 | No checks could be made at all | COULD NOT VERIFY |
 | 1 | Coverage < 50% of applicable dimensions | COULD NOT VERIFY |
 | 2 | A disqualifying check failed | NOT RECOMMENDED |
-| 3 | Pass rate ≥ 80% **and** ≥ 3 checks actually made | VERIFIED — GOOD CHOICE |
-| 4 | Pass rate ≥ 50% | VERIFIED — ACCEPTABLE |
+| 3 | Pass rate ≥ 80% **and** ≥ 3 checks actually made | GOOD CHOICE |
+| 4 | Pass rate ≥ 50% | ACCEPTABLE |
 | 5 | Otherwise | NOT RECOMMENDED |
 
 Coverage is `known / applicable`; pass rate is `passed / known`. Unknown checks are
@@ -249,7 +249,7 @@ everything in the rubric they are ours and provisional.
 ## 21. Two overrides, because counting checks equally has a failure mode
 
 Running the rubric over the real catalogue produced one indefensible result:
-**salted butter rated VERIFIED — ACCEPTABLE** at 4 of 7 checks passed. It genuinely
+**salted butter rated ACCEPTABLE** at 4 of 7 checks passed. It genuinely
 passes "low sugars", "minimally processed", "no additives" and "publishes
 ingredients" — four true statements — while carrying 55 g of saturated fat per 100 g.
 
@@ -263,7 +263,7 @@ forces NOT RECOMMENDED regardless of the tally. Two things qualify:
 
 ## 22. GOOD CHOICE needs a minimum of evidence, not just a high ratio
 
-A sunscreen reached VERIFIED — GOOD CHOICE on a pass rate of 1.0 over three weak
+A sunscreen reached GOOD CHOICE on a pass rate of 1.0 over three weak
 checks. Cosmetics only have three applicable dimensions, so a high ratio is cheap
 there. `MIN_KNOWN_FOR_GOOD_CHOICE = 3` means our strongest statement always rests on
 at least three checks actually made.
@@ -1411,7 +1411,7 @@ what changed around it before looking harder at it.
 
 The first scan of a real product by someone who is not me produced a result page
 that was right in every respect but one. A 1 L bottle of Borges extra virgin
-olive oil, confirmed by the shopper, VERIFIED — GOOD CHOICE, four of four checks
+olive oil, confirmed by the shopper, GOOD CHOICE, four of four checks
 passed, certification honestly unknown and excluded, no price invented.
 
 And this line:
@@ -1580,4 +1580,24 @@ is worth stating is that nothing is hidden either way: the failed salt line
 appears on the checklist whatever the verdict reads, and a second test now
 asserts that a disqualifying failure is always visible. A coverage floor may
 withhold a summary; it may never suppress a measured finding.
+
+## 99. The verdict no longer says VERIFIED
+
+The banner read "VERIFIED — GOOD CHOICE" and "VERIFIED — ACCEPTABLE". Elsewhere
+on the same screen, VERIFIED means a certificate in the UAE register matched to
+this exact barcode — a much stronger and entirely different claim.
+
+Measured across the 262-product catalogue: **97 products, 37%**, displayed a
+banner beginning "VERIFIED" while their certification state was NOT_FOUND or
+BRAND_LEVEL_ONLY. A shopper reading "VERIFIED — ACCEPTABLE" directly above "no
+record found in MOIAT" is being shown one word meaning two things, and the
+stronger meaning is the one that sticks.
+
+The prefix is gone. Thresholds, ordering and decision logic are untouched; the
+line beneath the banner still states the arithmetic it rests on. A test asserts
+no verdict label contains the word again.
+
+Whether "GOOD CHOICE" itself is the right summary of "80% of resolved checks
+passed" is a separate question, and it is not mine to answer: RUBRIC §9 Q16 now
+asks the nutritionist, alongside Q7 on the cut-offs themselves.
 

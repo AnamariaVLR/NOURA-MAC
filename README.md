@@ -155,7 +155,7 @@ plan for merging the `brand/website` branch.
  │  4  ANALYSE                          lib/health/evaluate.ts             │
  │     checks.ts   → every rubric dimension as ✓ / ✗ / unknown, with the   │
  │                   measured value and source behind it                   │
- │     verdict.ts  → VERIFIED — GOOD CHOICE / VERIFIED — ACCEPTABLE /      │
+ │     verdict.ts  → GOOD CHOICE / ACCEPTABLE /      │
  │                   NOT RECOMMENDED / COULD NOT VERIFY                    │
  │     Unknown is excluded from the arithmetic, never counted as a pass    │
  │                                                                         │
@@ -277,8 +277,8 @@ The verdict follows from the checklist by these rules, in order:
 | 0 | The category is one Noura cannot assess (cosmetics, supplements) | COULD NOT VERIFY |
 | 1 | Coverage < 50% of the category's applicable checks | COULD NOT VERIFY |
 | 2 | A `disqualifying` check failed | NOT RECOMMENDED |
-| 3 | Pass rate ≥ 80% and ≥ 3 checks made | VERIFIED — GOOD CHOICE |
-| 4 | Pass rate ≥ 50% | VERIFIED — ACCEPTABLE |
+| 3 | Pass rate ≥ 80% and ≥ 3 checks made | GOOD CHOICE |
+| 4 | Pass rate ≥ 50% | ACCEPTABLE |
 | 5 | Otherwise | NOT RECOMMENDED |
 
 Coverage is `known / applicable`; pass rate is `passed / known`. Two things are

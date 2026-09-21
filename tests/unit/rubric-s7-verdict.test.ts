@@ -42,10 +42,26 @@ function list(pass: number, fail: number, unknown = 0): Check[] {
   ];
 }
 
+describe("the verdict never borrows the word VERIFIED from the evidence layer", () => {
+  it("keeps the health assessment's vocabulary separate from certification's", () => {
+    // 97 of 262 catalogue products were showing a banner beginning "VERIFIED"
+    // while their certification state was NOT_FOUND or BRAND_LEVEL_ONLY. One
+    // word, two meanings, same screen.
+    expect(VERDICT_LABEL.good_choice).not.toMatch(/verified/i);
+    expect(VERDICT_LABEL.acceptable).not.toMatch(/verified/i);
+    expect(VERDICT_LABEL.not_recommended).not.toMatch(/verified/i);
+  });
+
+  it("still says plainly when it could not establish enough to judge", () => {
+    // This one keeps the word, and means it: we could not verify ENOUGH.
+    expect(VERDICT_LABEL.could_not_verify).toBe("COULD NOT VERIFY");
+  });
+});
+
 describe("the four verdicts", () => {
   it("has a display label for each", () => {
-    expect(VERDICT_LABEL.good_choice).toBe("VERIFIED — GOOD CHOICE");
-    expect(VERDICT_LABEL.acceptable).toBe("VERIFIED — ACCEPTABLE");
+    expect(VERDICT_LABEL.good_choice).toBe("GOOD CHOICE");
+    expect(VERDICT_LABEL.acceptable).toBe("ACCEPTABLE");
     expect(VERDICT_LABEL.not_recommended).toBe("NOT RECOMMENDED");
     expect(VERDICT_LABEL.could_not_verify).toBe("COULD NOT VERIFY");
   });

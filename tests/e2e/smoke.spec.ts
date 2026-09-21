@@ -10,8 +10,8 @@ import { BETTER_DRINKS, SCANNED_PRODUCT, addChecks, clearChecks, disconnect } fr
 const FIXTURE = resolve(__dirname, "../../fixtures/product.png");
 
 const VERDICTS = [
-  "VERIFIED — GOOD CHOICE",
-  "VERIFIED — ACCEPTABLE",
+  "GOOD CHOICE",
+  "ACCEPTABLE",
   "NOT RECOMMENDED",
   "COULD NOT VERIFY",
 ];

@@ -133,7 +133,7 @@ pack in the shopper's hand.
 | ID | Rule | Tag |
 |---|---|---|
 | **D4** | A verdict requires **at least half** of the category's applicable checks to be resolved. `MIN_COVERAGE = 0.5` | **POLICY** — no retrieved scheme defines a coverage floor. Retained because removing it lets a product reach a verdict by publishing almost nothing (§9 Q7) |
-| **D5** | **VERIFIED — GOOD CHOICE** additionally requires **at least 3** resolved checks. `MIN_KNOWN_FOR_GOOD_CHOICE = 3` | **POLICY** — without it a cosmetic with three weak dimensions reaches our strongest statement on a pass rate of 1.0 (§9 Q7) |
+| **D5** | **GOOD CHOICE** additionally requires **at least 3** resolved checks. `MIN_KNOWN_FOR_GOOD_CHOICE = 3` | **POLICY** — without it a cosmetic with three weak dimensions reaches our strongest statement on a pass rate of 1.0 (§9 Q7) |
 
 ### 2.4 How "unknown" propagates
 
@@ -624,8 +624,8 @@ Applied in order; the first matching rule decides.
 | **V0** | Category not supported (D12), or no applicable checks, or none resolvable | **COULD NOT VERIFY** | **POLICY** |
 | **V1** | Coverage < 50% of the category's applicable checks | **COULD NOT VERIFY** | **POLICY** — D4 |
 | **V2** | Any **disqualifying** check failed | **NOT RECOMMENDED** | **POLICY** — §7.1 |
-| **V3** | Pass rate ≥ **80%** (`0.8`) and ≥ **3** checks resolved | **VERIFIED — GOOD CHOICE** | **POLICY** — D5 |
-| **V4** | Pass rate ≥ **50%** (`0.5`) | **VERIFIED — ACCEPTABLE** | **POLICY** |
+| **V3** | Pass rate ≥ **80%** (`0.8`) and ≥ **3** checks resolved | **GOOD CHOICE** | **POLICY** — D5 |
+| **V4** | Pass rate ≥ **50%** (`0.5`) | **ACCEPTABLE** | **POLICY** |
 | **V5** | Otherwise | **NOT RECOMMENDED** | **POLICY** |
 
 `coverage = resolved ÷ applicable`; `pass rate = passed ÷ resolved`.
@@ -731,6 +731,7 @@ removed from the pilot until there is something to check.
 | **Q12** | Should A6.3 fail a product? EFSA's phosphate finding is about *population exposure across the diet*, not about any one product. The approving decision says flag on an EFSA concern; this is the row where that reads most strangely | new, open |
 | **Q13** | Cheese has sourced thresholds (S5 #9) and no rule (L8). Worth writing, and what is "better" within cheese? | new, open |
 | **Q14** | C4.8.7 identifies an energy drink as caffeine **plus** a named stimulant, which misses one formulated with caffeine alone. Is that the right direction to err in, given the flag disqualifies? | new, open |
+| **Q16** | The banner reads **GOOD CHOICE** at a pass rate of 0.8 over three or more resolved checks. That wording is an editorial summary of an arithmetic fact, and both the cut-off and the words are UNSOURCED POLICY. The line beneath always states the arithmetic ("7 of 8 checks passed"). Is "good choice" the right thing to say, or should the banner state the arithmetic and stop? | new, open |
 | **Q15** | §7 applies V1 (coverage below 50%) **before** V2 (a disqualifying failure), so a product can carry a measured disqualifier and still read COULD NOT VERIFY. A real case: a sweet chilli sauce with salt at 3.0 g/100 g — 2.3× the line, from the published panel — and only 3 of 7 checks resolvable. The failed salt line is shown on the checklist either way; only the one-line verdict changes. Should a **quantified** disqualifier outrank the coverage floor? | new, open |
 
 ---
