@@ -415,3 +415,25 @@ test("with no checks recorded, no price is shown and the reason is given", async
   const prices = body.match(/AED\s*\d/g) ?? [];
   expect(prices, `page showed a price with no check recorded: ${prices.join(", ")}`).toHaveLength(0);
 });
+
+/* ===========================================================================
+ * Evidence provenance: each claim, and the register that answered it
+ * ========================================================================= */
+test("each certification claim is shown separately, naming its source", async ({ page }) => {
+  await scan(page);
+
+  const rows = page.getByTestId("claim-evidence");
+  await expect(rows).not.toHaveCount(0);
+
+  // Every row names a register. A claim with no source behind it is not a claim
+  // Noura is entitled to print.
+  for (const row of await rows.all()) {
+    const text = await row.innerText();
+    expect(text).toMatch(/MOIAT|register/i);
+  }
+
+  // And nowhere does the page assert the product is uncertified.
+  const body = (await page.locator("body").innerText()).toLowerCase();
+  expect(body).not.toMatch(/\b(is|are) (not certified|uncertified)\b/);
+  expect(body).not.toMatch(/certification:\s*none\b/);
+});
