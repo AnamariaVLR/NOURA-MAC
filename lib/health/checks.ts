@@ -75,6 +75,11 @@ export type EvidenceInput = {
    * Proof the UAE register was ASKED about this product. Null means it was not,
    * which is UNKNOWN — a different thing from asked-and-nothing-found.
    */
+  /**
+   * The UAE conformity answer specifically — derived from the EvidenceLookup row
+   * for (MOIAT, UAE_CONFORMITY). Other claims are held alongside it and rendered
+   * separately; this check speaks for one register and one question.
+   */
   certificationLookup?: LookupEvidence;
   /** Attribution for the nutrition/ingredient evidence. */
   evidenceSource: SourceRef;

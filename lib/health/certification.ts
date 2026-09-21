@@ -21,7 +21,7 @@
  *                     within MOIAT's technical-regulation scope at all.
  *   UNKNOWN           we never asked, or the query failed. The default.
  *
- * The line between NOT_FOUND and UNKNOWN is the reason CertificationLookup
+ * The line between NOT_FOUND and UNKNOWN is the reason EvidenceLookup
  * exists: it is the record that the question was put.
  *
  * ── What this never does ────────────────────────────────────────────────────

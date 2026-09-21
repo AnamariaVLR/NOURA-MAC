@@ -14,7 +14,7 @@
  *   2. Brand-level certificates — the brand matched, this product did not. Kept
  *      so the page can say "the brand is in the register and this product is
  *      not", and never counted as verification.
- *   3. A CertificationLookup row, always, even when nothing was found.
+ *   3. One EvidenceLookup row PER CLAIM, always, even when nothing was found.
  *
  * (3) is what separates "we asked and the register has nothing" from "we never
  * asked". Without it both render as unknown, and one of them is a fact worth

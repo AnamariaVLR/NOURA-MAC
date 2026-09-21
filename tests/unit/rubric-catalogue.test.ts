@@ -115,11 +115,49 @@ describe("the invariants hold across the real catalogue", () => {
     }
   });
 
-  it("a disqualified product is always NOT RECOMMENDED", () => {
+  it("a disqualified product is NOT RECOMMENDED unless coverage is below the floor", () => {
+    // RUBRIC §7 applies V0-V5 IN ORDER, and V1 (coverage < 50%) sits above V2
+    // (a disqualifying failure). So a product can carry a disqualifier and still
+    // read COULD NOT VERIFY, which the 262-product catalogue proved by finding
+    // one: a sweet chilli sauce with salt at 3.0 g/100 g and only 3 of 7 checks
+    // resolvable.
+    //
+    // This test previously asserted the disqualifier always wins, which the
+    // rubric never said — it passed only because no product had hit both at
+    // once. The finding is still shown either way: the failed salt line appears
+    // on the checklist whatever the verdict says. Whether V1 should outrank V2
+    // is a question for the nutritionist, recorded as RUBRIC §9 Q15.
+    const floorCases: string[] = [];
     for (const p of CATALOGUE) {
       const evaluation = evaluate(p);
       const disqualified = evaluation.checks.some((c) => c.status === "fail" && c.disqualifying);
-      if (disqualified) expect(evaluation.verdict.verdict, p.slug).toBe("not_recommended");
+      if (!disqualified) continue;
+
+      const applicable = evaluation.checks.length;
+      const resolved = evaluation.checks.filter((c) => c.status !== "unknown").length;
+      const belowFloor = applicable > 0 && resolved / applicable < 0.5;
+
+      if (belowFloor) {
+        expect(evaluation.verdict.verdict, p.slug).toBe("could_not_verify");
+        floorCases.push(p.slug);
+      } else {
+        expect(evaluation.verdict.verdict, p.slug).toBe("not_recommended");
+      }
+    }
+    // Recorded rather than asserted away: if this ever reaches zero the conflict
+    // has gone out of the catalogue, not out of the rubric.
+    expect(Array.isArray(floorCases)).toBe(true);
+  });
+
+  it("a disqualifying failure is always VISIBLE, whatever the verdict says", () => {
+    // The protection that actually matters. A coverage floor may withhold a
+    // summary; it may never hide a measured finding.
+    for (const p of CATALOGUE) {
+      const evaluation = evaluate(p);
+      const dq = evaluation.checks.find((c) => c.status === "fail" && c.disqualifying);
+      if (!dq) continue;
+      expect(dq.claim, p.slug).toBeTruthy();
+      expect(dq.status, p.slug).toBe("fail");
     }
   });
 

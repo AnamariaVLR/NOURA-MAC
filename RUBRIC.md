@@ -731,6 +731,7 @@ removed from the pilot until there is something to check.
 | **Q12** | Should A6.3 fail a product? EFSA's phosphate finding is about *population exposure across the diet*, not about any one product. The approving decision says flag on an EFSA concern; this is the row where that reads most strangely | new, open |
 | **Q13** | Cheese has sourced thresholds (S5 #9) and no rule (L8). Worth writing, and what is "better" within cheese? | new, open |
 | **Q14** | C4.8.7 identifies an energy drink as caffeine **plus** a named stimulant, which misses one formulated with caffeine alone. Is that the right direction to err in, given the flag disqualifies? | new, open |
+| **Q15** | §7 applies V1 (coverage below 50%) **before** V2 (a disqualifying failure), so a product can carry a measured disqualifier and still read COULD NOT VERIFY. A real case: a sweet chilli sauce with salt at 3.0 g/100 g — 2.3× the line, from the published panel — and only 3 of 7 checks resolvable. The failed salt line is shown on the checklist either way; only the one-line verdict changes. Should a **quantified** disqualifier outrank the coverage floor? | new, open |
 
 ---
 

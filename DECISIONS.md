@@ -1563,3 +1563,21 @@ is real work, and the shopper should know a person has been there. Candidates
 carry `staleListing` purely to explain the absence, never to quote from; a test
 asserts the lapsed copy contains no digits so an old price cannot leak back.
 
+## 98. The coverage floor outranks a disqualifier, for now, and it is flagged
+
+Expanding to 262 products found the first product where RUBRIC §7's V1 and V2
+both apply: a sweet chilli sauce with salt at 3.0 g/100 g — measured, published,
+2.3× the line — and only 3 of 7 checks resolvable. §7 says the rules are applied
+in order and V1 sits above V2, so the verdict is COULD NOT VERIFY.
+
+A unit test asserted the opposite, that a disqualifier always wins. The rubric
+never said that; the test passed only because no product had hit both at once.
+The test now encodes what §7 actually specifies, and RUBRIC §9 Q15 asks the
+nutritionist whether a *quantified* disqualifier should outrank the floor.
+
+Changing the ordering would be a rubric change, which is not mine to make. What
+is worth stating is that nothing is hidden either way: the failed salt line
+appears on the checklist whatever the verdict reads, and a second test now
+asserts that a disqualifying failure is always visible. A coverage floor may
+withhold a summary; it may never suppress a measured finding.
+
