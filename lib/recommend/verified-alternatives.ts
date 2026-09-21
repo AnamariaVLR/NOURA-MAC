@@ -62,11 +62,14 @@ export const REJECTION_COPY: Record<RejectionReason, string> = {
  * a price for this yet" is an honest thing to print; quietly dropping it would
  * let a data gap masquerade as a judgement about the product.
  */
-export type CommerceStatus = "PRICED" | "PRICE_UNVERIFIED";
+export type CommerceStatus = "PRICED" | "AVAILABILITY_STALE" | "PRICE_UNVERIFIED";
 
 export const COMMERCE_COPY: Record<CommerceStatus, string> = {
   PRICED: "Price verified by hand",
-  PRICE_UNVERIFIED: "We have not verified a price for this yet",
+  // Someone HAS checked; the check is simply too old to quote. Saying "no price"
+  // would throw away real work and misdescribe what we know.
+  AVAILABILITY_STALE: "Availability not verified recently",
+  PRICE_UNVERIFIED: "Price not verified yet",
 };
 
 /**
@@ -342,7 +345,12 @@ export function selectVerifiedAlternatives(
       betterOn,
       differences,
       why: `Suggested because it ${sentenceList(betterOn)}.`,
-      commerce: candidate.bestListing !== null ? "PRICED" : "PRICE_UNVERIFIED",
+      commerce:
+        candidate.bestListing !== null
+          ? "PRICED"
+          : candidate.staleListing !== null
+            ? "AVAILABILITY_STALE"
+            : "PRICE_UNVERIFIED",
     };
   });
 

@@ -16,6 +16,7 @@ import {
 } from "@/lib/health/certification";
 import { certificationCheck } from "@/lib/health/checks";
 import {
+  COMMERCE_COPY,
   compareEvidence,
   explainEmpty,
   selectVerifiedAlternatives,
@@ -127,6 +128,7 @@ function candidate(over: Partial<AlternativeCandidate> & { name: string }): Alte
     subcategory: "olive-oil",
     verdict: "good_choice",
     certification: "NOT_FOUND",
+    staleListing: null,
     checks: [check({ key: "saturatedFat" }), check({ key: "salt" })],
     nutrition: null,
     additiveCount: 0,
@@ -471,5 +473,41 @@ describe("availability is separate evidence from price", () => {
     ).alternatives[0];
     expect(alt.commerce).toBe("PRICE_UNVERIFIED");
     expect(JSON.stringify(alt)).not.toMatch(/estimat|approx|around AED/i);
+  });
+});
+
+/* ── availability is its own fact (Phase 7) ─────────────────────────────── */
+
+describe("a lapsed check and a never-checked product read differently", () => {
+  const scanned = () =>
+    candidate({ name: "Scanned", checks: [check({ key: "salt", status: "fail" })] });
+
+  it("says availability is not recent when someone DID check, just not lately", () => {
+    const stale = candidate({
+      name: "Lapsed Oil",
+      bestListing: null,
+      staleListing: listing({ isFresh: false, ageDays: 40 }),
+    });
+    const alt = select(scanned(), [stale]).alternatives[0];
+    expect(alt.commerce).toBe("AVAILABILITY_STALE");
+    expect(COMMERCE_COPY[alt.commerce]).toBe("Availability not verified recently");
+  });
+
+  it("says the price is simply not verified when nobody has ever checked", () => {
+    const never = candidate({ name: "Never Checked", bestListing: null, staleListing: null });
+    const alt = select(scanned(), [never]).alternatives[0];
+    expect(alt.commerce).toBe("PRICE_UNVERIFIED");
+    expect(COMMERCE_COPY[alt.commerce]).toBe("Price not verified yet");
+  });
+
+  it("never reuses a lapsed check as if it were a current price", () => {
+    const stale = candidate({
+      name: "Lapsed",
+      bestListing: null,
+      staleListing: listing({ isFresh: false, ageDays: 40, priceFils: 999 }),
+    });
+    const alt = select(scanned(), [stale]).alternatives[0];
+    expect(alt.candidate.bestListing).toBeNull();
+    expect(COMMERCE_COPY[alt.commerce]).not.toMatch(/\d/);
   });
 });

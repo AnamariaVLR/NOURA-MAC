@@ -173,10 +173,18 @@ function toCandidate(
     .filter((l): l is Listing => l !== null && l.isFresh && l.inStock)
     .sort((a, b) => (a.unitPriceFils ?? a.priceFils) - (b.unitPriceFils ?? b.priceFils));
 
+  // The newest check of any kind, fresh or not. Used only to say WHY there is no
+  // price, never as a price.
+  const anyChecked = product.listings
+    .map((listing) => toListing(listing, now))
+    .filter((l): l is Listing => l !== null)
+    .sort((a, b) => a.ageDays - b.ageDays);
+
   const certification = certificationFor(input).state;
 
   return {
     certification,
+    staleListing: buyable.length === 0 ? (anyChecked[0] ?? null) : null,
     productId: product.id,
     slug: product.slug,
     name: product.name,

@@ -74,6 +74,13 @@ export type Candidate = {
    * recomputing it per comparison would be both slow and a chance to disagree.
    */
   certification: import("../health/certification").CertificationState;
+  /**
+   * The newest listing check even when it is too old to quote, so the page can
+   * distinguish "nobody has ever checked" from "the last check has lapsed".
+   * Those are different things to tell a shopper, and collapsing them into a
+   * single blank was hiding work that has actually been done.
+   */
+  staleListing: import("../schemas").Listing | null;
   productId: string;
   slug: string;
   name: string;

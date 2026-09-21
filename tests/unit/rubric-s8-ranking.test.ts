@@ -87,6 +87,7 @@ function candidate(over: Partial<Candidate> & { name: string }): Candidate {
     subcategory: null,
     verdict: "acceptable",
     certification: "NOT_FOUND",
+    staleListing: null,
     checks: checks(3),
     nutrition: null,
     additiveCount: 0,
