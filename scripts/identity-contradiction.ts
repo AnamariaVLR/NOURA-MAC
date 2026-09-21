@@ -41,7 +41,32 @@ async function main(): Promise<void> {
   console.log(`  visual evidence points at : ${visual.brand} — ${visual.name}`);
   console.log(`  barcode resolves to       : ${other.brand} — ${other.name}  [${other.barcode}]\n`);
 
+  const target = await prisma.product.findFirst({
+    where: { barcode: "6291030006429" },
+  });
+
   const cases: Case[] = [
+    ...(target
+      ? [
+          {
+            // THE POSITIVE CASE. Visual identity and a real GTIN agree.
+            label: "visual identity AND a real GTIN resolve to the SAME product",
+            expect: "IDENTIFIED_BY_BARCODE" as IdentityState,
+            identification: {
+              name: target.name,
+              brand: target.brand,
+              barcode: target.barcode,
+              category: target.category,
+              subcategory: target.subcategory,
+              sizeLabel: target.sizeLabel,
+              confidence: 0.95,
+              visibleText: `${target.brand} ${target.name} ${target.sizeLabel ?? ""}`,
+              distinctProductsVisible: 1,
+              otherProducts: [],
+            },
+          },
+        ]
+      : []),
     {
       label: "barcode disagrees with BOTH the claimed brand and the pack text",
       expect: "NEEDS_CONFIRMATION",
@@ -54,6 +79,8 @@ async function main(): Promise<void> {
         sizeLabel: visual.sizeLabel,
         confidence: 0.95,
         visibleText: `${visual.brand} ${visual.name} ${visual.sizeLabel ?? ""}`,
+        distinctProductsVisible: 1,
+        otherProducts: [],
       },
     },
     {
@@ -68,6 +95,8 @@ async function main(): Promise<void> {
         sizeLabel: visual.sizeLabel,
         confidence: 0.95,
         visibleText: `${visual.brand} ${visual.name} ${visual.sizeLabel ?? ""}`,
+        distinctProductsVisible: 1,
+        otherProducts: [],
       },
     },
   ];
@@ -88,6 +117,9 @@ async function main(): Promise<void> {
     console.log(`   product        : ${result.product ? `${result.product.brand} — ${result.product.name}` : "(none)"}`);
     console.log(`   verdict allowed: ${allowed ? "YES" : "no"}`);
     console.log(`   assessed the barcode product: ${assessedWrongProduct ? "YES — FAILURE" : "no"}`);
+    if (result.identity) {
+      console.log(`   brandAgrees ${result.identity.brandAgrees} · textCorroborates ${result.identity.textCorroborates} · scene ${result.identity.scene}`);
+    }
     console.log(`   => ${ok ? "PASS" : "FAIL"}\n`);
   }
 

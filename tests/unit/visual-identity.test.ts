@@ -256,3 +256,34 @@ describe("a neighbouring SKU is not the product in the photograph", () => {
     expect(decision.kind).toBe("auto");
   });
 });
+
+/* ── the barcode-positive case ──────────────────────────────────────────── */
+
+describe("a barcode that agrees strengthens an identity the visuals already made", () => {
+  it("is the strongest state, and is distinct from the name-only route", () => {
+    // Both permit a verdict; they are not the same claim, and the database
+    // keeps them apart so an audit can tell which one a scan rested on.
+    expect(permitsAnalysis("IDENTIFIED_BY_BARCODE")).toBe(true);
+    expect(permitsAnalysis("IDENTIFIED_BY_NAME_WITH_CORROBORATION")).toBe(true);
+    expect("IDENTIFIED_BY_BARCODE").not.toBe("IDENTIFIED_BY_NAME_WITH_CORROBORATION");
+  });
+
+  it("requires no confirmation when every signal agrees", () => {
+    // Visual identity establishes the product; the GTIN resolves to the same
+    // one. Nothing disagrees, so there is nothing to ask about.
+    expect(
+      barcodeIsContradicted({
+        claimedBrand: "AL RAWABI",
+        visibleText: "AL RAWABI Greek Yoghurt Plain 360 g",
+        matchedBrand: "AL RAWABI",
+      }),
+    ).toBe(false);
+  });
+
+  it("does not require the barcode to have produced the identity", () => {
+    // The point of the hierarchy: the visuals can stand alone, and the barcode
+    // adds exact-SKU precision rather than permission.
+    const front = frontOfPack({ barcode: null });
+    expect(isUsableIdentification(front as never)).toBe(true);
+  });
+});
