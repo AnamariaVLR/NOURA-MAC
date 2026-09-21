@@ -275,9 +275,9 @@ export function explainEmpty(
     scannedCertification === "NOT_FOUND" && considered.every((c) => c.reason === "not-better");
 
   const tail = noCertAnywhere
-    ? " Nothing in this category carries a UAE certificate we can verify — the register covers " +
-      "technical regulations such as bottled water, electrical goods and detergents, and most " +
-      "packaged food is outside its scope."
+    ? " Nothing in this category carries a UAE certificate we could verify. The register does " +
+      "cover food, but listing is driven by manufacturers applying for certificates, and in " +
+      "this category none of them has."
     : "";
 
   return (

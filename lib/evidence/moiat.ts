@@ -26,11 +26,17 @@
  *
  * ── Coverage, stated plainly ────────────────────────────────────────────────
  *
- * MOIAT regulates technical conformity. Most packaged food is outside its scope,
- * and a scan of 36 catalogue barcodes returned certificates for 9 — UAE-made
- * dairy and bottled water. An olive oil returning nothing is the register being
- * silent about a category it does not cover, which is why NOT_FOUND exists as a
- * state separate from "not certified".
+ * MOIAT regulates technical conformity. Its published product-type taxonomy DOES
+ * cover food — organic processed food, edible vegetable oil, honey, eggs, dairy,
+ * juices, bottled water and fourteen halal process categories — so absence is
+ * about whether a manufacturer applied, not about whether the category exists,
+ * and a scan of 262 catalogue barcodes returned exact certificates for 42 —
+ * mostly UAE-made dairy, laban, yoghurt and bottled water. An olive oil
+ * returning nothing means no olive oil producer in our catalogue has a
+ * certificate on file, NOT that olive oil is outside the register's scope:
+ * "Edible Vegetable Oil" (product type 15087) is a category it publishes. That
+ * distinction is exactly why NOT_FOUND exists as a state separate from
+ * "not certified".
  */
 
 const BASE = "https://api.moiat.gov.ae/api/ConformityHub/GetCertificatesListV3";

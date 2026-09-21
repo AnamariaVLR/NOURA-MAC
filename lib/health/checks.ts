@@ -563,9 +563,10 @@ export function certificationCheck(
         key,
         "No certificate for this product is in the UAE register",
         "We searched the UAE conformity register for this barcode and it returned nothing. " +
-          "That is not the same as uncertified: the register covers technical regulations — " +
-          "electrical goods, bottled water, detergents, cosmetics — and most packaged food is " +
-          "outside its scope entirely.",
+          "That is not the same as uncertified. The register's food coverage is uneven: it holds " +
+          "categories for processed food, organic food, edible vegetable oil, honey, eggs, dairy " +
+          "and bottled water, but a product is only listed once its manufacturer has sought a " +
+          "certificate, and many never do.",
         source,
         "searched, none found",
       );

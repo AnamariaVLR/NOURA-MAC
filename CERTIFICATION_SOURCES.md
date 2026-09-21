@@ -259,3 +259,65 @@ means a lookup record *per source per product*, so the page can say "found in EU
 found in MOIAT" — two facts, separately sourced, neither one overriding the other.
 
 That is the change to make first, and it is a schema change, not a new integration.
+
+---
+
+## 9. Correction — MOIAT's food scope was understated (21 September 2026)
+
+**What I got wrong.** §2.1 and the shipped copy said the register "covers technical regulations"
+and that "most packaged food is outside its scope entirely." That was inferred from *query
+results* — barcode lookups that returned nothing for most food — and not from the register's own
+definition of what it covers. It was too strong, and it reached users.
+
+**The evidence.** The MOIAT open-data page publishes its full filter taxonomy: **1,145 product
+types**. Extracting the food-related ones shows the register defines categories for, among others:
+
+| ID | Product type |
+|---|---|
+| 14429 | Organic (Processed Food) |
+| 14899 / 14900 | Organic Foods / Organic Foods-Voluntary |
+| 14427 / 14428 | Organic (Crops) / Organic Livestock & Livestock Products |
+| **15087** | **Edible Vegetable Oil — Voluntary** |
+| 14424 / 14447 | Processed Food / Processed Food products |
+| 14875 | Honey |
+| 14634 / 15045 | Eggs / Chicken Eggs |
+| 14446 / 15056 | Fish and Seafood Products |
+| 15068 | Baby Formula, Follow-up formula / baby food |
+| 15066 / 15067 | Foods for Special Dietary Use / Special Medical Purposes |
+| 14869, 15001, 15194-15208 | Halal National Mark, Halal Products, and 14 Halal process categories |
+
+Plus dairy, laban, yoghurt, juices, bottled water, meat products and food-contact materials.
+
+**Why it matters.** "Olive oil is outside the register's scope" and "no olive oil producer in our
+catalogue holds a certificate" are different claims, and only the second is supported. Edible
+Vegetable Oil is type 15087 — a category the register publishes. The corrected copy now says the
+register does cover food, that listing depends on a manufacturer applying, and that many never do.
+
+**The Borges conclusion is unchanged.** 8 olive oils queried by barcode and brand, 0 records. What
+changes is the *reason we give*, which must be "no producer here has applied" rather than "the
+register does not cover this".
+
+### 9.1 What the API actually filters
+
+The open-data page's form uses `certificatetypeid` and `producttypeid`. Those are **not** accepted
+by `GetCertificatesListV3`: passing `producttypeid=15087`, `14429`, `14899` and
+`certificatetypeid=3` all returned the identical unfiltered first row, so the endpoint silently
+ignores them. The website's filters post to a different service.
+
+`GetCertificatesListV3` filters on **`barcode`** and **`brand`** only — both proven, since the
+import returns differentiated results per product. §7's open question about `product_type` is
+answered: it is not that the parameter wants an ID, it is that this endpoint does not filter on
+product type at all.
+
+Also noted: `Total_Rows` now reads **3,193,659**, against the 303,024 recorded earlier. Either the
+register has grown or the earlier figure was a filtered view; not established which.
+
+### 9.2 EIAC — accredits bodies, not products
+
+`eiac.gov.ae` is the UAE accreditation body and publishes a directory of accredited certification
+bodies. It accredits **the bodies themselves**, never products, so it can never verify a SKU. Its
+legitimate use is a cross-check: confirming that the notified body named on a MOIAT certificate is
+genuinely accredited. Noura already imports 25 notified bodies from MOIAT's own
+`GetNotifiedBodiesList`; EIAC would corroborate that list rather than extend it. **Not integrated,
+and not needed for VERIFIED.**
+
