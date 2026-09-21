@@ -153,11 +153,11 @@ export async function runPipeline(args: {
     where: { productId: evidence.product.id },
     include: { body: true },
   })) as CertificationWithBody[];
-  const certificationLookup = await prisma.certificationLookup.findUnique({
+  const evidenceLookups = await prisma.evidenceLookup.findMany({
     where: { productId: evidence.product.id },
   });
 
-  const analysis = await analyseProduct(evidence.product, certifications, certificationLookup);
+  const analysis = await analyseProduct(evidence.product, certifications, evidenceLookups);
 
   const scan = await prisma.scan.create({
     data: {

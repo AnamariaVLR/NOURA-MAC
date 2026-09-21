@@ -154,7 +154,7 @@ function toCandidate(
     evidenceSource: string;
     lastVerifiedAt: Date;
     certifications: CertificationWithBody[];
-    certificationLookup?: import("@prisma/client").CertificationLookup | null;
+    evidenceLookups?: import("@prisma/client").EvidenceLookup[];
     listings: Parameters<typeof toListing>[0][];
   },
   now: Date,
@@ -162,7 +162,7 @@ function toCandidate(
   const input = buildEvidenceInput(
     product as never,
     product.certifications,
-    product.certificationLookup ?? null,
+    product.evidenceLookups ?? [],
   );
   const evaluation = evaluateProduct(input);
 
@@ -210,7 +210,7 @@ export async function findAlternatives(args: {
 
   const include = {
     certifications: { include: { body: true } },
-    certificationLookup: true,
+    evidenceLookups: true,
     listings: { include: { retailer: true, checks: { orderBy: { checkedAt: "desc" as const }, take: 1 } } },
   };
 
@@ -275,7 +275,7 @@ export async function findVerifiedAlternatives(args: {
 
   const include = {
     certifications: { include: { body: true } },
-    certificationLookup: true,
+    evidenceLookups: true,
     listings: {
       include: { retailer: true, checks: { orderBy: { checkedAt: "desc" as const }, take: 1 } },
     },

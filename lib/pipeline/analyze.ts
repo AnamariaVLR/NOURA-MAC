@@ -7,10 +7,11 @@
  */
 import type {
   AccreditedBody,
-  CertificationLookup,
+  EvidenceLookup,
   Product,
   ProductCertification,
 } from "@prisma/client";
+import { uaeConformityLookup } from "../evidence/lookups";
 import { callTool } from "../anthropic";
 import { MODEL, runMode } from "../config";
 import type { CertificationEvidence } from "../health/checks";
@@ -37,7 +38,7 @@ export type CertificationWithBody = ProductCertification & { body: AccreditedBod
 /** A product with everything the checker needs read alongside it. */
 export type ProductWithEvidence = Product & {
   certifications: CertificationWithBody[];
-  certificationLookup?: CertificationLookup | null;
+  evidenceLookups?: EvidenceLookup[];
 };
 
 export function productSource(product: Product): SourceRef {
@@ -80,7 +81,7 @@ export function toCertificationEvidence(
 export function buildEvidenceInput(
   product: Product,
   certifications: CertificationWithBody[],
-  certificationLookup: CertificationLookup | null = null,
+  evidenceLookups: EvidenceLookup[] = [],
 ) {
   return {
     // A category we do not recognise falls back to the generic food rule rather
@@ -96,17 +97,10 @@ export function buildEvidenceInput(
     certifications: toCertificationEvidence(certifications),
     // Null means the UAE register was never asked, which is UNKNOWN. Asked and
     // empty is NOT FOUND, and the two must not render the same way.
-    certificationLookup: certificationLookup
-      ? {
-          barcode: certificationLookup.barcode,
-          exactMatches: certificationLookup.exactMatches,
-          brandMatches: certificationLookup.brandMatches,
-          succeeded: certificationLookup.succeeded,
-          source: certificationLookup.source,
-          sourceUrl: certificationLookup.sourceUrl,
-          checkedAt: certificationLookup.checkedAt,
-        }
-      : null,
+    // The certification check asks one question — UAE conformity — of one
+    // register. Other (source, claim) answers live alongside it and are rendered
+    // separately; collapsing them here is exactly what the model change forbids.
+    certificationLookup: uaeConformityLookup(evidenceLookups),
     evidenceSource: productSource(product),
   };
 }
@@ -141,9 +135,9 @@ export function mergeModelProse(
 export async function analyseProduct(
   product: Product,
   certifications: CertificationWithBody[],
-  certificationLookup: CertificationLookup | null = null,
+  evidenceLookups: EvidenceLookup[] = [],
 ): Promise<HealthAnalysisResult> {
-  const input = buildEvidenceInput(product, certifications, certificationLookup);
+  const input = buildEvidenceInput(product, certifications, evidenceLookups);
   const evaluation = evaluateProduct(input);
 
   let checks = evaluation.checks;

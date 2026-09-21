@@ -33,13 +33,47 @@
 
 import { isVerifiableSource } from "../schemas";
 
+/**
+ * The six states, each defined by WHAT WAS ESTABLISHED, never by what was assumed.
+ *
+ *   VERIFIED          an authoritative source matched THIS EXACT PRODUCT, and the
+ *                     record is live. The only state that counts as verification.
+ *   BRAND_LEVEL_ONLY  the brand or company matched; this product did not. A
+ *                     certified kettle is not a certified bottle of water.
+ *   EXPIRED           an exact-product record was found and is no longer valid.
+ *                     Not a finding against the product — the assurance is stale.
+ *   NOT_FOUND         the source was asked and held no record. A fact about the
+ *                     REGISTER. Never rendered as "not certified".
+ *   UNKNOWN           the source could not be asked, or was never asked.
+ *   CLAIM_ONLY        a manufacturer or retailer asserts it and no authoritative
+ *                     register was able to confirm it. The pack says organic; the
+ *                     registry does not say so. That is worth showing, and it is
+ *                     not verification.
+ *
+ * The forbidden equivalences, written down because each has been made before:
+ *   NOT_FOUND  ≠  NOT_CERTIFIED
+ *   NOT_FOUND  ≠  UNKNOWN
+ *   BRAND      ≠  PRODUCT
+ *   CLAIM      ≠  VERIFIED
+ */
 export const CERTIFICATION_STATES = [
   "VERIFIED",
   "BRAND_LEVEL_ONLY",
   "EXPIRED",
   "NOT_FOUND",
   "UNKNOWN",
+  "CLAIM_ONLY",
 ] as const;
+
+/** One line each, for the admin coverage view and for tests to assert against. */
+export const STATE_MEANING: Record<CertificationState, string> = {
+  VERIFIED: "EXACT_PRODUCT_MATCH · AUTHORITATIVE_EVIDENCE",
+  BRAND_LEVEL_ONLY: "BRAND_MATCH_BUT_NOT_EXACT_PRODUCT",
+  EXPIRED: "EVIDENCE_FOUND_BUT_NO_LONGER_VALID",
+  NOT_FOUND: "NO_RECORD_IN_THIS_SOURCE",
+  UNKNOWN: "INSUFFICIENT_EVIDENCE_OR_SOURCE_NOT_AVAILABLE",
+  CLAIM_ONLY: "MANUFACTURER_OR_RETAILER_CLAIM_WITHOUT_AUTHORITATIVE_VERIFICATION",
+};
 
 export type CertificationState = (typeof CERTIFICATION_STATES)[number];
 
@@ -166,6 +200,10 @@ export function assessCertification(
 export const CERTIFICATION_RANK: Record<CertificationState, number> = {
   VERIFIED: 3,
   BRAND_LEVEL_ONLY: 1,
+  // A claim on the pack that no register confirms sits above silence — someone
+  // is at least asserting it, and that is information — and far below a brand
+  // record, which at least came from a registry. It must never approach VERIFIED.
+  CLAIM_ONLY: 0.5,
   UNKNOWN: 0,
   NOT_FOUND: 0,
   EXPIRED: -1,
@@ -176,8 +214,9 @@ export const CERTIFICATION_LABEL: Record<CertificationState, string> = {
   VERIFIED: "Verified for this exact product",
   BRAND_LEVEL_ONLY: "Brand appears in the register, this product does not",
   EXPIRED: "A certificate exists but is no longer valid",
-  NOT_FOUND: "No certificate found in the UAE register",
-  UNKNOWN: "Not checked against the UAE register",
+  NOT_FOUND: "No record found in the source we searched",
+  UNKNOWN: "Not checked against any register",
+  CLAIM_ONLY: "Claimed on the pack, not confirmed by a register",
 };
 
 /* -------------------------------------------------------------------------

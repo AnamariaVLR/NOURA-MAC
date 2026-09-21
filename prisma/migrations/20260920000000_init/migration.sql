@@ -115,18 +115,25 @@ CREATE TABLE "ProductCertification" (
 );
 
 -- CreateTable
-CREATE TABLE "CertificationLookup" (
+CREATE TABLE "EvidenceLookup" (
     "id" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
-    "barcode" TEXT NOT NULL,
+    "sourceKey" TEXT NOT NULL,
+    "claim" TEXT NOT NULL,
+    "state" TEXT NOT NULL,
+    "queriedValue" TEXT NOT NULL,
     "exactMatches" INTEGER NOT NULL DEFAULT 0,
     "brandMatches" INTEGER NOT NULL DEFAULT 0,
     "succeeded" BOOLEAN NOT NULL DEFAULT true,
-    "source" TEXT NOT NULL,
+    "referenceNumber" TEXT,
+    "validFrom" TIMESTAMP(3),
+    "validUntil" TIMESTAMP(3),
+    "sourceName" TEXT NOT NULL,
     "sourceUrl" TEXT NOT NULL,
-    "checkedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "retrievedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "rawProvenance" TEXT,
 
-    CONSTRAINT "CertificationLookup_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "EvidenceLookup_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -237,7 +244,16 @@ CREATE INDEX "ProductCertification_matchBasis_idx" ON "ProductCertification"("ma
 CREATE UNIQUE INDEX "ProductCertification_certificateNumber_productId_registerMo_key" ON "ProductCertification"("certificateNumber", "productId", "registerModelNumber");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CertificationLookup_productId_key" ON "CertificationLookup"("productId");
+CREATE INDEX "EvidenceLookup_productId_idx" ON "EvidenceLookup"("productId");
+
+-- CreateIndex
+CREATE INDEX "EvidenceLookup_sourceKey_claim_idx" ON "EvidenceLookup"("sourceKey", "claim");
+
+-- CreateIndex
+CREATE INDEX "EvidenceLookup_state_idx" ON "EvidenceLookup"("state");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EvidenceLookup_productId_sourceKey_claim_key" ON "EvidenceLookup"("productId", "sourceKey", "claim");
 
 -- CreateIndex
 CREATE INDEX "Scan_userKey_createdAt_idx" ON "Scan"("userKey", "createdAt");
@@ -270,7 +286,7 @@ ALTER TABLE "ProductCertification" ADD CONSTRAINT "ProductCertification_productI
 ALTER TABLE "ProductCertification" ADD CONSTRAINT "ProductCertification_bodyId_fkey" FOREIGN KEY ("bodyId") REFERENCES "AccreditedBody"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CertificationLookup" ADD CONSTRAINT "CertificationLookup_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "EvidenceLookup" ADD CONSTRAINT "EvidenceLookup_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Scan" ADD CONSTRAINT "Scan_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;

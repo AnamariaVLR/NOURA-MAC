@@ -24,6 +24,7 @@
  * barcode is counted and dropped.
  */
 import "../lib/load-env";
+import { capStateForSource } from "@/lib/evidence/registry";
 import { prisma } from "../lib/db";
 import {
   MOIAT_SOURCE_NAME,
@@ -63,20 +64,19 @@ async function importForProduct(
     tally.failed += 1;
     // A failed query is UNKNOWN. Record the failure so the state is auditable
     // but does not read as NOT FOUND.
-    await prisma.certificationLookup.upsert({
-      where: { productId: product.id },
-      create: {
+    // A failed query is UNKNOWN for every claim this source could have answered.
+    for (const claim of ["UAE_CONFORMITY", "HALAL", "ORGANIC"]) {
+      await recordLookup({
         productId: product.id,
         barcode: product.barcode,
+        claim,
+        state: "UNKNOWN",
         exactMatches: 0,
         brandMatches: 0,
         succeeded: false,
-        source: MOIAT_SOURCE_NAME,
-        sourceUrl: MOIAT_SOURCE_URL,
-        checkedAt: now,
-      },
-      update: { succeeded: false, checkedAt: now, barcode: product.barcode },
-    });
+        now,
+      });
+    }
     return "QUERY FAILED";
   }
   tally.queried += 1;
@@ -127,26 +127,37 @@ async function importForProduct(
   // A handful is enough to say "the brand is in the register"; the rest is noise.
   for (const certificate of brandHits.slice(0, 5)) await write(certificate, "BRAND");
 
-  await prisma.certificationLookup.upsert({
-    where: { productId: product.id },
-    create: {
+  // One row per claim. A claim with no matching record is NOT_FOUND *in MOIAT* —
+  // a fact about the register, never about the product.
+  for (const claim of ["UAE_CONFORMITY", "HALAL", "ORGANIC"] as const) {
+    const exactForClaim = exactHits.filter((c) => claimOf(c) === claim);
+    const brandForClaim = brandHits.filter((c) => claimOf(c) === claim);
+    const liveExact = exactForClaim.filter(
+      (c) => readStatus(c.rawStatus) === "valid" && (!c.expiresAt || c.expiresAt.getTime() > now.getTime()),
+    );
+
+    const state =
+      liveExact.length > 0 ? "VERIFIED"
+      : exactForClaim.length > 0 ? "EXPIRED"
+      : brandForClaim.length > 0 ? "BRAND_LEVEL_ONLY"
+      : "NOT_FOUND";
+
+    const best = liveExact[0] ?? exactForClaim[0] ?? brandForClaim[0] ?? null;
+
+    await recordLookup({
       productId: product.id,
       barcode: product.barcode,
-      exactMatches: exactHits.length,
-      brandMatches: brandHits.length,
+      claim,
+      state,
+      exactMatches: exactForClaim.length,
+      brandMatches: brandForClaim.length,
       succeeded: true,
-      source: MOIAT_SOURCE_NAME,
-      sourceUrl: MOIAT_SOURCE_URL,
-      checkedAt: now,
-    },
-    update: {
-      barcode: product.barcode,
-      exactMatches: exactHits.length,
-      brandMatches: brandHits.length,
-      succeeded: true,
-      checkedAt: now,
-    },
-  });
+      referenceNumber: best?.certificateNumber ?? null,
+      validUntil: best?.expiresAt ?? null,
+      raw: best ?? undefined,
+      now,
+    });
+  }
 
   tally.exact += exactHits.length;
   tally.brand += Math.min(brandHits.length, 5);
@@ -155,6 +166,67 @@ async function importForProduct(
   if (exactHits.length > 0) return `${exactHits.length} exact`;
   if (brandHits.length > 0) return `brand only (${brandHits.length})`;
   return "not found";
+}
+
+/**
+ * Record what MOIAT said, per CLAIM.
+ *
+ * One query answers more than one question. The register carries UAE conformity
+ * (ECAS/EQM), halal (HNM and EQM halal marks) and organic (ECAS "Organic
+ * (Processed Food)") records, and those are three separate facts about a
+ * product. Writing one row per claim is what lets the page say "no UAE
+ * conformity record found in MOIAT" while saying nothing at all about organic,
+ * rather than implying a single verdict covering everything.
+ *
+ * The state is capped by the source's granularity in lib/evidence/registry.ts,
+ * so an importer cannot promote a brand match to VERIFIED by mistake.
+ */
+async function recordLookup(args: {
+  productId: string;
+  barcode: string;
+  claim: string;
+  state: string;
+  exactMatches: number;
+  brandMatches: number;
+  succeeded: boolean;
+  referenceNumber?: string | null;
+  validUntil?: Date | null;
+  raw?: unknown;
+  now: Date;
+}): Promise<void> {
+  const state = capStateForSource(args.state, "MOIAT");
+  const data = {
+    state,
+    queriedValue: args.barcode,
+    exactMatches: args.exactMatches,
+    brandMatches: args.brandMatches,
+    succeeded: args.succeeded,
+    referenceNumber: args.referenceNumber ?? null,
+    validUntil: args.validUntil ?? null,
+    sourceName: MOIAT_SOURCE_NAME,
+    sourceUrl: MOIAT_SOURCE_URL,
+    retrievedAt: args.now,
+    rawProvenance: args.raw ? JSON.stringify(args.raw).slice(0, 4000) : null,
+  };
+  await prisma.evidenceLookup.upsert({
+    where: {
+      productId_sourceKey_claim: {
+        productId: args.productId,
+        sourceKey: "MOIAT",
+        claim: args.claim,
+      },
+    },
+    create: { productId: args.productId, sourceKey: "MOIAT", claim: args.claim, ...data },
+    update: data,
+  });
+}
+
+/** Which claim a register row speaks to, read from its own words. */
+function claimOf(certificate: { certificateType: string; productType: string | null }): string {
+  const type = `${certificate.certificateType} ${certificate.productType ?? ""}`.toLowerCase();
+  if (type.includes("halal") || certificate.certificateType === "HNM") return "HALAL";
+  if (type.includes("organic")) return "ORGANIC";
+  return "UAE_CONFORMITY";
 }
 
 async function main(): Promise<void> {
