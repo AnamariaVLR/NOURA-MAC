@@ -15,6 +15,7 @@ export type ListingRow = {
   productId: string;
   productName: string;
   productBrand: string | null;
+  productBarcode: string | null;
   productSlug: string;
   category: string;
   retailerName: string;
@@ -68,6 +69,7 @@ export async function listingQueue(now: Date = new Date()): Promise<ListingQueue
       productId: listing.product.id,
       productName: listing.product.name,
       productBrand: listing.product.brand,
+      productBarcode: listing.product.barcode,
       productSlug: listing.product.slug,
       category: listing.product.category,
       retailerName: listing.retailer.name,

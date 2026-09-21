@@ -125,3 +125,49 @@ recommendations. The distribution is steep — the top two products alone accoun
 for 114 recommendation slots — so this is an afternoon of fieldwork, not a data
 programme.
 
+---
+
+## M3 — Barcode identity quality (21 September 2026)
+
+Exact-product certification matching keys on the barcode, so the barcodes have to
+be what they claim to be. Checked all 262.
+
+| Measure | Value |
+|---|---|
+| Products with a barcode | 262 (100%) |
+| Restricted-range codes (prefix 02, 20-29) | **8 (3.1%)** |
+| Failing the GS1 check digit | **1** |
+
+### Restricted-range codes
+
+Prefixes 02 and 20-29 are reserved for **in-store use**: a retailer assigns them
+for own-brand or weighed goods, and they are NOT globally unique. The same code
+can mean different products in different shops.
+
+Seven of the eight are Spinneys and Spinners own-brand; one is a Nada line.
+
+**One of them resolves to VERIFIED**, and it was worth chasing: SpinneysFood
+Greek-Style Vanilla Yoghurt, barcode `29590438`. The certificate is real —
+issued to **Spinneys Dubai L.L.C** for **Flavored Yoghurt**, with the register's
+model number recorded as `29590438`. Spinneys registered their own internal code
+with MOIAT, and the product is a Spinneys own-brand yoghurt. The identity chain
+is coherent and the VERIFIED state is correct.
+
+**The latent risk is real and currently unguarded.** That match held because the
+certificate's company matched the product's brand — which nothing in the code
+requires. A restricted code from retailer A colliding with a MOIAT model number
+registered by retailer B would produce a false VERIFIED, and the present
+safeguard is coincidence rather than design.
+
+Not fixed, deliberately: one product, correct result, and requiring
+company-to-brand agreement for restricted-range barcodes is a change to matching
+logic that should be made on purpose rather than folded into a pilot-readiness
+pass. Recorded here so it is a decision rather than an oversight.
+
+### Check-digit failure
+
+`2000000039883` (Quaker Oat Crisp Cereal 375 g) is not a valid GTIN — the check
+digit does not compute. It is almost certainly a placeholder. A shopper scanning
+that pack will not match this record. One product, left in place and flagged
+rather than silently deleted.
+

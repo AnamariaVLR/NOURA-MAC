@@ -54,6 +54,9 @@ async function main() {
     rows.map((row) => ({
       listing_id: row.listingId,
       product_slug: row.productSlug,
+      brand: row.productBrand ?? "",
+      product_name: row.productName,
+      barcode: row.productBarcode ?? "",
       retailer_slug: row.retailerSlug,
       size_label: row.sizeLabel,
       // Left blank on purpose: a price is the one thing a person must supply.

@@ -18,6 +18,13 @@ import { parsePriceAed } from "./listings-admin";
 export const CSV_COLUMNS = [
   "listing_id",
   "product_slug",
+  // Identity, for the person holding the file in an aisle. A slug is fine for a
+  // script and useless on a shelf: "president-quot-quot-9" names nothing you can
+  // pick up. These three are written on export and ignored on import, where
+  // listing_id is the only identity that counts.
+  "brand",
+  "product_name",
+  "barcode",
   "retailer_slug",
   "size_label",
   "price_aed",
