@@ -78,6 +78,16 @@ export const SOURCE_TYPES = [
   "OPEN_DATABASE",
   /** A person who looked, with their name attached. */
   "HUMAN_OBSERVATION",
+  /**
+   * Any web page that classifies as nothing better.
+   *
+   * The open web is where an arbitrary product is actually documented, and
+   * refusing to read it would recreate the catalogue problem one level up. So
+   * it is read, and it is capped: a page nobody can vouch for may support what
+   * a product IS, and may report that someone claims a certification, and may
+   * establish nothing else at all.
+   */
+  "GENERIC_WEB",
   /** Noura's own deterministic rules, applied to evidence gathered above. */
   "NOURA_RULE",
 ] as const;
@@ -101,6 +111,8 @@ export const INDEPENDENCE_KINDS = [
   "COMMERCIAL",
   /** Contributed by volunteers, unverified. */
   "CROWD_SOURCED",
+  /** A page whose provenance could not be established. */
+  "UNKNOWN_PROVENANCE",
   /** Noura's own reasoning, not a source at all. */
   "INTERNAL",
 ] as const;
@@ -224,6 +236,21 @@ export const CAPABILITY: Record<SourceType, Record<ClaimKind, AuthorityLevel>> =
     PRODUCT_SIZE: "SUPPORTING",
   },
 
+  GENERIC_WEB: {
+    ...NOTHING,
+    // Enough to help say what the product is.
+    PRODUCT_IDENTITY: "SUPPORTING",
+    PRODUCT_SIZE: "SUPPORTING",
+    INGREDIENTS: "SUPPORTING",
+    NUTRITION: "SUPPORTING",
+    // "This product is certified organic" on an unknown page is a claim that
+    // someone makes, and is not evidence the certificate exists.
+    CERTIFICATION_HELD: "DECLARED",
+    // Everything else is NONE, and the important ones are worth naming:
+    // CERTIFICATION_VALID, HEALTH_EFFECT, ENVIRONMENTAL_EFFECT, and price and
+    // availability, which a shopper cannot act on from a site nobody knows.
+  },
+
   NOURA_RULE: {
     ...NOTHING,
     // Noura establishes nothing about the world. It applies rules to evidence
@@ -243,6 +270,7 @@ export const INDEPENDENCE_OF: Record<SourceType, Independence> = {
   RETAILER: "COMMERCIAL",
   OPEN_DATABASE: "CROWD_SOURCED",
   HUMAN_OBSERVATION: "INDEPENDENT",
+  GENERIC_WEB: "UNKNOWN_PROVENANCE",
   NOURA_RULE: "INTERNAL",
 };
 
@@ -333,6 +361,11 @@ export function doesNotEstablish(source: SourceType, claim: ClaimKind): string[]
   if (source === "OPEN_DATABASE") {
     out.push("anything with certainty — the record was contributed by a volunteer");
   }
+  if (source === "GENERIC_WEB") {
+    out.push("anything independently — this page's provenance could not be established");
+    out.push("that any certification it mentions is real, current, or covers this product");
+    out.push("that the product is healthier, safer or environmentally better");
+  }
   if (source === "CERTIFICATION_REGISTRY" || source === "REGULATOR") {
     out.push("that the product is nutritionally better than any other");
   }
@@ -350,6 +383,7 @@ function label(source: SourceType): string {
     MANUFACTURER: "the manufacturer",
     RETAILER: "the retailer",
     OPEN_DATABASE: "the open database",
+    GENERIC_WEB: "the page",
     HUMAN_OBSERVATION: "the person who checked",
     NOURA_RULE: "Noura",
   }[source];
