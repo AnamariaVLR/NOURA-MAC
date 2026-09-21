@@ -139,6 +139,17 @@ find that figure: it is not a quiet fail and it is not a quiet pass.
 This is the part only a person can do. No UAE grocery retailer publishes a price
 API and Noura does not scrape, so every price in the app is one you wrote down.
 
+**Before you go, once:** run `npm run price:priority`. It ranks products by how
+many *other* products would gain a quotable alternative if this one had a
+verified price. The list is short — a handful of products usually covers most of
+the recommendation slots — so an hour spent on the right shelves is worth an
+afternoon spent on the wrong ones.
+
+`__LIVE_URL__/admin/coverage` shows the same picture per product: which register
+was asked which question, what it answered, and whether anyone has verified a
+price or seen the item in stock. "Not found" there means the named register held
+no record. It never means the product is uncertified.
+
 **First time on a phone, once:**
 
 1. Go to `__LIVE_URL__/admin/listings`.
