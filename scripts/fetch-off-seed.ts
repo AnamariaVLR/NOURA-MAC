@@ -95,6 +95,30 @@ function nutritionIsUsable(n: Record<string, number | null>): boolean {
   return n.energyKcal !== null || anyPositive;
 }
 
+/**
+ * Open Food Facts stores some names exactly as a contributor pasted them, HTML
+ * entities and all. Two catalogue products carried a literal `&quot;` that would
+ * have rendered as those six characters on a result page, next to a claim about
+ * trustworthiness.
+ *
+ * Only the handful of entities that actually appear in product names are
+ * decoded: a general HTML decoder here would be a way to turn a contributed
+ * string into markup, and a product name is never markup.
+ */
+function decodeEntities(value: string): string {
+  return value
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    // Ampersand last, so "&amp;quot;" cannot become a quote in two passes.
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function fetchOne(entry: CatalogueEntry): Promise<FetchedProduct | null> {
   const base = BASE[entry.db];
   const url = `${base}/api/v2/product/${entry.barcode}.json?fields=${FIELDS}`;
@@ -114,7 +138,7 @@ async function fetchOne(entry: CatalogueEntry): Promise<FetchedProduct | null> {
         slug: entry.slug,
         barcode: entry.barcode,
         category: entry.category,
-        name: p.product_name_en || p.product_name || entry.fallbackName,
+        name: decodeEntities(p.product_name_en || p.product_name || entry.fallbackName),
         brand: (p.brands ?? "").split(",")[0]?.trim() || entry.fallbackBrand,
         sizeLabel: entry.sizeLabel,
         imageUrl: p.image_front_url ?? null,

@@ -15,7 +15,8 @@
 import { NextResponse } from "next/server";
 import { MAX_UPLOAD_BYTES } from "@/lib/config";
 import { runPipeline } from "@/lib/pipeline/run";
-import { consume, prune, scanLimitPerHour } from "@/lib/rate-limit";
+import { consume, prune } from "@/lib/rate-limit";
+import { scanLimitPerAddressPerHour, scanLimitPerHour } from "@/lib/config";
 import { UploadSchema } from "@/lib/schemas";
 import { resizeForModel, store } from "@/lib/storage";
 import { ensureUserKey } from "@/lib/user";
@@ -24,7 +25,34 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const limit = await consume(request.headers, "scan", scanLimitPerHour());
+  // Two allowances, both required.
+  //
+  // The per-browser one is the shopper's: thirty scans is more than anyone
+  // shops, and it is keyed on the cookie so that five testers on one office
+  // WiFi get five allowances rather than sharing one. Keying on the address
+  // alone made a pilot group throttle each other, and a collective refusal
+  // reads to each of them as a fault in the app.
+  //
+  // The per-address one is the building's, set ten times higher, and exists so
+  // that clearing a cookie is not an unlimited bypass.
+  const userKey = await ensureUserKey();
+  const limit = await consume(
+    request.headers,
+    "scan",
+    scanLimitPerHour(),
+    new Date(),
+    `user:${userKey}`,
+  );
+  const addressLimit = limit.allowed
+    ? await consume(request.headers, "scan-address", scanLimitPerAddressPerHour())
+    : limit;
+  if (!addressLimit.allowed) {
+    const seconds = Math.max(1, Math.ceil((addressLimit.resetAt.getTime() - Date.now()) / 1000));
+    return NextResponse.json(
+      { error: "This network has made a lot of scans in the last hour. Try again later." },
+      { status: 429, headers: { "Retry-After": String(seconds) } },
+    );
+  }
   if (!limit.allowed) {
     const seconds = Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000));
     return NextResponse.json(

@@ -117,6 +117,20 @@ export function loginAttemptsPerHour(): number {
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 10;
 }
 
+/**
+ * The wider ceiling applied per ADDRESS rather than per browser.
+ *
+ * An IP is a building, not a person. The per-browser limit is what protects a
+ * shopper from a runaway loop; this one protects Noura from a single address
+ * hammering it, and is set high enough that a household or a pilot group of a
+ * dozen testers never reaches it.
+ */
+export function scanLimitPerAddressPerHour(): number {
+  const raw = Number(process.env.SCAN_ADDRESS_LIMIT_PER_HOUR);
+  if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+  return Math.max(scanLimitPerHour() * 10, 200);
+}
+
 /** Salt for the rate-limit key hash, so the table never holds an IP address. */
 export function rateLimitSalt(): string {
   return process.env.RATE_LIMIT_SALT?.trim() || process.env.ADMIN_PASSWORD?.trim() || "noura-dev";

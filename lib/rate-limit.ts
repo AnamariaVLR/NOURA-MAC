@@ -82,15 +82,27 @@ export function windowStartFor(now: Date): Date {
  * The upsert-then-read order matters: the increment is atomic in the database, so
  * two simultaneous requests cannot both read 29 and both proceed.
  */
+/**
+ * `identity` overrides the client address as the thing being counted.
+ *
+ * Needed because an IP is not a person. A pilot group sharing an office WiFi, a
+ * household, or a mobile carrier's CGNAT all present as ONE address, so an
+ * IP-keyed allowance is spent collectively: five testers get six scans each
+ * before Noura starts refusing them, and the refusal reads like a fault.
+ *
+ * Callers pass the per-browser key for the bucket that should be per-person,
+ * and still apply a wider address-keyed ceiling for abuse. See app/api/scan.
+ */
 export async function consume(
   headers: Headers,
   bucket: string,
   limit: number,
   now: Date = new Date(),
+  identity?: string,
 ): Promise<LimitResult> {
   const windowStart = windowStartFor(now);
   const resetAt = new Date(windowStart.getTime() + HOUR_MS);
-  const id = limitKey(clientAddress(headers), bucket, windowStart);
+  const id = limitKey(identity ?? clientAddress(headers), bucket, windowStart);
 
   try {
     const row = await prisma.rateLimit.upsert({

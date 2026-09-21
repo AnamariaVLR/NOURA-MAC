@@ -25,6 +25,9 @@ import {
 import { describeAll, describeLookup, uaeConformityLookup } from "@/lib/evidence/lookups";
 import { certificationCheck } from "@/lib/health/checks";
 import { CheckSchema } from "@/lib/schemas";
+import { limitKey, windowStartFor } from "@/lib/rate-limit";
+import { scanLimitPerAddressPerHour, scanLimitPerHour } from "@/lib/config";
+import { CATALOGUE } from "@/prisma/seed-data/catalogue";
 import { CATEGORY_RULES } from "@/lib/health/categories";
 import type { Basis } from "@/lib/health/categories/types";
 
@@ -363,5 +366,51 @@ describe("register text can never overflow the check schema", () => {
       const parsed = CheckSchema.safeParse(check);
       expect(parsed.success, `${succeeded ? "NOT_FOUND" : "UNKNOWN"}: ${check.detail.length} chars`).toBe(true);
     }
+  });
+});
+
+/* ── the pilot's own rate limit ─────────────────────────────────────────── */
+
+describe("an allowance counts a person, not a building", () => {
+  it("keys a per-browser bucket separately from a per-address one", () => {
+    const now = new Date("2026-09-21T12:00:00.000Z");
+    const window = windowStartFor(now);
+    const a = limitKey("user:aaa", "scan", window);
+    const b = limitKey("user:bbb", "scan", window);
+    const ip = limitKey("81.2.3.4", "scan-address", window);
+    // Two testers on one office WiFi must not spend each other's allowance.
+    expect(a).not.toBe(b);
+    expect(a).not.toBe(ip);
+  });
+
+  it("sets the address ceiling well above one shopper's rate", () => {
+    expect(scanLimitPerAddressPerHour()).toBeGreaterThanOrEqual(scanLimitPerHour() * 10);
+  });
+
+  it("never stores anything reversible to an address", () => {
+    const key = limitKey("81.2.3.4", "scan", new Date("2026-09-21T12:00:00.000Z"));
+    expect(key).not.toContain("81.2.3.4");
+  });
+});
+
+/* ── product names are text, not markup ─────────────────────────────────── */
+
+describe("no product name reaches a page carrying markup", () => {
+  it("has no raw HTML entity in any catalogue name or brand", () => {
+    // Open Food Facts stores some names exactly as a contributor pasted them.
+    // Two products carried a literal &quot; that would have rendered as six
+    // characters on a page making claims about trustworthiness.
+    const offenders = CATALOGUE.filter((entry) =>
+      /&(quot|amp|lt|gt|apos|nbsp|#\d+);/i.test(`${entry.fallbackName} ${entry.fallbackBrand}`),
+    ).map((e) => e.slug);
+    expect(offenders, `entities in: ${offenders.join(", ")}`).toEqual([]);
+  });
+
+  it("decodes entities at ingest rather than at render", () => {
+    // Fixing this in the template would leave the bad value in the database and
+    // in every export; the decode belongs where the value enters.
+    const fetcher = readFileSync("scripts/fetch-off-seed.ts", "utf8");
+    expect(fetcher).toMatch(/decodeEntities/);
+    expect(fetcher).toMatch(/name: decodeEntities\(/);
   });
 });
