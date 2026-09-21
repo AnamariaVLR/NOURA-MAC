@@ -29,6 +29,8 @@
     "qr": "tsx scripts/make-qr.ts",
     "pilot:url": "tsx scripts/pilot-url.ts",
     "db:where": "tsx scripts/db-where.ts",
+    "price:priority": "tsx scripts/price-priority.ts",
+    "discover:uae": "tsx scripts/discover-uae.ts",
     "db:wal": "tsx scripts/sqlite-wal.ts",
     "seed:bodies": "tsx scripts/import-notified-bodies.ts"
   },
