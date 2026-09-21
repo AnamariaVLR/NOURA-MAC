@@ -30,6 +30,7 @@ import { formatAed, formatDate } from "@/lib/format";
 import { findVerifiedAlternatives } from "@/lib/recommend/alternatives";
 import { CERTIFICATION_LABEL, type CertificationState } from "@/lib/health/certification";
 import { describeAll } from "@/lib/evidence/lookups";
+import { IDENTITY_STATE_LABEL, type IdentityState } from "@/lib/pipeline/identity";
 import {
   VERDICT_BEARING_MODES,
   type IdentificationMode,
@@ -270,14 +271,13 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   // Provenance. What the page is entitled to claim depends on how the product
   // was arrived at, and the three cases say genuinely different things.
   const matchSource = MatchSourceSchema.safeParse(scan.matchSource).data ?? null;
+  // Driven by the PERSISTED identity state, not by matchSource. The old label
+  // collapsed seven distinct states into four and told a completed scan to
+  // "confirm below", where there is nothing to confirm. These are different
+  // strengths of evidence and the page should not flatten them.
   const matchLabel =
-    matchSource === "USER_CONFIRMED"
-      ? "You confirmed this product"
-      : matchSource === "BARCODE"
-        ? "Matched by barcode"
-        : matchSource === "NAME_AUTO"
-          ? "Matched by name, confirm below"
-          : "Matched from your photo";
+    IDENTITY_STATE_LABEL[scan.identityState as IdentityState] ??
+    (matchSource === "USER_CONFIRMED" ? "You confirmed this product" : "Matched from your photo");
   const unit = nutrition?.basis === "per_100ml" ? "per 100 ml" : "per 100 g";
 
   return (

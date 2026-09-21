@@ -103,7 +103,12 @@ export default defineConfig({
     // NOURA_DISABLE_IDENTIFICATION defeats whatever key .env holds, because
     // .env beats webServer.env and a developer with a real key would otherwise
     // never run this test at all.
-    command: `npm run start -- --port ${UNCONFIGURED_PORT}`,
+    // Builds too, rather than assuming the other server got there first.
+    // Running `npm run dev` wipes .next, and this server then failed to boot
+    // with "Could not find a production build" — which surfaced as forty
+    // unrelated test failures rather than as a configuration problem.
+    // The build is cached and costs a second when it is already current.
+    command: `npm run build && npm run start -- --port ${UNCONFIGURED_PORT}`,
     url: unconfiguredURL,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
